@@ -8,6 +8,7 @@ const REQUEST_TIMEOUT_MS = 30_000
 export function createAppHubApi(backendUrl, token, options = {}) {
   const baseURL = (backendUrl || '').replace(/\/$/, '')
   const hostAccessSecret = options.hostAccessSecret || ''
+  const getZoneHeaderId = options.getZoneHeaderId
 
   const client = axios.create({
     baseURL,
@@ -17,6 +18,15 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       'Content-Type': 'application/json',
       ...(token ? { 'X-Knf-Token': token } : {}),
     },
+  })
+
+  client.interceptors.request.use((config) => {
+    const zoneId = typeof getZoneHeaderId === 'function' ? getZoneHeaderId() : null
+    if (zoneId) {
+      config.headers = config.headers || {}
+      config.headers['X-Knf-Zone-Id'] = zoneId
+    }
+    return config
   })
 
   function bridgeHeaders(launchToken, appSlug) {

@@ -1,6 +1,8 @@
 import { safeParseJson, sanitizeWindowLayout } from '../../../utils/safeStorage.js'
 
 export const TASKBAR_HEIGHT = 48
+export const WINDOW_MIN_WIDTH = 280
+export const WINDOW_MIN_HEIGHT = 200
 const STORAGE_PREFIX = 'apphub-window-layout:'
 
 /** Measured from `.apphub-desktop__workarea` — not the browser viewport. */
@@ -40,6 +42,52 @@ export function clampWindowToWorkArea(win) {
   const { width: areaW, height: areaH } = getWorkArea()
   win.x = Math.min(Math.max(0, win.x), Math.max(0, areaW - win.width))
   win.y = Math.min(Math.max(0, win.y), Math.max(0, areaH - win.height))
+}
+
+export function clampWindowDimensions(win) {
+  const area = getWorkArea()
+  const minW = Math.min(win.miniWidth ?? WINDOW_MIN_WIDTH, area.width)
+  const minH = Math.min(win.miniHeight ?? WINDOW_MIN_HEIGHT, area.height)
+
+  win.width = Math.max(minW, Math.min(area.width, win.width))
+  win.height = Math.max(minH, Math.min(area.height, win.height))
+  clampWindowToWorkArea(win)
+}
+
+/** @param {'n'|'s'|'e'|'w'|'ne'|'nw'|'se'|'sw'} edge */
+export function applyWindowResize(win, edge, dx, dy) {
+  const area = getWorkArea()
+  const minW = Math.min(win.miniWidth ?? WINDOW_MIN_WIDTH, area.width)
+  const minH = Math.min(win.miniHeight ?? WINDOW_MIN_HEIGHT, area.height)
+
+  let { x, y, width, height } = win
+  const right = x + width
+  const bottom = y + height
+
+  if (edge.includes('e')) width += dx
+  if (edge.includes('w')) {
+    x += dx
+    width -= dx
+  }
+  if (edge.includes('s')) height += dy
+  if (edge.includes('n')) {
+    y += dy
+    height -= dy
+  }
+
+  width = Math.max(minW, Math.min(area.width, width))
+  height = Math.max(minH, Math.min(area.height, height))
+
+  if (edge.includes('w')) x = right - width
+  if (edge.includes('n')) y = bottom - height
+
+  x = Math.max(0, Math.min(x, area.width - width))
+  y = Math.max(0, Math.min(y, area.height - height))
+
+  win.x = x
+  win.y = y
+  win.width = width
+  win.height = height
 }
 
 export function loadWindowLayout(layoutKey) {

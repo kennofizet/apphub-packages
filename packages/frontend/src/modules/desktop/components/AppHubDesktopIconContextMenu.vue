@@ -11,6 +11,24 @@
       {{ openLabel }}
     </button>
     <button
+      v-if="showPin"
+      type="button"
+      class="apphub-icon-menu__item"
+      role="menuitem"
+      @click="emit('pin')"
+    >
+      {{ pinLabel }}
+    </button>
+    <button
+      v-if="showFavorite"
+      type="button"
+      class="apphub-icon-menu__item"
+      role="menuitem"
+      @click="emit('favorite')"
+    >
+      {{ favoriteLabel }}
+    </button>
+    <button
       v-if="canRename"
       type="button"
       class="apphub-icon-menu__item"
@@ -32,10 +50,14 @@ defineProps({
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
   canRename: { type: Boolean, default: true },
+  showPin: { type: Boolean, default: false },
+  showFavorite: { type: Boolean, default: false },
   openLabel: { type: String, default: '' },
+  pinLabel: { type: String, default: '' },
+  favoriteLabel: { type: String, default: '' },
   renameLabel: { type: String, default: '' },
   propertiesLabel: { type: String, default: '' },
 })
 
-const emit = defineEmits(['open', 'rename', 'info', 'close'])
+const emit = defineEmits(['open', 'pin', 'favorite', 'rename', 'info', 'close'])
 </script>

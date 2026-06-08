@@ -18,29 +18,49 @@
           />
         </div>
 
-        <p class="apphub-start__section-label">{{ pinnedLabel }}</p>
-        <ul class="apphub-start__list">
-          <li v-for="app in filteredApps" :key="app.id">
-            <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
-              <span class="apphub-start__list-icon-wrap">
-                <span class="apphub-start__list-icon">{{ app.icon }}</span>
-              </span>
-              <span class="apphub-start__list-name">{{ app.name }}</span>
-            </button>
-          </li>
-          <li v-if="!filteredApps.length" class="apphub-start__empty">{{ emptyLabel }}</li>
-        </ul>
+        <div class="apphub-start__lists">
+          <template v-if="isSearching">
+            <p class="apphub-start__section-label">{{ searchResultsLabel }}</p>
+            <ul class="apphub-start__list">
+              <li v-for="app in searchResults" :key="app.id">
+                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+                  <span class="apphub-start__list-icon-wrap">
+                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                  </span>
+                  <span class="apphub-start__list-name">{{ app.name }}</span>
+                </button>
+              </li>
+              <li v-if="!searchResults.length" class="apphub-start__empty">{{ emptyLabel }}</li>
+            </ul>
+          </template>
 
-        <div class="apphub-start__footer">
-          <AppHubDesktopSettings
-            :snap-to-grid="snapToGrid"
-            :snap-label="snapLabel"
-            :theme="theme"
-            :theme-label="themeLabel"
-            :show-theme-toggle="showThemeToggle"
-            @update:snap-to-grid="emit('update:snapToGrid', $event)"
-            @update:theme="emit('update:theme', $event)"
-          />
+          <template v-else>
+            <p class="apphub-start__section-label">{{ favoritesLabel }}</p>
+            <ul class="apphub-start__list">
+              <li v-for="app in favoriteApps" :key="`fav-${app.id}`">
+                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+                  <span class="apphub-start__list-icon-wrap">
+                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                  </span>
+                  <span class="apphub-start__list-name">{{ app.name }}</span>
+                </button>
+              </li>
+              <li v-if="!favoriteApps.length" class="apphub-start__empty">{{ emptyLabel }}</li>
+            </ul>
+
+            <p class="apphub-start__section-label apphub-start__section-label--spaced">{{ recentLabel }}</p>
+            <ul class="apphub-start__list">
+              <li v-for="app in recentApps" :key="`recent-${app.id}`">
+                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+                  <span class="apphub-start__list-icon-wrap">
+                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                  </span>
+                  <span class="apphub-start__list-name">{{ app.name }}</span>
+                </button>
+              </li>
+              <li v-if="!recentApps.length" class="apphub-start__empty">{{ emptyLabel }}</li>
+            </ul>
+          </template>
         </div>
       </aside>
 
@@ -73,6 +93,20 @@
           <span class="apphub-start__hero-arrow" aria-hidden="true">›</span>
         </button>
 
+        <button
+          v-if="settingsApp"
+          type="button"
+          class="apphub-start__hero apphub-start__hero--settings"
+          @click="onOpen(settingsApp)"
+        >
+          <span class="apphub-start__hero-icon">{{ settingsApp.icon }}</span>
+          <span class="apphub-start__hero-body">
+            <strong class="apphub-start__hero-title">{{ settingsApp.name }}</strong>
+            <span class="apphub-start__hero-hint">{{ settingsApp.hint }}</span>
+          </span>
+          <span class="apphub-start__hero-arrow" aria-hidden="true">›</span>
+        </button>
+
         <p v-if="suggestedApps.length" class="apphub-start__section-label">{{ suggestedLabel }}</p>
         <div v-if="suggestedApps.length" class="apphub-start__grid">
           <button
@@ -86,7 +120,7 @@
             <span class="apphub-start__app-tile-name">{{ app.name }}</span>
           </button>
         </div>
-        <p v-else-if="!featuredApp" class="apphub-start__empty apphub-start__empty--right">
+        <p v-else-if="!featuredApp && !guideApp && !settingsApp" class="apphub-start__empty apphub-start__empty--right">
           {{ emptyLabel }}
         </p>
       </section>
@@ -96,23 +130,23 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import AppHubDesktopSettings from './AppHubDesktopSettings.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
-  apps: { type: Array, default: () => [] },
+  favoriteApps: { type: Array, default: () => [] },
+  recentApps: { type: Array, default: () => [] },
+  suggestedApps: { type: Array, default: () => [] },
+  catalogApps: { type: Array, default: () => [] },
+  visibleInStartIds: { type: Array, default: () => [] },
   searchPlaceholder: { type: String, default: '' },
-  pinnedLabel: { type: String, default: '' },
+  favoritesLabel: { type: String, default: '' },
+  recentLabel: { type: String, default: '' },
+  searchResultsLabel: { type: String, default: '' },
   suggestedLabel: { type: String, default: '' },
   emptyLabel: { type: String, default: '' },
-  snapToGrid: { type: Boolean, default: true },
-  snapLabel: { type: String, default: '' },
-  theme: { type: String, default: 'dark' },
-  themeLabel: { type: String, default: '' },
-  showThemeToggle: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['close', 'open-app', 'update:snapToGrid', 'update:theme'])
+const emit = defineEmits(['close', 'open-app'])
 
 const query = ref('')
 
@@ -120,22 +154,26 @@ watch(() => props.open, (isOpen) => {
   if (!isOpen) query.value = ''
 })
 
-const filteredApps = computed(() => {
+const visibleSet = computed(() => new Set(props.visibleInStartIds ?? []))
+
+const catalog = computed(() => props.catalogApps ?? [])
+
+const isSearching = computed(() => query.value.trim().length > 0)
+
+const searchResults = computed(() => {
   const q = query.value.trim().toLowerCase()
-  const list = props.apps ?? []
-  if (!q) return list
-  return list.filter((app) => app.name?.toLowerCase().includes(q))
+  if (!q) return []
+  return catalog.value.filter((app) => app.name?.toLowerCase().includes(q))
 })
 
-const featuredApp = computed(() =>
-  (props.apps ?? []).find((a) => a.builtin && a.module === 'app-store') ?? null,
-)
+function findVisibleBuiltin(module) {
+  const app = catalog.value.find((a) => a.builtin && a.module === module)
+  return app && visibleSet.value.has(app.id) ? app : null
+}
 
-const guideApp = computed(() =>
-  (props.apps ?? []).find((a) => a.builtin && a.module === 'guide') ?? null,
-)
-
-const suggestedApps = computed(() => (props.apps ?? []).filter((a) => !a.builtin).slice(0, 8))
+const featuredApp = computed(() => findVisibleBuiltin('app-store'))
+const guideApp = computed(() => findVisibleBuiltin('guide'))
+const settingsApp = computed(() => findVisibleBuiltin('settings'))
 
 function onOpen(app) {
   emit('open-app', app)

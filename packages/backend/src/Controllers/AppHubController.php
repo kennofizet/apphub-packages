@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Kennofizet\AppHub\Support\IntegrationDocs;
 use Kennofizet\AppHub\Support\LaunchTokenService;
+use Kennofizet\PackagesCore\Models\User;
 
 class AppHubController extends Controller
 {
@@ -16,11 +17,12 @@ class AppHubController extends Controller
     {
     }
 
-    public function bootstrap(): JsonResponse
+    public function bootstrap(Request $request): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => [
+                'user' => $this->resolveSessionUser($request),
                 'installed' => [],
                 'catalog' => [],
             ],
@@ -87,5 +89,29 @@ class AppHubController extends Controller
         } catch (\RuntimeException) {
             return response()->json(['success' => false, 'error' => 'Integration documentation unavailable'], 404);
         }
+    }
+
+    /** @return array{id: int, name: string}|null */
+    private function resolveSessionUser(Request $request): ?array
+    {
+        $userId = $request->attributes->get('knf_core_user_id');
+        if (empty($userId)) {
+            return null;
+        }
+
+        $user = User::byId((int) $userId)->first();
+        if ($user === null) {
+            return ['id' => (int) $userId, 'name' => (string) $userId];
+        }
+
+        $nameCol = $user->getNameColumn();
+        $name = ($nameCol && isset($user->{$nameCol}))
+            ? (string) $user->{$nameCol}
+            : (string) $user->id;
+
+        return [
+            'id' => (int) $user->id,
+            'name' => $name,
+        ];
     }
 }

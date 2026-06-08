@@ -105,10 +105,16 @@
         :x="iconContextMenu.x"
         :y="iconContextMenu.y"
         :can-rename="contextMenuCanRename"
+        :show-pin="contextMenuShowPin"
+        :show-favorite="contextMenuShowFavorite"
         :open-label="contextMenuOpenLabel"
+        :pin-label="contextMenuPinLabel"
+        :favorite-label="contextMenuFavoriteLabel"
         :rename-label="labels.icon_context_rename"
         :properties-label="labels.icon_context_properties"
         @open="onContextMenuOpen"
+        @pin="onContextMenuPin"
+        @favorite="onContextMenuFavorite"
         @rename="onContextMenuRename"
         @info="onContextMenuInfo"
       />
@@ -160,20 +166,19 @@
 
     <AppHubStartMenu
       :open="shell.state.startOpen"
-      :apps="startMenuApps"
+      :favorite-apps="startMenuFavoriteApps"
+      :recent-apps="startMenuRecentApps"
+      :suggested-apps="startMenuSuggestedApps"
+      :catalog-apps="startMenuCatalogApps"
+      :visible-in-start-ids="visibleInStartIds"
       :search-placeholder="labels.start_menu_search"
-      :pinned-label="labels.start_menu_pinned"
+      :favorites-label="labels.start_menu_favorites"
+      :recent-label="labels.start_menu_recent"
+      :search-results-label="labels.start_menu_search_results"
       :suggested-label="labels.start_menu_suggested"
       :empty-label="labels.start_menu_empty"
-      :snap-to-grid="desktopSettings.snapToGrid"
-      :snap-label="labels.settings_snap_grid"
-      :theme="activeTheme"
-      :theme-label="labels.settings_light_mode"
-      :show-theme-toggle="showThemeToggle"
       @close="shell.state.startOpen = false"
       @open-app="onStartMenuOpenApp"
-      @update:snap-to-grid="onSnapGridChange"
-      @update:theme="onThemeChange"
     />
 
     <footer class="apphub-desktop__taskbar" @click.stop>
@@ -195,6 +200,13 @@
           {{ win.icon }} {{ win.title }}
         </button>
       </div>
+
+      <AppHubTaskbarPins
+        :apps="taskbarPinnedApps"
+        :aria-label="labels.taskbar_pins"
+        @open-app="onOpenIcon"
+      />
+
       <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
     </footer>
   </div>
@@ -210,6 +222,7 @@ import { AppHubWindowFrame, useWindowManager } from '../../window-manager/index.
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
 import AppHubStartMenu from './AppHubStartMenu.vue'
+import AppHubTaskbarPins from './AppHubTaskbarPins.vue'
 import AppHubDuplicateAppDialog from './AppHubDuplicateAppDialog.vue'
 import AppHubDesktopIconContextMenu from './AppHubDesktopIconContextMenu.vue'
 import AppHubDesktopIconInfoDialog from './AppHubDesktopIconInfoDialog.vue'
@@ -227,7 +240,34 @@ import {
   saveDesktopSession,
 } from '../utils/desktopSession.js'
 import { clampPointToLayer, nextIconGridSlot, snapPoint } from '../utils/desktopGrid.js'
+import { DESKTOP_HUB_SETTINGS_KEY } from '../composables/useDesktopHubSettings.js'
 import { applyDesktopSettings, loadDesktopSettings, saveDesktopSettings } from '../utils/desktopSettings.js'
+import { loadHubKeyboardSettings, matchSnapShortcut, saveHubKeyboardSettings } from '../utils/hubKeyboardSettings.js'
+import {
+  isAppPinned,
+  isAppVisibleInStart,
+  loadStartMenuPins,
+  pinApp,
+  saveStartMenuPins,
+  setPinVisible,
+  unpinApp,
+} from '../utils/startMenuPins.js'
+import {
+  favoriteApp,
+  isAppFavorite,
+  resolveStartMenuFavoriteApps,
+  resolveStartMenuRecentApps,
+  loadStartMenuFavorites,
+  saveStartMenuFavorites,
+  setFavoriteVisible,
+  unfavoriteApp,
+} from '../utils/startMenuFavorites.js'
+import {
+  loadRecentOpenLog,
+  recordRecentApp,
+  resolveRecentApps,
+  resolveSuggestedApps,
+} from '../utils/recentApps.js'
 import { nextDuplicateName } from '../utils/duplicateAppUtils.js'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
@@ -268,6 +308,10 @@ const iconsLayerRef = ref(null)
 provide(DESKTOP_HOST_KEY, workAreaRef)
 
 const desktopSettings = reactive(loadDesktopSettings())
+const keyboardSettings = reactive(loadHubKeyboardSettings())
+const startMenuPins = reactive(loadStartMenuPins())
+const startMenuFavorites = reactive(loadStartMenuFavorites())
+const recentOpenLog = ref(loadRecentOpenLog())
 
 const builtinPlacements = reactive({})
 
@@ -293,6 +337,9 @@ const labels = computed(() => ({
   guide_app_name: t('guide_app_name', lang.value),
   guide_app_hint: t('guide_app_hint', lang.value),
   guide_app_title: t('guide_app_title', lang.value),
+  hub_settings_app_name: t('hub_settings_app_name', lang.value),
+  hub_settings_app_hint: t('hub_settings_app_hint', lang.value),
+  hub_settings_app_title: t('hub_settings_app_title', lang.value),
   app_store_title: t('app_store_title', lang.value),
   drop_hint: t('drop_hint', lang.value),
   drop_installing: t('drop_installing', lang.value),
@@ -319,12 +366,19 @@ const labels = computed(() => ({
   group_info_apps: t('group_info_apps', lang.value),
   group_info_type_group: t('group_info_type_group', lang.value),
   start_menu_search: t('start_menu_search', lang.value),
-  start_menu_pinned: t('start_menu_pinned', lang.value),
+  start_menu_recent: t('start_menu_recent', lang.value),
+  start_menu_search_results: t('start_menu_search_results', lang.value),
   start_menu_suggested: t('start_menu_suggested', lang.value),
   start_menu_empty: t('start_menu_empty', lang.value),
+  taskbar_pins: t('taskbar_pins', lang.value),
   icon_context_open: t('icon_context_open', lang.value),
   icon_context_rename: t('icon_context_rename', lang.value),
   icon_context_properties: t('icon_context_properties', lang.value),
+  icon_context_pin: t('icon_context_pin', lang.value),
+  icon_context_unpin: t('icon_context_unpin', lang.value),
+  icon_context_favorite: t('icon_context_favorite', lang.value),
+  icon_context_unfavorite: t('icon_context_unfavorite', lang.value),
+  start_menu_favorites: t('start_menu_favorites', lang.value),
   icon_info_title: t('icon_info_title', lang.value),
   icon_info_name: t('icon_info_name', lang.value),
   icon_info_slug: t('icon_info_slug', lang.value),
@@ -374,6 +428,26 @@ const contextMenuOpenLabel = computed(() =>
 const contextMenuCanRename = computed(() => {
   if (iconContextMenu.group) return true
   return !iconContextMenu.app?.builtin
+})
+
+const contextMenuShowPin = computed(() => !iconContextMenu.group && !!iconContextMenu.app?.id)
+
+const contextMenuPinLabel = computed(() => {
+  const app = iconContextMenu.app
+  if (!app?.id) return labels.value.icon_context_pin
+  return isAppPinned(startMenuPins, app.id)
+    ? labels.value.icon_context_unpin
+    : labels.value.icon_context_pin
+})
+
+const contextMenuShowFavorite = computed(() => !iconContextMenu.group && !!iconContextMenu.app?.id)
+
+const contextMenuFavoriteLabel = computed(() => {
+  const app = iconContextMenu.app
+  if (!app?.id) return labels.value.icon_context_favorite
+  return isAppFavorite(startMenuFavorites, app.id)
+    ? labels.value.icon_context_unfavorite
+    : labels.value.icon_context_favorite
 })
 
 const iconInfoDialogTitle = computed(() =>
@@ -451,12 +525,39 @@ const shell = createDesktopShell({
   language: lang,
   getLabels: () => labels.value,
   handleInstall: handleInstallUserApp,
+  onAppOpened: (appId) => touchRecentApp(appId),
 })
 
 const iconList = shell.iconList
 
 const builtinIcons = computed(() => iconList.filter((a) => a?.builtin))
-const startMenuApps = computed(() => iconList.filter((a) => a?.id))
+const startMenuCatalogApps = computed(() => iconList.filter((a) => a?.id))
+
+const startMenuFavoriteApps = computed(() =>
+  resolveStartMenuFavoriteApps(startMenuCatalogApps.value, startMenuFavorites),
+)
+
+const startMenuRecentApps = computed(() =>
+  resolveStartMenuRecentApps(
+    startMenuCatalogApps.value,
+    startMenuFavorites,
+    recentOpenLog.value,
+  ),
+)
+
+const startMenuSuggestedApps = computed(() =>
+  resolveSuggestedApps(startMenuCatalogApps.value, recentOpenLog.value),
+)
+
+const taskbarPinnedApps = computed(() =>
+  startMenuCatalogApps.value.filter((a) => isAppVisibleInStart(startMenuPins, a.id)),
+)
+
+const visibleInStartIds = computed(() =>
+  startMenuCatalogApps.value
+    .filter((a) => isAppVisibleInStart(startMenuPins, a.id))
+    .map((a) => a.id),
+)
 
 function getBuiltinPlacedApp(app) {
   const pos = builtinPlacements[app.id]
@@ -743,6 +844,68 @@ function onThemeChange(theme) {
   schedulePersist()
 }
 
+function persistStartMenuPins() {
+  saveStartMenuPins(startMenuPins)
+}
+
+function persistStartMenuFavorites() {
+  saveStartMenuFavorites(startMenuFavorites)
+}
+
+function toggleAppPin(appId) {
+  if (!appId) return
+  if (isAppPinned(startMenuPins, appId)) {
+    unpinApp(startMenuPins, appId)
+  } else {
+    pinApp(startMenuPins, appId)
+  }
+  persistStartMenuPins()
+}
+
+function toggleAppFavorite(appId) {
+  if (!appId) return
+  if (isAppFavorite(startMenuFavorites, appId)) {
+    unfavoriteApp(startMenuFavorites, appId)
+  } else {
+    favoriteApp(startMenuFavorites, appId)
+  }
+  persistStartMenuFavorites()
+}
+
+function setAppPinVisible(appId, visible) {
+  setPinVisible(startMenuPins, appId, visible)
+  persistStartMenuPins()
+}
+
+function setAppFavoriteVisible(appId, visible) {
+  setFavoriteVisible(startMenuFavorites, appId, visible)
+  persistStartMenuFavorites()
+}
+
+const hubSettings = reactive({
+  desktopSettings,
+  keyboardSettings,
+  startMenuPins,
+  startMenuFavorites,
+  recentOpenLog,
+  desktopApps: startMenuCatalogApps,
+  activeTheme,
+  showThemeToggle,
+  setSnapToGrid: onSnapGridChange,
+  setTheme: onThemeChange,
+  saveKeyboardSettings: () => saveHubKeyboardSettings(keyboardSettings),
+  getDesktopApps: () => startMenuCatalogApps.value,
+  getRecentApps: () => resolveRecentApps(startMenuCatalogApps.value, recentOpenLog.value),
+  isAppPinned: (appId) => isAppPinned(startMenuPins, appId),
+  isAppFavorite: (appId) => isAppFavorite(startMenuFavorites, appId),
+  setPinVisible: setAppPinVisible,
+  setFavoriteVisible: setAppFavoriteVisible,
+  toggleAppPin,
+  toggleAppFavorite,
+})
+
+provide(DESKTOP_HUB_SETTINGS_KEY, hubSettings)
+
 function resolveDropPosition(x, y) {
   const layer = iconsLayerRef.value
   if (!layer) return snapPoint(x, y, desktopSettings.snapToGrid)
@@ -764,6 +927,22 @@ function measureWorkArea() {
   if (!work) return
   wm.setWorkArea?.({ width: work.clientWidth, height: work.clientHeight })
   wm.relayoutWindows?.()
+}
+
+function isTypingTarget(target) {
+  if (!target || !(target instanceof Element)) return false
+  return !!target.closest('input, textarea, select, [contenteditable="true"]')
+}
+
+function onDocumentKeyDown(event) {
+  const direction = matchSnapShortcut(event, keyboardSettings)
+  if (!direction) return
+  if (isTypingTarget(event.target)) return
+  if (!wm.state.activeId) return
+
+  event.preventDefault()
+  wm.snapActiveWindow?.(wm.state.activeId, direction)
+  schedulePersist()
 }
 
 function pointerInIconsLayer(event) {
@@ -803,6 +982,16 @@ function methodLabel(job) {
   return job.method === 'appstore' ? labels.value.drop_method_appstore : labels.value.drop_method_local
 }
 
+function touchRecentApp(appId) {
+  if (!appId) return
+  recentOpenLog.value = recordRecentApp(appId, recentOpenLog.value)
+}
+
+function resolveAppIdFromWindow(win) {
+  if (!win?.id || typeof win.id !== 'string') return null
+  return win.id.startsWith('win-') ? win.id.slice(4) : null
+}
+
 function onOpenIcon(app) {
   measureWorkArea()
   shell.openApp(app, wm)
@@ -831,7 +1020,7 @@ function onIconContextMenu(app, event) {
   if (!layer) return
   const rect = layer.getBoundingClientRect()
   const menuW = 220
-  const menuH = app.builtin ? 88 : 132
+  const menuH = app.builtin ? 176 : 220
   let x = event.clientX - rect.left
   let y = event.clientY - rect.top
   x = Math.max(4, Math.min(x, rect.width - menuW - 4))
@@ -853,6 +1042,20 @@ function onContextMenuOpen() {
     return
   }
   if (app) onOpenIcon(app)
+}
+
+function onContextMenuPin() {
+  const app = iconContextMenu.app
+  closeIconContextMenu()
+  if (!app?.id) return
+  toggleAppPin(app.id)
+}
+
+function onContextMenuFavorite() {
+  const app = iconContextMenu.app
+  closeIconContextMenu()
+  if (!app?.id) return
+  toggleAppFavorite(app.id)
 }
 
 function onContextMenuRename() {
@@ -974,15 +1177,25 @@ function onStartMenuOpenApp(app) {
 
 function onOpenAppStore() {
   shell.state.startOpen = false
-  measureWorkArea()
-  shell.openBuiltinAppStore(wm)
-  schedulePersist()
+  const app = iconList.find((a) => a.builtin && a.module === 'app-store')
+  if (app) onOpenIcon(app)
+  else {
+    measureWorkArea()
+    shell.openBuiltinAppStore(wm)
+    schedulePersist()
+  }
 }
 
 function onTaskClick(win) {
-  if (win.minimized) wm.focusWindow(win.id)
-  else if (wm.state.activeId === win.id) wm.minimizeWindow(win.id)
-  else wm.focusWindow(win.id)
+  if (win.minimized) {
+    touchRecentApp(resolveAppIdFromWindow(win))
+    wm.focusWindow(win.id)
+  } else if (wm.state.activeId === win.id) {
+    wm.minimizeWindow(win.id)
+  } else {
+    touchRecentApp(resolveAppIdFromWindow(win))
+    wm.focusWindow(win.id)
+  }
   schedulePersist()
 }
 
@@ -1007,6 +1220,7 @@ onMounted(async () => {
   window.addEventListener('dragend', onWindowDragEnd)
   document.addEventListener('dragover', onDocumentDragOver)
   document.addEventListener('mousedown', onDocumentPointerDown)
+  document.addEventListener('keydown', onDocumentKeyDown)
 
   await nextTick()
   measureWorkArea()
@@ -1034,8 +1248,12 @@ onMounted(async () => {
   assignDefaultIconPositions()
 
   if (props.openAppStoreOnMount) {
-    shell.openBuiltinAppStore(wm)
-    schedulePersist()
+    const app = iconList.find((a) => a.builtin && a.module === 'app-store')
+    if (app) onOpenIcon(app)
+    else {
+      shell.openBuiltinAppStore(wm)
+      schedulePersist()
+    }
   }
 })
 
@@ -1049,6 +1267,7 @@ onUnmounted(() => {
   window.removeEventListener('dragend', onWindowDragEnd)
   document.removeEventListener('dragover', onDocumentDragOver)
   document.removeEventListener('mousedown', onDocumentPointerDown)
+  document.removeEventListener('keydown', onDocumentKeyDown)
   persistSession()
 })
 </script>

@@ -2,6 +2,7 @@ import { computed, reactive, watchEffect } from 'vue'
 import { AppHubAppStoreApp } from '../../app-store/index.js'
 import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps } from '../data/builtinApps.js'
 import AppHubGuideApp from '../components/AppHubGuideApp.vue'
+import AppHubSettingsApp from '../components/AppHubSettingsApp.vue'
 import AppHubPlaceholderApp from '../components/AppHubPlaceholderApp.vue'
 import { findAppByName, nextDuplicateName, nextDuplicateSlug } from '../utils/duplicateAppUtils.js'
 
@@ -38,6 +39,7 @@ export function createDesktopShell(options = {}) {
   function resolveWindowComponent(app) {
     if (app.module === 'app-store') return AppHubAppStoreApp
     if (app.module === 'guide') return AppHubGuideApp
+    if (app.module === 'settings') return AppHubSettingsApp
     return AppHubPlaceholderApp
   }
 
@@ -76,6 +78,7 @@ export function createDesktopShell(options = {}) {
   }
 
   function openApp(app, windowManager, sessionState = null) {
+    if (app?.id && !sessionState) options.onAppOpened?.(app.id)
     windowManager.openWindow(buildWindowDefinition(app), sessionState)
   }
 

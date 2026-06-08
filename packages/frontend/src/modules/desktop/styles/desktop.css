@@ -154,6 +154,7 @@
   border-top: 1px solid var(--ah-border);
   backdrop-filter: blur(20px) saturate(1.2);
   pointer-events: auto;
+  overflow: hidden;
 }
 
 /* Windows-style Start button */
@@ -218,10 +219,28 @@
 
 .apphub-start__left {
   flex: 0 0 280px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: rgba(25, 25, 25, 0.55);
   border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.apphub-start__lists {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.apphub-start__lists::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apphub-start__lists::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
 }
 
 .apphub-start__right {
@@ -283,23 +302,15 @@
   color: rgba(255, 255, 255, 0.38);
 }
 
+.apphub-start__section-label--spaced {
+  margin-top: 14px;
+}
+
 .apphub-start__list {
-  flex: 1;
+  flex: 0 0 auto;
   list-style: none;
   margin: 0;
-  padding: 0 8px 8px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-}
-
-.apphub-start__list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.apphub-start__list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 3px;
+  padding: 0 8px 4px;
 }
 
 .apphub-start__list-item {
@@ -535,10 +546,53 @@
 
 .apphub-desktop__tasks {
   flex: 1;
+  min-width: 0;
   display: flex;
   gap: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 0 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.apphub-desktop__tasks::-webkit-scrollbar {
+  display: none;
+}
+
+.apphub-taskbar-pins {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: min(240px, 28vw);
+  padding: 0 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.apphub-taskbar-pins__btn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #f1f5f9;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease;
+}
+
+.apphub-taskbar-pins__btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apphub-taskbar-pins__icon {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .apphub-desktop__task {
@@ -675,32 +729,170 @@
 
 .apphub-win__body {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: #1e293b;
+}
+
+.apphub-win__body > * {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.apphub-win--resizable .apphub-win__resize {
+  position: absolute;
+  z-index: 3;
+}
+
+.apphub-win__resize--n,
+.apphub-win__resize--s {
+  left: 10px;
+  right: 10px;
+  height: 6px;
+}
+
+.apphub-win__resize--e,
+.apphub-win__resize--w {
+  top: 10px;
+  bottom: 10px;
+  width: 6px;
+}
+
+.apphub-win__resize--n {
+  top: 0;
+  cursor: n-resize;
+}
+
+.apphub-win__resize--s {
+  bottom: 0;
+  cursor: s-resize;
+}
+
+.apphub-win__resize--e {
+  right: 0;
+  cursor: e-resize;
+}
+
+.apphub-win__resize--w {
+  left: 0;
+  cursor: w-resize;
+}
+
+.apphub-win__resize--ne,
+.apphub-win__resize--nw,
+.apphub-win__resize--se,
+.apphub-win__resize--sw {
+  width: 10px;
+  height: 10px;
+}
+
+.apphub-win__resize--ne {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.apphub-win__resize--nw {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.apphub-win__resize--se {
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+}
+
+.apphub-win__resize--sw {
+  left: 0;
+  bottom: 0;
+  cursor: sw-resize;
 }
 
 /* App Store */
 .apphub-store {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   color: #e2e8f0;
-  min-height: 100%;
+  background: #1e293b;
 }
 
 .apphub-store__header {
+  flex: 0 0 auto;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #334155;
 }
 
 .apphub-store__title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apphub-store__toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.apphub-store__settings-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.apphub-store__settings-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.apphub-store__settings-btn--active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.apphub-store__settings-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.apphub-store__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.apphub-store__panel {
+  padding: 16px;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .apphub-store__search {
-  flex: 1;
+  width: 100%;
+  margin-bottom: 12px;
   min-width: 160px;
   padding: 8px 12px;
   border-radius: 6px;
@@ -714,7 +906,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: 12px;
 }
 
@@ -759,10 +951,181 @@
   padding: 32px;
 }
 
+/* App Store settings — full content area */
+.apphub-store-settings {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.apphub-store-settings__section {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.apphub-store-settings__section:last-child {
+  margin-bottom: 0;
+}
+
+.apphub-store-settings__heading {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.apphub-store-settings__hint {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.apphub-store-settings__dl {
+  margin: 0;
+}
+
+.apphub-store-settings__row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #334155;
+  font-size: 0.875rem;
+}
+
+.apphub-store-settings__row:last-child {
+  border-bottom: none;
+}
+
+.apphub-store-settings__row dt {
+  flex: 0 0 110px;
+  color: #94a3b8;
+}
+
+.apphub-store-settings__row dd {
+  margin: 0;
+  flex: 1;
+  word-break: break-word;
+}
+
+.apphub-store-settings__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.apphub-store-settings__badge--ok {
+  background: #14532d;
+  color: #86efac;
+}
+
+.apphub-store-settings__badge--warn {
+  background: #422006;
+  color: #fcd34d;
+}
+
+.apphub-store-settings__field {
+  margin-bottom: 12px;
+}
+
+.apphub-store-settings__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.apphub-store-settings__select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.apphub-store-settings__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.apphub-store-settings__zone-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apphub-store-settings__zone-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  font-size: 0.875rem;
+}
+
+.apphub-store-settings__zone-item--active {
+  border-color: #3b82f6;
+  background: #172554;
+}
+
+.apphub-store-settings__zone-id {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.apphub-store-settings__zone-chip {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #172554;
+  border: 1px solid #3b82f6;
+  font-size: 0.875rem;
+}
+
+.apphub-store-settings__msg {
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.apphub-store-settings__meta {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.apphub-store-settings__refresh {
+  margin-top: 12px;
+  padding: 6px 14px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: #334155;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
 .apphub-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 0;
   padding: 24px;
   text-align: center;
   color: #e2e8f0;
+  box-sizing: border-box;
 }
 
 .apphub-placeholder__icon {

@@ -4,16 +4,20 @@
     :class="{
       'apphub-win--active': active,
       'apphub-win--fullscreen': window.display === 'fullscreen',
+      'apphub-win--resizable': window.display !== 'fullscreen',
     }"
     :style="frameStyle"
     @mousedown="onFocus"
   >
-    <header class="apphub-win__titlebar" @mousedown.stop="onDragStart">
+    <header
+      class="apphub-win__titlebar"
+      @mousedown.stop="onDragStart"
+      @dblclick.stop="onTitlebarDblClick"
+    >
       <span class="apphub-win__icon">{{ window.icon }}</span>
       <span class="apphub-win__title">{{ window.title }}</span>
-      <div class="apphub-win__controls" @mousedown.stop>
+      <div class="apphub-win__controls" @mousedown.stop @dblclick.stop>
         <button
-          v-if="window.layoutKey"
           type="button"
           class="apphub-win__btn"
           :title="window.display === 'fullscreen' ? labels.window_restore : labels.window_fullscreen"
@@ -29,6 +33,16 @@
     <section class="apphub-win__body">
       <component :is="window.component" v-bind="window.props" />
     </section>
+
+    <template v-if="window.display !== 'fullscreen'">
+      <div
+        v-for="edge in resizeEdges"
+        :key="edge"
+        class="apphub-win__resize"
+        :class="`apphub-win__resize--${edge}`"
+        @mousedown.stop="onResizeStart(edge, $event)"
+      />
+    </template>
   </div>
 </template>
 
@@ -37,9 +51,10 @@ import { computed, inject, onBeforeUnmount, ref } from 'vue'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { t } from '../../../i18n/index.js'
 import { useWindowManager } from '../composables/useWindowManager.js'
-import { clampWindowToWorkArea } from '../utils/windowLayout.js'
+import { applyWindowResize, clampWindowToWorkArea } from '../utils/windowLayout.js'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
+const resizeEdges = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
 
 const props = defineProps({
   window: { type: Object, required: true },
@@ -60,6 +75,7 @@ const labels = computed(() => ({
 
 const wm = useWindowManager()
 const drag = ref(null)
+const resize = ref(null)
 
 const frameStyle = computed(() => ({
   width: `${props.window.width}px`,
@@ -99,6 +115,13 @@ function onToggleDisplay() {
   notifySession()
 }
 
+function onTitlebarDblClick(event) {
+  if (event.target.closest('button, .apphub-win__controls')) return
+  cleanupPointerHandlers()
+  wm?.toggleWindowDisplay(props.window.id)
+  notifySession()
+}
+
 function onDragStart(event) {
   if (!wm) return
   if (event.target.closest('button, .apphub-win__controls')) return
@@ -106,7 +129,7 @@ function onDragStart(event) {
   const win = wm.state.windows.find((w) => w.id === props.window.id)
   if (!win) return
 
-  if (win.display === 'fullscreen' && win.layoutKey) {
+  if (win.display === 'fullscreen') {
     const pointer = getPointerInWorkArea(event.clientX, event.clientY)
     wm.restoreWindowFromFullscreen(props.window.id, {
       pointerX: pointer.x,
@@ -144,12 +167,58 @@ function onDragEnd() {
   window.removeEventListener('mouseup', onDragEnd)
   if (drag.value) {
     const win = wm.state.windows.find((w) => w.id === drag.value.id)
-    if (win) clampWindowToWorkArea(win)
+    if (win) {
+      clampWindowToWorkArea(win)
+      wm?.clearSnap(props.window.id)
+    }
     wm?.saveWindowLayoutState(props.window.id)
     notifySession()
   }
   drag.value = null
 }
 
-onBeforeUnmount(onDragEnd)
+function onResizeStart(edge, event) {
+  if (!wm || event.button !== 0) return
+  const win = wm.state.windows.find((w) => w.id === props.window.id)
+  if (!win || win.display === 'fullscreen') return
+
+  wm.focusWindow(props.window.id)
+  wm.clearSnap(props.window.id)
+  resize.value = {
+    id: props.window.id,
+    edge,
+    startX: event.clientX,
+    startY: event.clientY,
+  }
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', onResizeEnd)
+}
+
+function onResizeMove(event) {
+  if (!resize.value) return
+  const win = wm.state.windows.find((w) => w.id === resize.value.id)
+  if (!win) return
+  const dx = event.clientX - resize.value.startX
+  const dy = event.clientY - resize.value.startY
+  applyWindowResize(win, resize.value.edge, dx, dy)
+  resize.value.startX = event.clientX
+  resize.value.startY = event.clientY
+}
+
+function onResizeEnd() {
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', onResizeEnd)
+  if (resize.value) {
+    wm?.saveWindowLayoutState(props.window.id)
+    notifySession()
+  }
+  resize.value = null
+}
+
+function cleanupPointerHandlers() {
+  onDragEnd()
+  onResizeEnd()
+}
+
+onBeforeUnmount(cleanupPointerHandlers)
 </script>

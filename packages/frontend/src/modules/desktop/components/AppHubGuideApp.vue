@@ -183,7 +183,7 @@ const devSections = computed(() => [
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100%;
+  min-height: 0;
   color: var(--ah-text-secondary, #cbd5e1);
   background: var(--ah-surface, #1e293b);
 }
