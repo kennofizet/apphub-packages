@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace Kennofizet\AppHub\Controllers;
+namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Kennofizet\AppHub\Support\LaunchTokenService;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 
 class BridgeController extends Controller
 {

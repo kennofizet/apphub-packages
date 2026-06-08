@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Kennofizet\AppHub\Support;
+namespace Kennofizet\AppHub\Modules\Bridge\Support;
 
 final class IntegrationDocs
 {

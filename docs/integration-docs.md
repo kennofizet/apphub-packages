@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`packages/backend/src/Resources/integration-docs.json` — single source of truth for humans and AI tools.
+`packages/backend/src/Modules/Bridge/Resources/integration-docs.json` — single source of truth for humans and AI tools.
 
 | Audience | Who | What they read |
 |----------|-----|----------------|
@@ -52,7 +52,7 @@ Publishers only see granted bridge responses — not how enforcement works.
 |---------|----------|
 | HTTP (publisher) | `GET {api_prefix}/apphub/integration-docs` — filtered subset |
 | HTTP (host dev) | `GET {api_prefix}/apphub/integration-docs/internal` — full JSON |
-| JSON source | `packages/backend/src/Resources/integration-docs.json` |
+| JSON source | `packages/backend/src/Modules/Bridge/Resources/integration-docs.json` |
 | Publisher (human) | Guide → **App bridge** |
 | Host security | `audiences.host_dev.backend_security` (internal endpoint only) |
 

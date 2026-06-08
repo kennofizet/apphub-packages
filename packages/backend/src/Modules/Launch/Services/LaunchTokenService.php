@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Kennofizet\AppHub\Support;
+namespace Kennofizet\AppHub\Modules\Launch\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;

@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Kennofizet\AppHub\Http\Middleware;
+namespace Kennofizet\AppHub\Modules\Bridge\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Kennofizet\AppHub\Support\LaunchTokenService;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ValidateLaunchToken
