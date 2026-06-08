@@ -1,0 +1,26 @@
+{
+    "name": "kennofizet/apphub-backend",
+    "description": "App Hub backend — minimal bootstrap until full API is restored.",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1.0",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0",
+        "kennofizet/packages-core-backend": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kennofizet\\AppHub\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kennofizet\\AppHub\\AppHubServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

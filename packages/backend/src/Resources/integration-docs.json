@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0.0",
+  "package": {
+    "name": "apphub",
+    "version": "0.1.0",
+    "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
+  },
+  "meta": {
+    "ide_agnostic": true,
+    "doc_split": {
+      "publisher": "Usage only — bridge API, permissions, launch. No package, production, or security architecture.",
+      "host_dev": "Host embedding + backend endpoint security (internal).",
+      "agent_internal": "When writing publisher docs, never mention production, host_dev, or package install."
+    }
+  },
+  "audiences": {
+    "end_user": {
+      "summary": "Uses the App Hub desktop, App Store, and installed apps.",
+      "human_doc": "App Hub Guide → For users"
+    },
+    "publisher": {
+      "summary": "Build an app that runs in App Hub and uses the bridge to request permissions, read user info, and send desktop messages.",
+      "human_doc": "App Hub Guide → App bridge tab",
+      "bridge": {
+        "overview": "When a user opens your app from the desktop, App Hub loads your runtime in a window and provides AppHubBridge for permissions and desktop features.",
+        "connection_flow": [
+          "User opens your app (desktop icon or App Store).",
+          "App Hub resolves launch: GET /apps/{slug}/launch → runtime_url + launch_context.",
+          "Your app loads in a Hub window; AppHubBridge becomes available (or postMessage channel apphub:bridge).",
+          "Request the permissions you need, then call bridge methods."
+        ],
+        "runtime_context": {
+          "fields": ["app_slug", "session_id", "user_id", "scopes_granted", "launch_token"],
+          "launch_token": "Short-lived token for optional bridge HTTP calls from your app server."
+        },
+        "discovery": {
+          "in_window": "window.AppHubBridge",
+          "cross_origin": "postMessage on channel apphub:bridge",
+          "handshake_event": "apphub:bridge:ready"
+        },
+        "permissions": [
+          {
+            "scope": "user.read",
+            "description": "User id and display name.",
+            "user_prompt": "Allow {app} to see your name?"
+          },
+          {
+            "scope": "user.profile",
+            "description": "Extra profile fields (avatar, locale, etc.) when the user agrees.",
+            "user_prompt": "Allow {app} to read your profile?"
+          },
+          {
+            "scope": "desktop.notify",
+            "description": "Show a notification on the desktop or taskbar.",
+            "user_prompt": "Allow {app} to send notifications?"
+          },
+          {
+            "scope": "desktop.message",
+            "description": "Show a banner or message on the desktop work area.",
+            "user_prompt": "Allow {app} to show messages on your desktop?"
+          },
+          {
+            "scope": "desktop.badge",
+            "description": "Show a count or dot on your app icon in the taskbar.",
+            "user_prompt": "Allow {app} to update its taskbar badge?"
+          }
+        ],
+        "javascript_api": {
+          "requestPermission": {
+            "signature": "requestPermission(scope: string): Promise<boolean>",
+            "description": "Ask the user to allow a scope. Returns true if granted."
+          },
+          "getUserInfo": {
+            "signature": "getUserInfo(): Promise<{ id, name, locale?, avatar? }>",
+            "requires": ["user.read"],
+            "description": "Basic user info after user.read is granted."
+          },
+          "getProfile": {
+            "signature": "getProfile(): Promise<Record<string, unknown>>",
+            "requires": ["user.profile"],
+            "description": "Extended profile after user.profile is granted."
+          },
+          "sendDesktopMessage": {
+            "signature": "sendDesktopMessage(payload: DesktopMessage): Promise<void>",
+            "requires": ["desktop.message"],
+            "description": "Show a banner or overlay on the desktop.",
+            "payload_shape": {
+              "type": "toast | banner | host-hint",
+              "title": "string",
+              "body": "string",
+              "duration_ms": "number optional",
+              "priority": "normal | high optional"
+            }
+          },
+          "notify": {
+            "signature": "notify({ title, body, icon? }): Promise<void>",
+            "requires": ["desktop.notify"],
+            "description": "Desktop notification shortcut."
+          },
+          "setTaskbarBadge": {
+            "signature": "setTaskbarBadge(count: number | null): Promise<void>",
+            "requires": ["desktop.badge"],
+            "description": "Set or clear taskbar badge on your app button."
+          }
+        },
+        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nawait bridge.requestPermission('user.read')\nconst user = await bridge.getUserInfo()\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({\n  type: 'banner',\n  title: 'Hello',\n  body: `Welcome ${user.name}`,\n  duration_ms: 5000\n})",
+        "http_companion": {
+          "note": "Optional server-side calls with launch_token + app slug header.",
+          "routes": [
+            "GET bridge/user — scoped user snapshot",
+            "POST bridge/desktop/message — same as sendDesktopMessage"
+          ]
+        }
+      },
+      "deploy": {
+        "local": "Drop a .zip or manifest on the desktop to test (private install).",
+        "public": "Submit to App Store catalog so all users can install (when listing API is available)."
+      },
+      "steps": [
+        "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
+        "Listen for apphub:bridge:ready in your app.",
+        "Call requestPermission for each scope you need.",
+        "Use getUserInfo, sendDesktopMessage, notify, setTaskbarBadge as granted.",
+        "Handle denied permissions gracefully in your UI."
+      ]
+    },
+    "agent": {
+      "instructions": "Publisher docs = usage only (bridge). Security and package details are host_dev / backend_security — never put those in publisher-facing text.",
+      "publisher_must_use": ["audiences.publisher.bridge"],
+      "publisher_doc_forbidden_phrases": [
+        "production host",
+        "host_dev",
+        "installAppHubModule",
+        "apphub package",
+        "USER-tier",
+        "sandbox security model",
+        "dangerous for host"
+      ],
+      "internal_only": ["backend_security", "audiences.host_dev"]
+    },
+    "host_dev": {
+      "summary": "Host team embeds App Hub in the product. Owns backend endpoint security.",
+      "human_doc": "packages/frontend/README.md, apphub-packages/README.md, docs/integration-docs.md#backend-security",
+      "install": {
+        "backend": "composer require kennofizet/apphub-backend",
+        "frontend": "npm install @kennofizet/apphub-frontend && installAppHubModule(app, options)"
+      },
+      "backend_security": {
+        "principle": "Publisher apps are untrusted USER-tier. Endpoint layer enforces isolation — publishers never see this section.",
+        "publisher_isolation": "Apps run in Hub windows. Only bridge routes and scoped launch_token. No host DB, env, or admin APIs.",
+        "endpoint_rules": [
+          "GET integration-docs/internal requires X-AppHub-Host-Access matching APPHUB_HOST_ACCESS_SECRET (not packages-core zone/server manager).",
+          "POST bridge/scopes requires launch_token user_id to match knf_core_user_id from X-Knf-Token.",
+          "Validate launch_token per app slug and session; user_id from auth, not client headers.",
+          "Filter bridge/user fields by granted scopes and packages-core zones.",
+          "Reject bridge calls without matching scope consent record."
+        ],
+        "middleware": ["api", "knf.core.token", "knf.core.validator"],
+        "traits_host_only": [
+          "InteractsWithAppHub",
+          "PublishesHubApp",
+          "PublishesHubAppViaPort",
+          "ManagesHubAppAsDev",
+          "HasHubAppCatalog"
+        ]
+      }
+    }
+  },
+  "http": {
+    "base_path": "api/knf/apphub",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "apps/{slug}/launch",
+        "auth": "token",
+        "audience": ["publisher"],
+        "description": "Launch context + runtime_url for your app window."
+      },
+      {
+        "method": "GET",
+        "path": "integration-docs",
+        "auth": "token",
+        "audience": ["publisher"],
+        "description": "Publisher-safe integration contract (audiences.publisher + bridge routes only)."
+      },
+      {
+        "method": "GET",
+        "path": "integration-docs/internal",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "Full contract — host integrator only (X-AppHub-Host-Access + APPHUB_HOST_ACCESS_SECRET)."
+      },
+      {
+        "method": "GET",
+        "path": "apps",
+        "auth": "token",
+        "audience": ["publisher", "end_user"],
+        "description": "App Store catalog."
+      },
+      {
+        "method": "GET",
+        "path": "bootstrap",
+        "auth": "token",
+        "audience": ["host_dev", "end_user"],
+        "description": "Hub session bootstrap."
+      },
+      {
+        "method": "POST",
+        "path": "bridge/scopes",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "Hub shell records user consent: { launch_token, scope }."
+      },
+      {
+        "method": "GET",
+        "path": "bridge/user",
+        "auth": "launch_token",
+        "audience": ["publisher"],
+        "description": "Scoped user info. Headers: X-AppHub-Launch-Token, X-AppHub-App-Slug."
+      },
+      {
+        "method": "POST",
+        "path": "bridge/desktop/message",
+        "auth": "launch_token",
+        "audience": ["publisher"],
+        "description": "Desktop message. Requires desktop.message scope."
+      }
+    ]
+  }
+}
