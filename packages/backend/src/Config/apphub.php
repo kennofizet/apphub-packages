@@ -3,7 +3,9 @@
 return [
     'api_prefix' => env('APPHUB_API_PREFIX', 'apphub'),
     'catalog_per_page' => (int) env('APPHUB_CATALOG_PER_PAGE', 24),
-    'launch_token_ttl' => (int) env('APPHUB_LAUNCH_TOKEN_TTL', 900),
+    'launch_token_ttl' => (int) env('APPHUB_LAUNCH_TOKEN_TTL', 180),
+    'launch_token_ttl_min' => 60,
+    'launch_token_ttl_max' => 180,
 
     /** Host integrator only — not packages-core zone/server managers. */
     'host_access_secret' => env('APPHUB_HOST_ACCESS_SECRET', ''),
@@ -19,4 +21,9 @@ return [
         'role_column' => env('APPHUB_RBAC_ROLE_COLUMN'),
         'department_column' => env('APPHUB_RBAC_DEPARTMENT_COLUMN'),
     ],
+
+    'dev_user_ids' => array_values(array_filter(array_map(
+        static fn ($v) => (int) trim((string) $v),
+        explode(',', (string) env('APPHUB_DEV_USER_IDS', '')),
+    ))),
 ];

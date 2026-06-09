@@ -29,7 +29,10 @@
           @dblclick.stop="!preview && emit('open-app', app)"
           @contextmenu.prevent.stop="!preview && emit('item-context-menu', app, $event)"
         >
-          <span class="apphub-icon-folder__item-icon">{{ app.icon }}</span>
+          <span class="apphub-icon-folder__item-icon-wrap">
+            <span class="apphub-icon-folder__item-icon">{{ app.icon }}</span>
+            <span v-if="app.status === 'draft'" class="apphub-icon-folder__item-flag">D</span>
+          </span>
           <span class="apphub-icon-folder__item-label">{{ app.name }}</span>
         </button>
       </div>

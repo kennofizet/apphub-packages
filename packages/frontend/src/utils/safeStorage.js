@@ -84,6 +84,10 @@ export function sanitizeUserApp(app) {
     ? app.installMethod
     : (app.local ? 'local' : 'appstore')
 
+  const status = app.status === 'draft' || app.status === 'active' || app.status === 'disabled'
+    ? app.status
+    : 'active'
+
   const desktopX = Number(app.desktopX)
   const desktopY = Number(app.desktopY)
 
@@ -93,6 +97,12 @@ export function sanitizeUserApp(app) {
     name: clampString(app.name) || slug,
     icon: clampString(app.icon, MAX_ICON) || '📦',
     hint: clampString(app.hint ?? app.description, MAX_HINT),
+    status,
+    runtime_type: app.runtime_type === 'iframe' || app.runtime_type === 'connected' || app.runtime_type === 'native'
+      ? app.runtime_type
+      : 'iframe',
+    entry_url: typeof app.entry_url === 'string' ? clampString(app.entry_url, 2048) || null : null,
+    healthcheck_url: typeof app.healthcheck_url === 'string' ? clampString(app.healthcheck_url, 2048) || null : null,
     builtin: false,
     local: installMethod === 'local',
     installMethod,

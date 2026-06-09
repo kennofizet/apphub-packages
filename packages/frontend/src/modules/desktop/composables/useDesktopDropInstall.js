@@ -85,7 +85,7 @@ export function createDesktopDropInstall(options = {}) {
       let app
       if (job.method === 'appstore') {
         const catalogItem = defaultAppStoreCatalog.find((a) => a.slug === job.intent.slug)
-          ?? appStore?.state?.catalog?.find((a) => a.slug === job.intent.slug)
+          ?? appStore?.findCatalogItem?.(job.intent.slug)
         if (catalogItem) {
           appStore?.installApp?.(catalogItem.slug)
           app = catalogItem

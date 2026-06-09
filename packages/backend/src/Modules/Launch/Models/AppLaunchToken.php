@@ -15,6 +15,8 @@ class AppLaunchToken extends Model
         'app_id',
         'user_id',
         'token_hash',
+        'session_id',
+        'scopes_granted',
         'expires_at',
         'used_at',
         'ip',
@@ -24,6 +26,7 @@ class AppLaunchToken extends Model
     protected $casts = [
         'app_id' => 'integer',
         'user_id' => 'integer',
+        'scopes_granted' => 'array',
         'expires_at' => 'datetime',
         'used_at' => 'datetime',
     ];

@@ -2,30 +2,30 @@
 
 namespace Kennofizet\AppHub\Modules\Launch\Services;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Launch\Models\AppLaunchToken;
 
 final class LaunchTokenService
 {
-    private const CACHE_PREFIX = 'apphub:launch:';
-
-    public function mint(string $slug, ?string $userId = null): array
+    public function mint(App $app, int $userId, ?string $ip = null, ?string $userAgent = null): array
     {
-        $token = Str::random(64);
+        $plainToken = Str::random(64);
         $sessionId = (string) Str::uuid();
 
-        $payload = [
-            'app_slug' => $slug,
-            'session_id' => $sessionId,
+        AppLaunchToken::query()->create([
+            'app_id' => $app->id,
             'user_id' => $userId,
+            'token_hash' => $this->hashToken($plainToken),
+            'session_id' => $sessionId,
             'scopes_granted' => [],
-            'created_at' => now()->toIso8601String(),
-        ];
-
-        Cache::put(self::CACHE_PREFIX . $token, $payload, $this->ttl());
+            'expires_at' => now()->addSeconds($this->ttlSeconds()),
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+        ]);
 
         return [
-            'launch_token' => $token,
+            'launch_token' => $plainToken,
             'session_id' => $sessionId,
             'scopes_granted' => [],
         ];
@@ -33,56 +33,49 @@ final class LaunchTokenService
 
     public function resolve(string $token, string $appSlug): ?array
     {
-        if ($token === '' || !preg_match('/^[A-Za-z0-9]{32,128}$/', $token)) {
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
             return null;
         }
 
-        $payload = Cache::get(self::CACHE_PREFIX . $token);
-        if (!is_array($payload)) {
+        $record->loadMissing('app');
+        if ($record->app === null || $record->app->slug !== $appSlug) {
             return null;
         }
 
-        if (($payload['app_slug'] ?? '') !== $appSlug) {
-            return null;
-        }
-
-        return $payload;
+        return $this->toPayload($record);
     }
 
     public function peek(string $token): ?array
     {
-        if ($token === '' || !preg_match('/^[A-Za-z0-9]{32,128}$/', $token)) {
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
             return null;
         }
 
-        $payload = Cache::get(self::CACHE_PREFIX . $token);
+        $record->loadMissing('app');
 
-        return is_array($payload) ? $payload : null;
+        return $this->toPayload($record);
     }
 
     public function grantScope(string $token, string $scope, string $userId): bool
     {
-        $key = self::CACHE_PREFIX . $token;
-        $payload = Cache::get($key);
-        if (!is_array($payload)) {
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
             return false;
         }
 
-        if ((string) ($payload['user_id'] ?? '') !== $userId) {
+        if ((string) $record->user_id !== $userId) {
             return false;
         }
 
-        $scopes = $payload['scopes_granted'] ?? [];
-        if (!is_array($scopes)) {
-            $scopes = [];
-        }
-
+        $scopes = is_array($record->scopes_granted) ? $record->scopes_granted : [];
         if (!in_array($scope, $scopes, true)) {
             $scopes[] = $scope;
         }
 
-        $payload['scopes_granted'] = $scopes;
-        Cache::put($key, $payload, $this->ttl());
+        $record->scopes_granted = $scopes;
+        $record->save();
 
         return true;
     }
@@ -94,10 +87,71 @@ final class LaunchTokenService
         return is_array($scopes) && in_array($scope, $scopes, true);
     }
 
-    private function ttl(): \DateTimeInterface
+    /** Tool backend: one-time verify; marks used_at. */
+    public function verify(string $token, ?string $appSlug = null): ?array
     {
-        $seconds = max(60, (int) config('apphub.launch_token_ttl', 900));
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
+            return null;
+        }
 
-        return now()->addSeconds($seconds);
+        if ($record->isUsed()) {
+            return null;
+        }
+
+        $record->loadMissing('app');
+        if ($record->app === null) {
+            return null;
+        }
+
+        if ($appSlug !== null && $appSlug !== '' && $record->app->slug !== $appSlug) {
+            return null;
+        }
+
+        $record->used_at = now();
+        $record->save();
+
+        return [
+            'user_id' => (int) $record->user_id,
+            'app_slug' => $record->app->slug,
+            'session_id' => $record->session_id,
+            'scopes_granted' => is_array($record->scopes_granted) ? $record->scopes_granted : [],
+        ];
+    }
+
+    public function hashToken(string $plainToken): string
+    {
+        return hash('sha256', $plainToken);
+    }
+
+    private function findByPlainToken(string $token): ?AppLaunchToken
+    {
+        if ($token === '' || !preg_match('/^[A-Za-z0-9]{32,128}$/', $token)) {
+            return null;
+        }
+
+        return AppLaunchToken::query()
+            ->where('token_hash', $this->hashToken($token))
+            ->first();
+    }
+
+    /** @return array{app_slug: string, session_id: string|null, user_id: int, scopes_granted: list<string>} */
+    private function toPayload(AppLaunchToken $record): array
+    {
+        return [
+            'app_slug' => (string) ($record->app?->slug ?? ''),
+            'session_id' => $record->session_id,
+            'user_id' => (int) $record->user_id,
+            'scopes_granted' => is_array($record->scopes_granted) ? $record->scopes_granted : [],
+        ];
+    }
+
+    private function ttlSeconds(): int
+    {
+        $min = max(60, (int) config('apphub.launch_token_ttl_min', 60));
+        $max = max($min, (int) config('apphub.launch_token_ttl_max', 180));
+        $configured = (int) config('apphub.launch_token_ttl', 180);
+
+        return max($min, min($max, $configured));
     }
 }

@@ -5,14 +5,24 @@ namespace Kennofizet\AppHub\Modules\Launch\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
+use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
+use Kennofizet\AppHub\Modules\Launch\Services\AppUsageService;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchDeniedException;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 
 class LaunchController extends Controller
 {
     private const SLUG_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
 
-    public function __construct(private readonly LaunchTokenService $launchTokens)
-    {
+    public function __construct(
+        private readonly LaunchService $launch,
+        private readonly LaunchTokenService $launchTokens,
+        private readonly AppUsageService $usage,
+        private readonly AppCatalogService $catalog,
+        private readonly AppHealthcheckService $healthcheck,
+    ) {
     }
 
     public function launch(Request $request, string $slug): JsonResponse
@@ -26,18 +36,102 @@ class LaunchController extends Controller
             return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
         }
 
-        $launch = $this->launchTokens->mint($slug, (string) $userId);
+        try {
+            $data = $this->launch->launch(
+                $slug,
+                (int) $userId,
+                $this->currentZoneId($request),
+                $request->ip(),
+                (string) $request->userAgent(),
+            );
+        } catch (LaunchDeniedException $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], $e->httpStatus());
+        }
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    /** Tool backend verifies launch token (no user session token required). */
+    public function verifyLaunchToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'launch_token' => 'required|string|min:32|max:128',
+            'app_slug' => 'nullable|string|regex:/^[a-z0-9][a-z0-9_-]{0,63}$/',
+        ]);
+
+        $result = $this->launchTokens->verify(
+            $validated['launch_token'],
+            $validated['app_slug'] ?? null,
+        );
+
+        if ($result === null) {
+            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+        }
+
+        return response()->json(['success' => true, 'data' => $result]);
+    }
+
+    public function ping(Request $request, string $slug): JsonResponse
+    {
+        if (!preg_match(self::SLUG_PATTERN, $slug)) {
+            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        }
+
+        $userId = $request->attributes->get('knf_core_user_id');
+        if (empty($userId)) {
+            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        }
+
+        $app = $this->catalog->findBySlug($slug);
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
+        if (!$this->catalog->userCanLaunch($app, (int) $userId, $this->currentZoneId($request))) {
+            return response()->json(['success' => false, 'error' => 'You do not have permission to test this app'], 403);
+        }
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'slug' => $slug,
-                'runtime_url' => null,
-                'launch_token' => $launch['launch_token'],
-                'session_id' => $launch['session_id'],
-                'scopes_granted' => $launch['scopes_granted'],
-                'message' => 'Backend stub — use App Store mock catalog in frontend.',
-            ],
+            'data' => $this->healthcheck->ping($app),
         ]);
+    }
+
+    public function usage(Request $request, string $slug): JsonResponse
+    {
+        if (!preg_match(self::SLUG_PATTERN, $slug)) {
+            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        }
+
+        $userId = $request->attributes->get('knf_core_user_id');
+        if (empty($userId)) {
+            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        }
+
+        $validated = $request->validate([
+            'action' => 'required|string|in:' . implode(',', AppUsageService::ALLOWED_ACTIONS),
+            'metadata' => 'nullable|array',
+        ]);
+
+        try {
+            $this->usage->logBySlug(
+                (int) $userId,
+                $slug,
+                $validated['action'],
+                $this->currentZoneId($request),
+                $validated['metadata'] ?? null,
+            );
+        } catch (LaunchDeniedException $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], $e->httpStatus());
+        }
+
+        return response()->json(['success' => true, 'data' => ['logged' => true]]);
+    }
+
+    private function currentZoneId(Request $request): ?int
+    {
+        $zoneId = $request->attributes->get('knf_core_user_zone_id_current');
+
+        return $zoneId !== null && $zoneId !== '' ? (int) $zoneId : null;
     }
 }

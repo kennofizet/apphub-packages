@@ -29,7 +29,7 @@ class AppHubPilotSeeder extends Seeder
                 'status' => AppStatus::DRAFT,
                 'runtime_type' => AppRuntimeType::IFRAME,
                 'entry_url' => 'https://tools.reg.local/apps/pilot-draft/',
-                'healthcheck_url' => null,
+                'healthcheck_url' => 'https://tools.reg.local/apps/pilot-draft/health',
                 'manifest' => [
                     'slug' => 'pilot-draft',
                     'name' => 'Pilot Draft App',

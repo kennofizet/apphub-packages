@@ -1,51 +1,185 @@
 import { computed, inject, reactive } from 'vue'
-import { defaultAppStoreCatalog } from '../data/defaultCatalog.js'
+import { CATALOG_MODE_DRAFT, CATALOG_MODE_STORE } from '../constants/catalogModes.js'
+import { normalizeCatalogList } from '../utils/normalizeCatalogApp.js'
 
 const APP_STORE_KEY = 'apphubAppStore'
 
+function createCatalogBucket() {
+  return {
+    items: [],
+    search: '',
+    loading: false,
+    loadingMore: false,
+    error: '',
+    loaded: false,
+    nextCursor: null,
+    hasMore: false,
+  }
+}
+
+function filterItems(items, search) {
+  const q = search.trim().toLowerCase()
+  if (!q) return items
+  return items.filter(
+    (app) =>
+      app.name.toLowerCase().includes(q) ||
+      app.slug.toLowerCase().includes(q) ||
+      (app.description || '').toLowerCase().includes(q),
+  )
+}
+
 /**
- * Independent App Store module — browse and install user apps into the desktop.
+ * Independent App Store module — separate catalog buckets per mode (store / draft).
  */
 export function createAppStoreState(options = {}) {
+  const catalogs = reactive({
+    store: createCatalogBucket(),
+    draft: createCatalogBucket(),
+  })
+
   const state = reactive({
-    search: '',
-    catalog: [...(options.initialCatalog ?? defaultAppStoreCatalog)],
     installedSlugs: options.installedSlugs ?? [],
   })
 
-  const filteredApps = computed(() => {
-    const q = state.search.trim().toLowerCase()
-    if (!q) return state.catalog
-    return state.catalog.filter(
-      (app) =>
-        app.name.toLowerCase().includes(q) ||
-        app.slug.toLowerCase().includes(q) ||
-        (app.description || '').toLowerCase().includes(q),
+  const filteredStoreApps = computed(() =>
+    filterItems(catalogs.store.items, catalogs.store.search),
+  )
+
+  const filteredTestingApps = computed(() =>
+    filterItems(catalogs.draft.items, catalogs.draft.search),
+  )
+
+  function bucketFor(mode) {
+    return mode === CATALOG_MODE_DRAFT ? catalogs.draft : catalogs.store
+  }
+
+  function findCatalogItem(slug) {
+    return (
+      catalogs.store.items.find((a) => a.slug === slug)
+      ?? catalogs.draft.items.find((a) => a.slug === slug)
+      ?? null
     )
-  })
+  }
 
   function isInstalled(slug) {
     return state.installedSlugs.includes(slug)
   }
 
+  function canInstall(app) {
+    return app?.status !== 'disabled'
+  }
+
   function installApp(slug) {
-    if (isInstalled(slug)) return
+    if (isInstalled(slug)) return false
+    const item = findCatalogItem(slug)
+    if (item && !canInstall(item)) return false
     state.installedSlugs.push(slug)
-    const item = state.catalog.find((a) => a.slug === slug)
     if (item) item.installed = true
+    return true
   }
 
-  function setCatalog(apps) {
-    state.catalog = apps
+  function syncInstalledFlags() {
+    for (const bucket of Object.values(catalogs)) {
+      for (const app of bucket.items) {
+        app.installed = state.installedSlugs.includes(app.slug)
+      }
+    }
   }
 
-  return {
+  async function loadCatalog(hostApi, options = {}) {
+    const mode = options.mode === CATALOG_MODE_DRAFT ? CATALOG_MODE_DRAFT : CATALOG_MODE_STORE
+    const bucket = bucketFor(mode)
+    const append = options.append === true
+    const backendReady = options.backendReady !== false
+
+    if (!backendReady || !hostApi?.apps) {
+      if (!append) {
+        bucket.items = []
+        bucket.error = 'no_api'
+        bucket.loaded = false
+        bucket.nextCursor = null
+        bucket.hasMore = false
+      }
+      return
+    }
+
+    if (append) {
+      if (!bucket.hasMore || bucket.loadingMore || bucket.loading) return
+      bucket.loadingMore = true
+    } else {
+      bucket.loading = true
+      bucket.error = ''
+    }
+
+    try {
+      const params = {
+        mode,
+        per_page: options.perPage ?? 24,
+      }
+      if (append && bucket.nextCursor) {
+        params.cursor = bucket.nextCursor
+      }
+
+      const res = await hostApi.apps(params)
+      if (res === undefined || res === null) {
+        if (!append) {
+          bucket.items = []
+          bucket.error = 'no_api'
+          bucket.loaded = false
+        }
+        return
+      }
+
+      const rows = normalizeCatalogList(res?.data?.data ?? res?.data?.datas ?? [])
+      const meta = res?.data?.meta ?? {}
+
+      if (append) {
+        const existing = new Set(bucket.items.map((a) => a.slug))
+        bucket.items.push(...rows.filter((a) => !existing.has(a.slug)))
+      } else {
+        bucket.items = rows
+      }
+
+      bucket.nextCursor = meta.next_cursor ?? null
+      bucket.hasMore = meta.has_more === true
+      syncInstalledFlags()
+      bucket.loaded = true
+    } catch (err) {
+      if (!append) {
+        const status = err?.response?.status
+        bucket.items = []
+        bucket.error = status === 403 ? 'permission_denied' : 'load_failed'
+        bucket.loaded = true
+        bucket.nextCursor = null
+        bucket.hasMore = false
+      }
+    } finally {
+      if (append) {
+        bucket.loadingMore = false
+      } else {
+        bucket.loading = false
+      }
+    }
+  }
+
+  async function loadMoreCatalog(hostApi, mode, options = {}) {
+    const bucket = bucketFor(mode)
+    if (!bucket.hasMore || bucket.loadingMore || bucket.loading) return
+    await loadCatalog(hostApi, { ...options, mode, append: true })
+  }
+
+  return reactive({
     state,
-    filteredApps,
+    catalogs,
+    filteredStoreApps,
+    filteredTestingApps,
+    findCatalogItem,
     isInstalled,
+    canInstall,
     installApp,
-    setCatalog,
-  }
+    loadCatalog,
+    loadMoreCatalog,
+  })
 }
 
 export function provideAppStore(app, store) {

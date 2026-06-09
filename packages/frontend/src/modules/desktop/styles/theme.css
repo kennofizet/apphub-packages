@@ -18,6 +18,13 @@
   --ah-titlebar: linear-gradient(180deg, #2d3f5c 0%, #1e2d45 100%);
   --ah-titlebar-text: #fff;
   --ah-overlay: rgba(2, 6, 23, 0.55);
+  --ah-draft-accent: #fde68a;
+  --ah-draft-accent-strong: #fbbf24;
+  --ah-draft-surface: #1e293b;
+  --ah-draft-hero-bg: linear-gradient(90deg, rgba(251, 191, 36, 0.1) 0%, transparent 55%);
+  --ah-draft-card-bg: var(--ah-hover);
+  --ah-draft-card-border: rgba(251, 191, 36, 0.22);
+  --ah-draft-icon-bg: var(--ah-surface-input);
   color: var(--ah-text);
   transition: color 0.2s ease;
 }
@@ -41,6 +48,13 @@
   --ah-titlebar: linear-gradient(180deg, #f2f5fa 0%, #d4dce8 100%);
   --ah-titlebar-text: #1a2332;
   --ah-overlay: rgba(26, 35, 50, 0.42);
+  --ah-draft-accent: #b45309;
+  --ah-draft-accent-strong: #d97706;
+  --ah-draft-surface: #eef1f6;
+  --ah-draft-hero-bg: linear-gradient(90deg, rgba(251, 191, 36, 0.14) 0%, transparent 55%);
+  --ah-draft-card-bg: #fff;
+  --ah-draft-card-border: rgba(180, 130, 20, 0.28);
+  --ah-draft-icon-bg: #f1f5f9;
 }
 
 .apphub-desktop--light .apphub-desktop__wallpaper {
@@ -307,6 +321,89 @@
 .apphub-store__meta p,
 .apphub-store__empty {
   color: var(--ah-text-muted);
+}
+
+.apphub-draft-store {
+  color: var(--ah-text-secondary);
+  background: var(--ah-draft-surface);
+}
+
+.apphub-draft-store__hero {
+  border-bottom-color: var(--ah-border);
+  background: var(--ah-draft-hero-bg);
+}
+
+.apphub-draft-store__hero-icon {
+  background: var(--ah-draft-icon-bg);
+  border-color: var(--ah-draft-card-border);
+}
+
+.apphub-draft-store__title {
+  color: var(--ah-draft-accent);
+}
+
+.apphub-draft-store__intro,
+.apphub-draft-store__msg,
+.apphub-draft-card__desc {
+  color: var(--ah-text-muted);
+}
+
+.apphub-draft-store__search {
+  border-color: var(--ah-border);
+  background: var(--ah-surface-input);
+  color: var(--ah-text);
+}
+
+.apphub-draft-store__empty {
+  color: var(--ah-text-muted);
+}
+
+.apphub-draft-card {
+  background: var(--ah-draft-card-bg);
+  border-color: var(--ah-draft-card-border);
+}
+
+.apphub-desktop--light .apphub-draft-card {
+  box-shadow: 0 2px 10px rgba(26, 35, 50, 0.08);
+}
+
+.apphub-draft-card__icon {
+  background: var(--ah-draft-icon-bg);
+  border-color: var(--ah-border-subtle);
+}
+
+.apphub-draft-card__name {
+  color: var(--ah-text);
+}
+
+.apphub-draft-card__slug {
+  color: var(--ah-text-muted);
+}
+
+.apphub-draft-card__actions {
+  border-top-color: var(--ah-border-subtle);
+}
+
+.apphub-draft-card__btn--secondary {
+  border-color: var(--ah-border);
+  background: var(--ah-surface-input);
+  color: var(--ah-text-secondary);
+}
+
+.apphub-draft-card__btn--secondary:hover:not(:disabled) {
+  border-color: var(--ah-draft-card-border);
+  color: var(--ah-draft-accent);
+  background: var(--ah-hover);
+}
+
+.apphub-desktop--light .apphub-draft-card__btn--primary {
+  background: linear-gradient(180deg, #1d6fd6 0%, #1558b0 100%);
+}
+
+.apphub-desktop--light .apphub-desktop__taskbar-draft-store {
+  color: var(--ah-draft-accent-strong);
+  border-color: rgba(180, 130, 20, 0.45);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
 }
 
 .apphub-placeholder {

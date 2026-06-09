@@ -121,10 +121,34 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+.apphub-desktop__icon-img-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .apphub-desktop__icon-img {
   font-size: 2rem;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.apphub-desktop__icon-flag {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  max-width: 52px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #fcd34d;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .apphub-desktop__icon-label {
@@ -636,6 +660,48 @@
   opacity: 0.72;
 }
 
+.apphub-desktop__taskbar-draft-store {
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  margin: 6px 8px 0 4px;
+  padding: 0 12px 0 10px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.18) 0%, rgba(251, 191, 36, 0.08) 100%);
+  color: #fde68a;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.apphub-desktop__taskbar-draft-store:hover {
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.28) 0%, rgba(251, 191, 36, 0.14) 100%);
+  border-color: rgba(251, 191, 36, 0.65);
+}
+
+.apphub-desktop__taskbar-draft-store:active {
+  transform: scale(0.98);
+}
+
+.apphub-desktop__taskbar-draft-store-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.apphub-desktop__taskbar-draft-store-label {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .apphub-desktop__clock {
   flex: 0 0 auto;
   display: flex;
@@ -890,6 +956,26 @@
   box-sizing: border-box;
 }
 
+.apphub-store__panel--scroll {
+  overflow: auto;
+}
+
+.apphub-draft-store__body--scroll {
+  overflow: auto;
+}
+
+.apphub-catalog-sentinel {
+  height: 1px;
+  margin-top: 8px;
+}
+
+.apphub-catalog-footer {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ah-text-muted, #94a3b8);
+}
+
 .apphub-store__search {
   width: 100%;
   margin-bottom: 12px;
@@ -899,6 +985,27 @@
   border: 1px solid #475569;
   background: #0f172a;
   color: #fff;
+}
+
+.apphub-store__section {
+  margin-bottom: 20px;
+}
+
+.apphub-store__section-title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.apphub-store__section-hint {
+  margin: -4px 0 10px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.apphub-store__section--testing .apphub-store__section-title {
+  color: #fcd34d;
 }
 
 .apphub-store__grid {
@@ -945,13 +1052,323 @@
   font-weight: 600;
 }
 
+.apphub-store__installed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.apphub-store__card--draft {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
 .apphub-store__empty {
   text-align: center;
   color: #94a3b8;
   padding: 32px;
 }
 
-/* App Store settings — full content area */
+.apphub-store__empty-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.apphub-store__msg {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.apphub-store__msg--error {
+  color: #fca5a5;
+}
+
+.apphub-store__msg--warn {
+  color: #fcd34d;
+}
+
+.apphub-store__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.apphub-store__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.apphub-store__badge--draft {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+
+.apphub-store__badge--offline {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+
+.apphub-store__card--offline {
+  opacity: 0.72;
+}
+
+.apphub-store__unavailable {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Draft App Store — taskbar-only; colors via theme.css tokens */
+.apphub-draft-store {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.apphub-draft-store__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid;
+}
+
+.apphub-draft-store__hero-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid;
+  box-shadow: 0 2px 8px var(--ah-shadow);
+}
+
+.apphub-draft-store__hero-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.apphub-draft-store__title {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.apphub-draft-store__intro {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  max-width: 42em;
+}
+
+.apphub-draft-store__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+}
+
+.apphub-draft-store__search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 0.85rem;
+}
+
+.apphub-draft-store__search:focus {
+  outline: none;
+  border-color: var(--ah-draft-card-border);
+  box-shadow: 0 0 0 2px var(--ah-hover);
+}
+
+.apphub-draft-store__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.apphub-draft-store__msg {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.apphub-draft-store__msg--error {
+  color: #fca5a5;
+}
+
+.apphub-draft-store__msg--warn {
+  color: var(--ah-draft-accent-strong);
+}
+
+.apphub-draft-store__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.apphub-draft-store__empty-icon {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+.apphub-draft-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid;
+  box-shadow: 0 2px 10px var(--ah-shadow);
+}
+
+.apphub-draft-card__main {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.apphub-draft-card__icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.apphub-draft-card__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.apphub-draft-card__name {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.apphub-draft-card__slug {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  font-family: ui-monospace, monospace;
+}
+
+.apphub-draft-card__desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.apphub-draft-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid;
+}
+
+.apphub-draft-card__btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.apphub-draft-card__btn--primary {
+  border: none;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.apphub-draft-card__btn--primary:hover {
+  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+.apphub-draft-card__btn--secondary {
+  border: 1px solid;
+}
+
+.apphub-draft-card__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.apphub-draft-card__installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.apphub-draft-card__installed-check {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.15);
+  font-size: 0.7rem;
+}
+
+.apphub-draft-card__unavailable {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.apphub-draft-card__ping {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.apphub-draft-card__ping--ok {
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.apphub-draft-card__ping--bad {
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
 .apphub-store-settings {
   padding: 16px;
   box-sizing: border-box;
@@ -1102,6 +1519,32 @@
   margin: 8px 0 0;
   font-size: 0.75rem;
   color: #64748b;
+}
+
+.apphub-store-settings__dev-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.apphub-store-settings__dev-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #334155;
+  font-size: 0.85rem;
+}
+
+.apphub-store-settings__dev-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: #475569;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
 }
 
 .apphub-store-settings__refresh {
@@ -1789,10 +2232,31 @@
   opacity: 0.5;
 }
 
+.apphub-icon-folder__item-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .apphub-icon-folder__item-icon {
   font-size: 1.5rem;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.apphub-icon-folder__item-flag {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  color: #fcd34d;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(251, 191, 36, 0.55);
 }
 
 .apphub-icon-folder__item-label {

@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
+use Kennofizet\PackagesCore\Models\User;
 
 class BridgeController extends Controller
 {
@@ -23,10 +24,7 @@ class BridgeController extends Controller
             return response()->json(['success' => false, 'error' => 'Scope not granted'], 403);
         }
 
-        $data = [
-            'id' => $launch['user_id'] ?? 'user-stub',
-            'name' => 'App Hub User',
-        ];
+        $data = $this->resolveBridgeUser($launch);
 
         if ($this->launchTokens->hasScope($launch, 'user.profile')) {
             $data['locale'] = 'vi';
@@ -91,5 +89,26 @@ class BridgeController extends Controller
         }
 
         return response()->json(['success' => true, 'data' => ['scope' => $validated['scope']]]);
+    }
+
+    /** @param array<string, mixed> $launch */
+    private function resolveBridgeUser(array $launch): array
+    {
+        $userId = (int) ($launch['user_id'] ?? 0);
+        if ($userId <= 0) {
+            return ['id' => 0, 'name' => 'App Hub User'];
+        }
+
+        $user = User::byId($userId)->first();
+        if ($user === null) {
+            return ['id' => $userId, 'name' => (string) $userId];
+        }
+
+        $nameCol = $user->getNameColumn();
+        $name = ($nameCol && isset($user->{$nameCol}))
+            ? (string) $user->{$nameCol}
+            : (string) $user->id;
+
+        return ['id' => $userId, 'name' => $name];
     }
 }

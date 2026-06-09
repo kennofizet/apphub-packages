@@ -1,5 +1,5 @@
 /**
- * Placeholder catalog until apphub-backend is connected.
+ * Legacy demo catalog — drop-install fallback only. App Store loads from GET /apps.
  */
 export const defaultAppStoreCatalog = [
   {

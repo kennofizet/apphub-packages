@@ -1,6 +1,7 @@
 import { computed, reactive, watchEffect } from 'vue'
 import { AppHubAppStoreApp } from '../../app-store/index.js'
-import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps } from '../data/builtinApps.js'
+import { AppHubDraftStoreApp } from '../../app-store/index.js'
+import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps, getTaskbarBuiltinApps } from '../data/builtinApps.js'
 import AppHubGuideApp from '../components/AppHubGuideApp.vue'
 import AppHubSettingsApp from '../components/AppHubSettingsApp.vue'
 import AppHubPlaceholderApp from '../components/AppHubPlaceholderApp.vue'
@@ -21,6 +22,7 @@ export function createDesktopShell(options = {}) {
   })
 
   const builtinApps = computed(() => getBuiltinDesktopApps(resolveLabels()))
+  const taskbarBuiltinApps = computed(() => getTaskbarBuiltinApps(resolveLabels()))
 
   const desktopIcons = computed(() => {
     const icons = [...(builtinApps.value ?? []), ...state.userApps]
@@ -38,6 +40,7 @@ export function createDesktopShell(options = {}) {
 
   function resolveWindowComponent(app) {
     if (app.module === 'app-store') return AppHubAppStoreApp
+    if (app.module === 'draft-store') return AppHubDraftStoreApp
     if (app.module === 'guide') return AppHubGuideApp
     if (app.module === 'settings') return AppHubSettingsApp
     return AppHubPlaceholderApp
@@ -46,7 +49,7 @@ export function createDesktopShell(options = {}) {
   const handleInstall = options.handleInstall ?? null
 
   function resolveWindowProps(app) {
-    if (app.module === 'app-store') {
+    if (app.module === 'app-store' || app.module === 'draft-store') {
       return {
         onInstalled: async (item) => {
           if (handleInstall) return handleInstall(item, null, 'appstore')
@@ -74,7 +77,9 @@ export function createDesktopShell(options = {}) {
   }
 
   function findDesktopApp(appId) {
-    return desktopIcons.value.find((a) => a.id === appId) ?? null
+    return desktopIcons.value.find((a) => a.id === appId)
+      ?? taskbarBuiltinApps.value.find((a) => a.id === appId)
+      ?? null
   }
 
   function openApp(app, windowManager, sessionState = null) {
@@ -106,12 +111,17 @@ export function createDesktopShell(options = {}) {
   }
 
   function buildUserApp(app, position, method = null) {
+    const status = typeof app.status === 'string' ? app.status : 'active'
     return {
       id: `user-${app.slug}`,
       slug: app.slug,
       name: app.name,
       icon: app.icon ?? '📦',
       hint: app.description ?? '',
+      status,
+      runtime_type: typeof app.runtime_type === 'string' ? app.runtime_type : 'iframe',
+      entry_url: typeof app.entry_url === 'string' ? app.entry_url : null,
+      healthcheck_url: typeof app.healthcheck_url === 'string' ? app.healthcheck_url : null,
       builtin: false,
       local: method === 'local' || app.local === true,
       installMethod: method ?? (app.local ? 'local' : 'appstore'),
@@ -167,6 +177,10 @@ export function createDesktopShell(options = {}) {
     }
 
     if (existingBySlug && !existingByName) {
+      if (app.status) existingBySlug.status = app.status
+      if (app.runtime_type) existingBySlug.runtime_type = app.runtime_type
+      if (app.entry_url) existingBySlug.entry_url = app.entry_url
+      if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
       if (position) {
         existingBySlug.desktopX = position.x
         existingBySlug.desktopY = position.y
@@ -210,6 +224,7 @@ export function createDesktopShell(options = {}) {
   return {
     state,
     desktopIcons,
+    taskbarBuiltinApps,
     iconList,
     allUserAppNames,
     openApp,

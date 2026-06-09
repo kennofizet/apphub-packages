@@ -58,7 +58,16 @@
           @dblclick.stop="onOpenIcon(item.app)"
           @contextmenu.prevent.stop="onIconContextMenu(item.app, $event)"
         >
-          <span class="apphub-desktop__icon-img">{{ item.app.icon }}</span>
+          <span class="apphub-desktop__icon-img-wrap">
+            <span class="apphub-desktop__icon-img">{{ item.app.icon }}</span>
+            <span
+              v-if="item.app.status === 'draft'"
+              class="apphub-desktop__icon-flag"
+              :title="labels.desktop_icon_draft_hint"
+            >
+              {{ labels.app_store_status_draft }}
+            </span>
+          </span>
           <span class="apphub-desktop__icon-label" :title="item.app.name">{{ item.app.name }}</span>
         </button>
       </template>
@@ -207,6 +216,17 @@
         @open-app="onOpenIcon"
       />
 
+      <button
+        v-if="draftStoreApp"
+        type="button"
+        class="apphub-desktop__taskbar-draft-store"
+        :title="draftStoreApp.hint || draftStoreApp.name"
+        @click="onOpenIcon(draftStoreApp)"
+      >
+        <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{ draftStoreApp.icon }}</span>
+        <span class="apphub-desktop__taskbar-draft-store-label">{{ draftStoreApp.name }}</span>
+      </button>
+
       <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
     </footer>
   </div>
@@ -341,6 +361,8 @@ const labels = computed(() => ({
   hub_settings_app_hint: t('hub_settings_app_hint', lang.value),
   hub_settings_app_title: t('hub_settings_app_title', lang.value),
   app_store_title: t('app_store_title', lang.value),
+  app_store_status_draft: t('app_store_status_draft', lang.value),
+  desktop_icon_draft_hint: t('desktop_icon_draft_hint', lang.value),
   drop_hint: t('drop_hint', lang.value),
   drop_installing: t('drop_installing', lang.value),
   drop_error: t('drop_error', lang.value),
@@ -354,6 +376,9 @@ const labels = computed(() => ({
   duplicate_app_cancel: t('duplicate_app_cancel', lang.value),
   desktop_icon_move_hint: t('desktop_icon_move_hint', lang.value),
   desktop_icon_hold_hint: t('desktop_icon_hold_hint', lang.value),
+  draft_store_app_name: t('draft_store_app_name', lang.value),
+  draft_store_app_hint: t('draft_store_app_hint', lang.value),
+  draft_store_title: t('draft_store_title', lang.value),
   group_label: t('group_label', lang.value),
   group_drop_hint: t('group_drop_hint', lang.value),
   group_folder_title: t('group_folder_title', lang.value),
@@ -552,6 +577,12 @@ const startMenuSuggestedApps = computed(() =>
 const taskbarPinnedApps = computed(() =>
   startMenuCatalogApps.value.filter((a) => isAppVisibleInStart(startMenuPins, a.id)),
 )
+
+const draftStoreApp = computed(() => {
+  const apps = shell.taskbarBuiltinApps
+  const list = apps?.value ?? apps ?? []
+  return list[0] ?? null
+})
 
 const visibleInStartIds = computed(() =>
   startMenuCatalogApps.value

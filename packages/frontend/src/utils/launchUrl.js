@@ -33,5 +33,16 @@ export function isAllowedLaunchUrl(url, allowedOrigins = []) {
 
 export function resolveLaunchUrl(responseData) {
   const data = responseData?.data ?? responseData
-  return data?.runtime_url ?? data?.launch?.url ?? ''
+  const base = data?.runtime_url ?? data?.entry_url ?? data?.launch?.url ?? ''
+  const token = data?.launch_token
+  if (!base) return ''
+  if (!token || typeof token !== 'string') return base
+
+  try {
+    const url = new URL(base)
+    url.searchParams.set('launch_token', token)
+    return url.toString()
+  } catch {
+    return base
+  }
 }

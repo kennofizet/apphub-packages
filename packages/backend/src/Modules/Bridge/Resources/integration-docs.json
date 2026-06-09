@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.3.0",
   "package": {
     "name": "apphub",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
   },
   "meta": {
@@ -25,7 +25,7 @@
         "overview": "When a user opens your app from the desktop, App Hub loads your runtime in a window and provides AppHubBridge for permissions and desktop features.",
         "connection_flow": [
           "User opens your app (desktop icon or App Store).",
-          "App Hub resolves launch: GET /apps/{slug}/launch → runtime_url + launch_context.",
+          "App Hub resolves launch: POST /apps/{slug}/launch → entry_url + launch_token.",
           "Your app loads in a Hub window; AppHubBridge becomes available (or postMessage channel apphub:bridge).",
           "Request the permissions you need, then call bridge methods."
         ],
@@ -170,11 +170,32 @@
     "base_path": "api/knf/apphub",
     "routes": [
       {
-        "method": "GET",
+        "method": "POST",
         "path": "apps/{slug}/launch",
         "auth": "token",
+        "audience": ["publisher", "end_user"],
+        "description": "Mint short-lived launch token and return entry_url for the app window."
+      },
+      {
+        "method": "POST",
+        "path": "verify-launch-token",
+        "auth": "none",
         "audience": ["publisher"],
-        "description": "Launch context + runtime_url for your app window."
+        "description": "Tool backend verifies launch_token once. Body: { launch_token, app_slug? }. Returns user_id + scopes."
+      },
+      {
+        "method": "POST",
+        "path": "apps/{slug}/usage",
+        "auth": "token",
+        "audience": ["host_dev", "end_user"],
+        "description": "Log app usage. Body: { action: app_open|error, metadata? }."
+      },
+      {
+        "method": "POST",
+        "path": "apps/{slug}/ping",
+        "auth": "token",
+        "audience": ["host_dev", "end_user"],
+        "description": "Server-side GET to app healthcheck_url. Requires launch permission. Returns { ok, status, latency_ms, error? }."
       },
       {
         "method": "GET",
@@ -195,7 +216,7 @@
         "path": "apps",
         "auth": "token",
         "audience": ["publisher", "end_user"],
-        "description": "App Store catalog."
+        "description": "App Store catalog. Query: mode=store|draft (default store), cursor?, per_page?. Response meta: has_more, next_cursor."
       },
       {
         "method": "GET",
@@ -224,6 +245,27 @@
         "auth": "launch_token",
         "audience": ["publisher"],
         "description": "Desktop message. Requires desktop.message scope."
+      },
+      {
+        "method": "GET",
+        "path": "dev/apps",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "All apps including disabled — APPHUB_DEV_USER_IDS only."
+      },
+      {
+        "method": "POST",
+        "path": "dev/apps/{slug}/status",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "Set app status (draft|active|disabled). Dev users only."
+      },
+      {
+        "method": "POST",
+        "path": "dev/apps/{slug}/disable",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "Emergency disable app. Dev users only."
       }
     ]
   }

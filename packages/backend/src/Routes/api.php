@@ -9,6 +9,7 @@ $rateLimit = config('packages-core.rate_limit', 60);
 $baseMiddleware = ['api', "throttle:{$rateLimit},1", 'knf.core.token', 'knf.core.validator'];
 $hostMiddleware = ['api', "throttle:{$rateLimit},1", 'knf.core.token', 'knf.core.validator', 'apphub.host.access'];
 $bridgeMiddleware = ['api', "throttle:{$rateLimit},1", 'apphub.launch.token', 'knf.core.validator'];
+$publicMiddleware = ['api', "throttle:{$rateLimit},1", 'knf.core.validator'];
 
 Route::prefix($prefix . '/' . $hubPrefix)
     ->middleware($baseMiddleware)
@@ -28,4 +29,10 @@ Route::prefix($prefix . '/' . $hubPrefix)
     ->middleware($bridgeMiddleware)
     ->group(function (): void {
         require __DIR__ . '/../Modules/Bridge/routes/api-token.php';
+    });
+
+Route::prefix($prefix . '/' . $hubPrefix)
+    ->middleware($publicMiddleware)
+    ->group(function (): void {
+        require __DIR__ . '/../Modules/Launch/routes/api-public.php';
     });

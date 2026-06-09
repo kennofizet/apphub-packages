@@ -3,7 +3,7 @@ import axios from 'axios'
 const REQUEST_TIMEOUT_MS = 30_000
 
 /**
- * HTTP client for apphub-backend (optional until backend is wired).
+ * HTTP client for apphub-backend.
  */
 export function createAppHubApi(backendUrl, token, options = {}) {
   const baseURL = (backendUrl || '').replace(/\/$/, '')
@@ -46,7 +46,20 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     integrationDocsInternal: () =>
       client.get('/integration-docs/internal', { headers: hostHeaders() }),
     apps: (params) => client.get('/apps', { params }),
-    launch: (slug) => client.get(`/apps/${encodeURIComponent(slug)}/launch`),
+    launch: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/launch`),
+    ping: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/ping`),
+    verifyLaunchToken: (launchToken, appSlug) =>
+      client.post('/verify-launch-token', {
+        launch_token: launchToken,
+        ...(appSlug ? { app_slug: appSlug } : {}),
+      }),
+    usage: (slug, payload) =>
+      client.post(`/apps/${encodeURIComponent(slug)}/usage`, payload),
+    devApps: (params) => client.get('/dev/apps', { params }),
+    devDisableApp: (slug) =>
+      client.post(`/dev/apps/${encodeURIComponent(slug)}/disable`),
+    devSetAppStatus: (slug, status) =>
+      client.post(`/dev/apps/${encodeURIComponent(slug)}/status`, { status }),
     grantBridgeScope: (launchToken, scope) =>
       client.post('/bridge/scopes', { launch_token: launchToken, scope }),
     bridgeUser: (launchToken, appSlug) =>
