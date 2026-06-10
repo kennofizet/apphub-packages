@@ -18,7 +18,7 @@ final class AppHubServiceTest extends TestCase
 
     public function test_is_dev_user_matches_configured_ids(): void
     {
-        if (!function_exists('app')) {
+        if (!function_exists('app') || !app()->bound('config')) {
             $this->markTestSkipped('Laravel app container not available');
         }
 

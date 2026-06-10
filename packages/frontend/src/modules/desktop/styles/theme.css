@@ -358,6 +358,42 @@
   color: var(--ah-text-muted);
 }
 
+.apphub-publish {
+  border-color: var(--ah-draft-card-border);
+  background: var(--ah-draft-card-bg);
+}
+
+.apphub-publish__title {
+  color: var(--ah-draft-accent);
+}
+
+.apphub-publish__intro {
+  color: var(--ah-text-muted);
+}
+
+.apphub-publish__tab {
+  border-color: var(--ah-border);
+  color: var(--ah-text-secondary);
+}
+
+.apphub-publish__tab--active {
+  background: var(--ah-hover);
+  border-color: var(--ah-draft-card-border);
+  color: var(--ah-draft-accent);
+}
+
+.apphub-publish__input,
+.apphub-publish__file {
+  border-color: var(--ah-border);
+  background: var(--ah-surface-input);
+  color: var(--ah-text);
+}
+
+.apphub-publish__submit {
+  background: var(--ah-draft-accent);
+  color: #fff;
+}
+
 .apphub-draft-card {
   background: var(--ah-draft-card-bg);
   border-color: var(--ah-draft-card-border);
@@ -404,6 +440,47 @@
   color: var(--ah-draft-accent-strong);
   border-color: rgba(180, 130, 20, 0.45);
   background: linear-gradient(180deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
+}
+
+.apphub-runner {
+  background: var(--ah-surface);
+}
+
+.apphub-runner__msg {
+  color: var(--ah-text-muted);
+}
+
+.apphub-runner__preflight-title {
+  color: var(--ah-text);
+}
+
+.apphub-runner__preflight-icon {
+  background: var(--ah-surface-elevated);
+}
+
+.apphub-runner__preflight-dl {
+  background: var(--ah-surface-elevated);
+  border-color: var(--ah-border);
+}
+
+.apphub-runner__preflight-row dt {
+  color: var(--ah-text-muted);
+}
+
+.apphub-runner__preflight-row dd {
+  color: var(--ah-text);
+}
+
+.apphub-runner__btn {
+  border-color: var(--ah-border);
+  background: var(--ah-surface-elevated);
+  color: var(--ah-text);
+}
+
+.apphub-runner__btn--primary {
+  background: var(--ah-accent);
+  border-color: var(--ah-accent);
+  color: #fff;
 }
 
 .apphub-placeholder {

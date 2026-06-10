@@ -20,6 +20,25 @@ final class AppCatalogService
         return App::query()->where('slug', $slug)->first();
     }
 
+    public function userCanViewVersionHistory(App $app, int $userId): bool
+    {
+        if ($this->appHub->isDevUser($userId)) {
+            return true;
+        }
+
+        if ((int) $app->owner_user_id === $userId) {
+            return true;
+        }
+
+        return App::query()
+            ->where('id', $app->id)
+            ->whereHas('permissions', static function ($permQuery) use ($userId): void {
+                $permQuery->where('user_id', $userId)
+                    ->where('permission', AppPermissionType::MANAGE);
+            })
+            ->exists();
+    }
+
     public function userCanLaunch(App $app, int $userId, ?int $currentZoneId): bool
     {
         if ($app->isDisabled()) {
@@ -125,6 +144,7 @@ final class AppCatalogService
     {
         return [
             'slug' => $app->slug,
+            'version' => $app->version,
             'name' => $app->name,
             'description' => $app->short_description,
             'icon' => $app->icon,
@@ -132,6 +152,9 @@ final class AppCatalogService
             'runtime_type' => $app->runtime_type,
             'entry_url' => $app->entry_url,
             'healthcheck_url' => $app->healthcheck_url,
+            'bundle_hash' => $app->bundle_hash,
+            'bundle_entry' => $app->bundle_entry,
+            'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,
             'installed' => false,
         ];
     }

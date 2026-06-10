@@ -35,4 +35,5 @@ Route::prefix($prefix . '/' . $hubPrefix)
     ->middleware($publicMiddleware)
     ->group(function (): void {
         require __DIR__ . '/../Modules/Launch/routes/api-public.php';
+        require __DIR__ . '/../Modules/Catalog/routes/api-runtime.php';
     });

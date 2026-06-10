@@ -5,8 +5,11 @@ namespace Kennofizet\AppHub\Modules\Catalog\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppBundleStorageService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubService;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppRuntimeType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -15,6 +18,7 @@ class CatalogDevController extends Controller
     public function __construct(
         private readonly AppHubService $appHub,
         private readonly AppCatalogService $catalog,
+        private readonly AppBundleStorageService $bundles,
     ) {
     }
 
@@ -56,6 +60,43 @@ class CatalogDevController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->catalog->toCatalogItem($app),
+        ]);
+    }
+
+    public function inspectBundle(Request $request, string $slug): JsonResponse
+    {
+        $this->guardDevUser($request);
+
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
+            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        }
+
+        $app = App::query()->where('slug', $slug)->first();
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
+        if ($app->runtime_type !== AppRuntimeType::HOSTED || $app->bundle_path === null || $app->bundle_path === '') {
+            return response()->json(['success' => false, 'error' => 'App has no hosted bundle'], 422);
+        }
+
+        $files = $this->bundles->listBundleFiles($app->bundle_path);
+        $maxFiles = 200;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'slug' => $app->slug,
+                'name' => $app->name,
+                'status' => $app->status,
+                'runtime_type' => $app->runtime_type,
+                'version' => $app->version,
+                'bundle_hash' => $app->bundle_hash,
+                'bundle_entry' => $app->bundle_entry,
+                'file_count' => count($files),
+                'files' => array_slice($files, 0, $maxFiles),
+                'files_truncated' => count($files) > $maxFiles,
+            ],
         ]);
     }
 

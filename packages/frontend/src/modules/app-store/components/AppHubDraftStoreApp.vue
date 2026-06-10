@@ -43,11 +43,13 @@
             <AppHubDraftStoreCard
               :app="app"
               :labels="labels"
+              :root-app="rootApp"
               :installed="appStore.isInstalled(app.slug)"
               :can-install="appStore.canInstall(app)"
               :pinging="pingingSlug === app.slug"
               :ping-result="pingResults[app.slug] ?? null"
               @install="onInstall"
+              @uninstall="onUninstall"
               @ping="onPing"
             />
           </li>
@@ -76,6 +78,7 @@ import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
 
 const props = defineProps({
   onInstalled: { type: Function, default: null },
+  onUninstalled: { type: Function, default: null },
 })
 
 const appStore = useAppStore()
@@ -101,10 +104,17 @@ const labels = computed(() => ({
   app_store_unavailable: t('app_store_unavailable', lang.value),
   app_store_status_draft: t('app_store_status_draft', lang.value),
   app_store_installed: t('app_store_installed', lang.value),
+  app_store_uninstall: t('app_store_uninstall', lang.value),
   draft_ping_btn: t('draft_ping_btn', lang.value),
   draft_ping_pinging: t('draft_ping_pinging', lang.value),
   draft_ping_ok: t('draft_ping_ok', lang.value),
   draft_ping_fail: t('draft_ping_fail', lang.value),
+  dev_review_history_btn: t('dev_review_history_btn', lang.value),
+  dev_review_history_loading: t('dev_review_history_loading', lang.value),
+  dev_review_history_title: t('dev_review_history_title', lang.value),
+  dev_review_history_empty: t('dev_review_history_empty', lang.value),
+  dev_review_history_current: t('dev_review_history_current', lang.value),
+  dev_review_history_error: t('dev_review_history_error', lang.value),
 }))
 
 function hostApiOptions() {
@@ -132,6 +142,11 @@ const { rootRef: scrollRoot, sentinelRef: scrollSentinel } = useCatalogInfiniteS
 async function onInstall(app) {
   if (!appStore.installApp(app.slug)) return
   await props.onInstalled?.(app)
+}
+
+async function onUninstall(app) {
+  if (!appStore.uninstallApp(app.slug)) return
+  await props.onUninstalled?.(app)
 }
 
 async function onPing(app) {

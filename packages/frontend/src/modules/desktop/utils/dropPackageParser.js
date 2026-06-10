@@ -3,7 +3,8 @@ import { clampString, isValidSlug } from '../../../utils/safeStorage.js'
 const MAX_MANIFEST_BYTES = 64 * 1024
 
 /**
- * Parse dropped files into an install intent (app store slug or local package).
+ * Parse dropped files into an install intent.
+ * Hosted publish: drop .zip (manifest.json inside zip) → draft submit, await DEV approval.
  */
 export async function parseDropFiles(dataTransfer) {
   let files = [...(dataTransfer?.files ?? [])]
@@ -19,56 +20,99 @@ export async function parseDropFiles(dataTransfer) {
 
   if (!files.length) return null
 
+  const zipFile = files.find((f) => /\.zip$/i.test(f.name))
   const jsonFile = files.find((f) =>
     f.name.endsWith('.apphub.json') || f.name === 'manifest.json' || f.type === 'application/json',
   )
 
-  if (jsonFile) {
-    if (jsonFile.size > MAX_MANIFEST_BYTES) return null
-    try {
-      const text = await jsonFile.text()
-      if (text.length > MAX_MANIFEST_BYTES) return null
-      const manifest = JSON.parse(text)
-      if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return null
+  if (zipFile) {
+    let manifest = null
+    if (jsonFile) {
+      manifest = await readManifestFile(jsonFile)
+    }
 
-      if (manifest.source === 'appstore' && manifest.slug) {
-        const slug = normalizeSlug(manifest.slug)
-        if (!slug) return null
-        return {
-          method: 'appstore',
-          slug,
-          name: clampString(manifest.name) || slug,
-          icon: clampString(manifest.icon, 16) || '🛒',
-          description: clampString(manifest.description, 500),
-        }
+    if (!manifest || isHostedPublishManifest(manifest)) {
+      return buildPublishIntent(zipFile, manifest)
+    }
+  }
+
+  if (jsonFile) {
+    const manifest = await readManifestFile(jsonFile)
+    if (!manifest) return null
+
+    if (manifest.source === 'appstore' && manifest.slug) {
+      const slug = normalizeSlug(manifest.slug)
+      if (!slug) return null
+      return {
+        method: 'appstore',
+        slug,
+        name: clampString(manifest.name) || slug,
+        icon: clampString(manifest.icon, 16) || '🛒',
+        description: clampString(manifest.description, 500),
       }
-      if (manifest.source === 'local' || manifest.name) {
-        const slug = normalizeSlug(manifest.slug ?? manifest.name ?? stripExt(jsonFile.name))
-        if (!slug) return null
-        return {
-          method: 'local',
-          slug,
-          name: clampString(manifest.name) || stripExt(jsonFile.name),
-          icon: clampString(manifest.icon, 16) || pickIcon(files),
-          description: clampString(manifest.description, 500),
-        }
+    }
+
+    if (manifest.source === 'local' || (manifest.name && !isHostedPublishManifest(manifest))) {
+      const slug = normalizeSlug(manifest.slug ?? manifest.name ?? stripExt(jsonFile.name))
+      if (!slug) return null
+      return {
+        method: 'local',
+        slug,
+        name: clampString(manifest.name) || stripExt(jsonFile.name),
+        icon: clampString(manifest.icon, 16) || pickIcon(files),
+        description: clampString(manifest.description, 500),
       }
-    } catch {
-      /* fall through */
     }
   }
 
   const primary = files[0]
   if (primary.size > 50 * 1024 * 1024) return null
-  const isArchive = /\.(zip|apphub|tar|gz)$/i.test(primary.name)
 
   return {
     method: 'local',
     slug: slugify(stripExt(primary.name)),
     name: stripExt(primary.name),
-    icon: isArchive ? '📦' : pickIcon(files),
+    icon: pickIcon(files),
     description: '',
     fileName: primary.name,
+  }
+}
+
+function isHostedPublishManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object') return false
+  const runtime = typeof manifest.runtime_type === 'string' ? manifest.runtime_type.toLowerCase() : ''
+  if (runtime === 'hosted') return true
+  if (manifest.source === 'publish' || manifest.source === 'hosted') return true
+  return Boolean(manifest.slug && manifest.name && !manifest.entry_url)
+}
+
+function buildPublishIntent(zipFile, manifest) {
+  const slug = manifest?.slug ? normalizeSlug(manifest.slug) : null
+  const name = manifest?.name
+    ? clampString(manifest.name)
+    : stripExt(zipFile.name)
+
+  return {
+    method: 'publish',
+    zipFile,
+    manifest,
+    slug,
+    name: name || stripExt(zipFile.name),
+    icon: clampString(manifest?.icon, 16) || '📦',
+    description: clampString(manifest?.description ?? manifest?.short_description, 500),
+  }
+}
+
+async function readManifestFile(jsonFile) {
+  if (!jsonFile || jsonFile.size > MAX_MANIFEST_BYTES) return null
+  try {
+    const text = await jsonFile.text()
+    if (text.length > MAX_MANIFEST_BYTES) return null
+    const manifest = JSON.parse(text)
+    if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return null
+    return manifest
+  } catch {
+    return null
   }
 }
 

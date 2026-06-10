@@ -25,8 +25,8 @@
     </div>
     <p class="apphub-drop-badge__label">
       <template v-if="job.status === 'installing'">{{ loadingLabel }}</template>
-      <template v-else-if="job.status === 'done'">{{ job.name }}</template>
-      <template v-else>{{ errorLabel }}</template>
+      <template v-else-if="job.status === 'done'">{{ doneLabel }}</template>
+      <template v-else>{{ job.errorMessage || errorLabel }}</template>
     </p>
     <p v-if="job.status === 'installing'" class="apphub-drop-badge__method">{{ methodLabel }}</p>
   </div>
@@ -40,6 +40,17 @@ const props = defineProps({
   loadingLabel: { type: String, default: '' },
   errorLabel: { type: String, default: '' },
   methodLabel: { type: String, default: '' },
+  donePublishLabel: { type: String, default: '' },
+})
+
+const doneLabel = computed(() => {
+  if (props.job.publishSubmitted && props.job.name) {
+    return props.job.name
+  }
+  if (props.job.publishSubmitted && props.donePublishLabel) {
+    return props.donePublishLabel
+  }
+  return props.job.name
 })
 
 const badgeStyle = computed(() => ({

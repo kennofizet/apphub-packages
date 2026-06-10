@@ -3,7 +3,9 @@
 namespace Kennofizet\AppHub\Modules\Catalog\Services;
 
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
+use Kennofizet\PackagesCore\Models\Zone;
 use RuntimeException;
 
 final class AppHubService
@@ -47,6 +49,10 @@ final class AppHubService
         $app->status = $status;
         $app->save();
 
+        if ($status === AppStatus::ACTIVE) {
+            $this->ensureDefaultZoneAccess($app);
+        }
+
         return $app;
     }
 
@@ -55,5 +61,25 @@ final class AppHubService
         if (!$this->isDevUser($userId)) {
             throw new RuntimeException('User is not an App Hub dev (check APPHUB_DEV_USER_IDS).');
         }
+    }
+
+    private function ensureDefaultZoneAccess(App $app): void
+    {
+        if ($app->zoneAccess()->exists()) {
+            return;
+        }
+
+        $zoneId = (int) (Zone::query()->orderBy('id')->value('id') ?? 0);
+        if ($zoneId <= 0) {
+            return;
+        }
+
+        AppZoneAccess::query()->updateOrCreate(
+            [
+                'app_id' => $app->id,
+                'zone_id' => $zoneId,
+            ],
+            [],
+        );
     }
 }

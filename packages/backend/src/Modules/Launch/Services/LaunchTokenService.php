@@ -8,16 +8,26 @@ use Kennofizet\AppHub\Modules\Launch\Models\AppLaunchToken;
 
 final class LaunchTokenService
 {
-    public function mint(App $app, int $userId, ?string $ip = null, ?string $userAgent = null): array
-    {
+    public function mint(
+        App $app,
+        int $userId,
+        ?string $ip = null,
+        ?string $userAgent = null,
+        ?string $bundleVersion = null,
+    ): array {
         $plainToken = Str::random(64);
         $sessionId = (string) Str::uuid();
+        $bundleVersion = $bundleVersion !== null ? trim($bundleVersion) : null;
+        if ($bundleVersion === '') {
+            $bundleVersion = null;
+        }
 
         AppLaunchToken::query()->create([
             'app_id' => $app->id,
             'user_id' => $userId,
             'token_hash' => $this->hashToken($plainToken),
             'session_id' => $sessionId,
+            'bundle_version' => $bundleVersion,
             'scopes_granted' => [],
             'expires_at' => now()->addSeconds($this->ttlSeconds()),
             'ip' => $ip,
@@ -44,6 +54,47 @@ final class LaunchTokenService
         }
 
         return $this->toPayload($record);
+    }
+
+    /** Runtime asset cookie auth — token_hash + slug, not expired. */
+    public function isValidHashForSlug(string $tokenHash, string $appSlug): bool
+    {
+        return $this->findValidForRuntimeByHash($tokenHash, $appSlug) !== null;
+    }
+
+    public function findValidForRuntimeByPlainToken(string $token, string $appSlug): ?AppLaunchToken
+    {
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
+            return null;
+        }
+
+        $record->loadMissing('app');
+        if ($record->app === null || $record->app->slug !== $appSlug) {
+            return null;
+        }
+
+        return $record;
+    }
+
+    public function findValidForRuntimeByHash(string $tokenHash, string $appSlug): ?AppLaunchToken
+    {
+        if ($tokenHash === '' || !preg_match('/^[a-f0-9]{64}$/', $tokenHash)) {
+            return null;
+        }
+
+        $record = AppLaunchToken::query()
+            ->where('token_hash', $tokenHash)
+            ->whereHas('app', static function ($query) use ($appSlug): void {
+                $query->where('slug', $appSlug);
+            })
+            ->first();
+
+        if ($record === null || $record->isExpired()) {
+            return null;
+        }
+
+        return $record;
     }
 
     public function peek(string $token): ?array

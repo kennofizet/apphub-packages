@@ -11,6 +11,12 @@
         {{ statusLabel }}
       </span>
     </div>
+    <p v-if="app.version" class="apphub-store__version">
+      v{{ app.version }}
+      <span v-if="installedVersion" class="apphub-store__version-installed">
+        · {{ labels.app_store_installed_version }} v{{ installedVersion }}
+      </span>
+    </p>
     <p>{{ app.description }}</p>
   </div>
   <button
@@ -29,28 +35,44 @@
     {{ labels.app_store_unavailable }}
   </span>
   <div v-else class="apphub-store__installed-row">
-    <span
-      v-if="statusLabel"
-      class="apphub-store__badge"
-      :class="statusBadgeClass"
-    >
-      {{ statusLabel }}
-    </span>
     <span class="apphub-store__installed" :title="labels.app_store_installed">✓</span>
+    <button
+      v-if="updateAvailable"
+      type="button"
+      class="apphub-store__btn apphub-store__btn--primary"
+      @click="emit('update', app)"
+    >
+      {{ labels.app_store_update }}
+    </button>
+    <button
+      type="button"
+      class="apphub-store__btn apphub-store__btn--secondary"
+      @click="emit('uninstall', app)"
+    >
+      {{ labels.app_store_uninstall }}
+    </button>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { isSemverGreaterThan } from '../../../utils/semver.js'
 
 const props = defineProps({
   app: { type: Object, required: true },
   labels: { type: Object, required: true },
   installed: { type: Boolean, default: false },
+  installedVersion: { type: String, default: null },
   canInstall: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['install'])
+const emit = defineEmits(['install', 'uninstall', 'update'])
+
+const updateAvailable = computed(() => {
+  if (!props.installed || !props.app?.version) return false
+  if (!props.installedVersion) return false
+  return isSemverGreaterThan(props.app.version, props.installedVersion)
+})
 
 const statusLabel = computed(() => {
   if (props.app.status === 'draft') return props.labels.app_store_status_draft

@@ -90,6 +90,12 @@
       </button>
     </section>
 
+    <AppHubDevReviewPanel
+      :root-app="rootApp"
+      :dev-apps="devApps"
+      @refreshed="onDevRefreshed"
+    />
+
     <section v-if="devApps.length" class="apphub-store-settings__section">
       <h3 class="apphub-store-settings__heading">{{ labels.dev_title }}</h3>
       <p class="apphub-store-settings__hint">{{ labels.dev_hint }}</p>
@@ -124,6 +130,7 @@ import { getHostApiForApp } from '../../../composables/useAppHubHostApi.js'
 import { useAppHubZoneContext } from '../../../composables/useAppHubZoneContext.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
+import AppHubDevReviewPanel from './AppHubDevReviewPanel.vue'
 
 const props = defineProps({
   rootApp: { type: Object, default: null },
@@ -236,6 +243,11 @@ async function setAppStatus(slug, status) {
   } catch {
     /* ignore */
   }
+}
+
+async function onDevRefreshed() {
+  await loadDevApps()
+  emit('refreshed')
 }
 
 async function onRefresh() {

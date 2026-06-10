@@ -11,6 +11,7 @@ return [
     'host_access_secret' => env('APPHUB_HOST_ACCESS_SECRET', ''),
 
     'apps_table' => env('APPHUB_APPS_TABLE', 'apphub_apps'),
+    'app_versions_table' => env('APPHUB_APP_VERSIONS_TABLE', 'apphub_app_versions'),
     'app_permissions_table' => env('APPHUB_APP_PERMISSIONS_TABLE', 'apphub_app_permissions'),
     'app_zone_access_table' => env('APPHUB_APP_ZONE_ACCESS_TABLE', 'apphub_app_zone_access'),
     'app_launch_tokens_table' => env('APPHUB_APP_LAUNCH_TOKENS_TABLE', 'apphub_app_launch_tokens'),
@@ -26,4 +27,8 @@ return [
         static fn ($v) => (int) trim((string) $v),
         explode(',', (string) env('APPHUB_DEV_USER_IDS', '')),
     ))),
+
+    'bundle_disk' => env('APPHUB_BUNDLE_DISK', 'local'),
+    'bundle_max_bytes' => (int) env('APPHUB_BUNDLE_MAX_BYTES', 52_428_800),
+    'bundle_storage_root' => env('APPHUB_BUNDLE_STORAGE_ROOT', 'apphub/bundles'),
 ];

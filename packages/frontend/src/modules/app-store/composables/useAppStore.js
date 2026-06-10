@@ -78,6 +78,16 @@ export function createAppStoreState(options = {}) {
     return true
   }
 
+  function uninstallApp(slug) {
+    const normalized = String(slug ?? '').trim()
+    if (!normalized) return false
+    const idx = state.installedSlugs.indexOf(normalized)
+    if (idx === -1) return false
+    state.installedSlugs.splice(idx, 1)
+    syncInstalledFlags()
+    return true
+  }
+
   function syncInstalledFlags() {
     for (const bucket of Object.values(catalogs)) {
       for (const app of bucket.items) {
@@ -177,6 +187,7 @@ export function createAppStoreState(options = {}) {
     isInstalled,
     canInstall,
     installApp,
+    uninstallApp,
     loadCatalog,
     loadMoreCatalog,
   })

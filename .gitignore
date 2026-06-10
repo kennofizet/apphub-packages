@@ -1,10 +1,14 @@
 /vendor/
 node_modules/
+example/**/dist/
+example/**/release/
 .env
 .idea/
 .vscode/
 .cursor/
-docs/PLAN.md
-docs/cursor-rules/
+
+docs/*
+!docs/integration-docs.md
+
 *.log
 .DS_Store

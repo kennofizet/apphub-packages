@@ -17,7 +17,7 @@
 
 Publisher documentation explains **how to use** App Hub from an app:
 
-- Launch flow (`GET /apps/{slug}/launch`)
+- Launch flow (`POST /apps/{slug}/launch`)
 - `AppHubBridge` handshake
 - `requestPermission`, `getUserInfo`, `sendDesktopMessage`, etc.
 

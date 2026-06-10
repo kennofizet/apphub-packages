@@ -13,6 +13,7 @@ export function normalizeCatalogApp(row) {
 
   return {
     slug,
+    version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : slug,
     description: typeof row.description === 'string' ? row.description : '',
     icon: typeof row.icon === 'string' && row.icon ? row.icon : '📦',
@@ -20,6 +21,11 @@ export function normalizeCatalogApp(row) {
     runtime_type: typeof row.runtime_type === 'string' ? row.runtime_type : 'iframe',
     entry_url: entryUrl || null,
     healthcheck_url: healthcheckUrl || null,
+    bundle_hash: typeof row.bundle_hash === 'string' ? row.bundle_hash : null,
+    bundle_entry: typeof row.bundle_entry === 'string' ? row.bundle_entry : null,
+    bundle_file_count: Number.isFinite(Number(row.bundle_file_count))
+      ? Number(row.bundle_file_count)
+      : null,
     installed: !!row.installed,
   }
 }

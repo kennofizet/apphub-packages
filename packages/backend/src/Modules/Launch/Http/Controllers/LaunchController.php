@@ -36,6 +36,10 @@ class LaunchController extends Controller
             return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
         }
 
+        $validated = $request->validate([
+            'version' => 'nullable|string|max:64',
+        ]);
+
         try {
             $data = $this->launch->launch(
                 $slug,
@@ -43,6 +47,7 @@ class LaunchController extends Controller
                 $this->currentZoneId($request),
                 $request->ip(),
                 (string) $request->userAgent(),
+                $validated['version'] ?? null,
             );
         } catch (LaunchDeniedException $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], $e->httpStatus());

@@ -1,0 +1,118 @@
+.apphub-notifications {
+  position: absolute;
+  right: 12px;
+  bottom: 52px;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.apphub-notifications__toast {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 64px;
+  border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.apphub-notifications__accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: #64748b;
+}
+
+.apphub-notifications__toast--info .apphub-notifications__accent {
+  background: #3b82f6;
+}
+
+.apphub-notifications__toast--success .apphub-notifications__accent {
+  background: #22c55e;
+}
+
+.apphub-notifications__toast--warning .apphub-notifications__accent {
+  background: #f59e0b;
+}
+
+.apphub-notifications__toast--error .apphub-notifications__accent {
+  background: #ef4444;
+}
+
+.apphub-notifications__body {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 8px 10px 12px;
+}
+
+.apphub-notifications__title {
+  margin: 0 0 2px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.apphub-notifications__message {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+  word-break: break-word;
+}
+
+.apphub-notifications__close {
+  flex-shrink: 0;
+  width: 36px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+.apphub-notifications__close:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.apphub-notifications__item-enter-active,
+.apphub-notifications__item-leave-active {
+  transition: all 0.28s ease;
+}
+
+.apphub-notifications__item-enter-from,
+.apphub-notifications__item-leave-to {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.apphub-desktop--light .apphub-notifications__toast {
+  background: #fff;
+  border-color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.apphub-desktop--light .apphub-notifications__title {
+  color: #0f172a;
+}
+
+.apphub-desktop--light .apphub-notifications__message {
+  color: #475569;
+}
+
+.apphub-desktop--light .apphub-notifications__close {
+  color: #64748b;
+}
+
+.apphub-desktop--light .apphub-notifications__close:hover {
+  color: #0f172a;
+  background: rgba(15, 23, 42, 0.06);
+}

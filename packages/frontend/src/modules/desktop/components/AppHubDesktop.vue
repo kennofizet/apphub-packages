@@ -107,6 +107,7 @@
         :loading-label="labels.drop_installing"
         :error-label="labels.drop_error"
         :method-label="methodLabel(job)"
+        :done-publish-label="labels.drop_done_publish"
       />
 
       <AppHubDesktopIconContextMenu
@@ -116,14 +117,17 @@
         :can-rename="contextMenuCanRename"
         :show-pin="contextMenuShowPin"
         :show-favorite="contextMenuShowFavorite"
+        :show-uninstall="contextMenuShowUninstall"
         :open-label="contextMenuOpenLabel"
         :pin-label="contextMenuPinLabel"
         :favorite-label="contextMenuFavoriteLabel"
+        :uninstall-label="labels.icon_context_uninstall"
         :rename-label="labels.icon_context_rename"
         :properties-label="labels.icon_context_properties"
         @open="onContextMenuOpen"
         @pin="onContextMenuPin"
         @favorite="onContextMenuFavorite"
+        @uninstall="onContextMenuUninstall"
         @rename="onContextMenuRename"
         @info="onContextMenuInfo"
       />
@@ -229,15 +233,24 @@
 
       <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
     </footer>
+
+    <AppHubDesktopNotifications />
   </div>
 </template>
 
 <script setup>
-import { computed, inject, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, inject, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue'
+import { getHostApiForApp, isBackendReadyForApp } from '../../../composables/useAppHubHostApi.js'
+import { CATALOG_MODE_DRAFT, CATALOG_MODE_STORE } from '../../app-store/constants/catalogModes.js'
 import { useAppStore } from '../../app-store/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { isThemeLocked, resolveTheme } from '../../../i18n/resolveTheme.js'
 import { t } from '../../../i18n/index.js'
+import {
+  AppHubDesktopNotifications,
+  createDesktopNotificationsState,
+  DESKTOP_NOTIFICATIONS_KEY,
+} from '../../notifications/index.js'
 import { AppHubWindowFrame, useWindowManager } from '../../window-manager/index.js'
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
@@ -294,6 +307,8 @@ const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 
 const props = defineProps({
   language: { type: String, default: 'vi' },
+  /** Open installed (or catalog) app by slug on mount — e.g. /apphub?open=pilot-active */
+  initialOpenSlug: { type: String, default: '' },
   openAppStoreOnMount: { type: Boolean, default: true },
   /** 'dark' | 'light' | 'auto' — auto uses saved user preference */
   theme: { type: String, default: 'auto' },
@@ -366,6 +381,12 @@ const labels = computed(() => ({
   drop_hint: t('drop_hint', lang.value),
   drop_installing: t('drop_installing', lang.value),
   drop_error: t('drop_error', lang.value),
+  drop_done_publish: t('drop_done_publish', lang.value),
+  notif_error_title: t('notif_error_title', lang.value),
+  notif_publish_success: t('notif_publish_success', lang.value),
+  notif_publish_upgrade_success: t('notif_publish_upgrade_success', lang.value),
+  notif_install_cancelled: t('notif_install_cancelled', lang.value),
+  drop_method_publish: t('drop_method_publish', lang.value),
   drop_method_appstore: t('drop_method_appstore', lang.value),
   drop_method_local: t('drop_method_local', lang.value),
   settings_snap_grid: t('settings_snap_grid', lang.value),
@@ -403,10 +424,12 @@ const labels = computed(() => ({
   icon_context_unpin: t('icon_context_unpin', lang.value),
   icon_context_favorite: t('icon_context_favorite', lang.value),
   icon_context_unfavorite: t('icon_context_unfavorite', lang.value),
+  icon_context_uninstall: t('icon_context_uninstall', lang.value),
   start_menu_favorites: t('start_menu_favorites', lang.value),
   icon_info_title: t('icon_info_title', lang.value),
   icon_info_name: t('icon_info_name', lang.value),
   icon_info_slug: t('icon_info_slug', lang.value),
+  icon_info_version: t('icon_info_version', lang.value),
   icon_info_created: t('icon_info_created', lang.value),
   icon_info_source: t('icon_info_source', lang.value),
   icon_info_source_appstore: t('icon_info_source_appstore', lang.value),
@@ -467,6 +490,11 @@ const contextMenuPinLabel = computed(() => {
 
 const contextMenuShowFavorite = computed(() => !iconContextMenu.group && !!iconContextMenu.app?.id)
 
+const contextMenuShowUninstall = computed(() => {
+  const app = iconContextMenu.app
+  return !iconContextMenu.group && !!app?.id && !app.builtin && !app.module
+})
+
 const contextMenuFavoriteLabel = computed(() => {
   const app = iconContextMenu.app
   if (!app?.id) return labels.value.icon_context_favorite
@@ -525,6 +553,8 @@ const iconInfoRows = computed(() => {
     return rows
   }
   rows.push({ label: L.icon_info_slug, value: app.slug })
+  const pinnedVersion = app.installedVersion ?? app.version
+  if (pinnedVersion) rows.push({ label: L.icon_info_version, value: `v${pinnedVersion}` })
   rows.push({ label: L.icon_info_created, value: formatAppCreatedAt(app.createdAt) })
   rows.push({ label: L.icon_info_source, value: resolveAppInstallSource(app) })
   if (app.hint) rows.push({ label: L.icon_info_description, value: app.hint })
@@ -546,10 +576,40 @@ async function handleInstallUserApp(app, position, method = 'local') {
   return result
 }
 
+function handleUninstallUserApp(appOrSlug) {
+  const slug = typeof appOrSlug === 'string' ? appOrSlug : appOrSlug?.slug
+  const app = (typeof appOrSlug === 'object' && appOrSlug?.id && !appOrSlug?.builtin ? appOrSlug : null)
+    ?? (slug ? shell.findUserAppBySlug(slug) : null)
+  if (!app || app.builtin) return false
+
+  if (slug) appStore.uninstallApp(slug)
+
+  const winId = `win-${app.id}`
+  if (wm.state.windows?.some((w) => w.id === winId)) {
+    wm.closeWindow(winId)
+  }
+  if (isAppPinned(startMenuPins, app.id)) unpinApp(startMenuPins, app.id)
+  if (isAppFavorite(startMenuFavorites, app.id)) unfavoriteApp(startMenuFavorites, app.id)
+
+  shell.removeUserApp(app.id)
+  assignDefaultIconPositions()
+  schedulePersist()
+  return true
+}
+
+function handleUpdateUserApp(app) {
+  if (!app?.slug || !app?.version) return false
+  const ok = shell.updateInstalledVersion(app.slug, app.version)
+  if (ok) schedulePersist()
+  return ok
+}
+
 const shell = createDesktopShell({
   language: lang,
   getLabels: () => labels.value,
   handleInstall: handleInstallUserApp,
+  handleUninstall: handleUninstallUserApp,
+  onUpdateApp: handleUpdateUserApp,
   onAppOpened: (appId) => touchRecentApp(appId),
 })
 
@@ -944,8 +1004,20 @@ function resolveDropPosition(x, y) {
   return snapPoint(clamped.x, clamped.y, desktopSettings.snapToGrid)
 }
 
+const desktopNotifications = createDesktopNotificationsState()
+provide(DESKTOP_NOTIFICATIONS_KEY, desktopNotifications)
+
 const dropInstall = createDesktopDropInstall({
   getAppStore: () => appStore,
+  getHostApi: () => getHostApiForApp(rootApp),
+  onNotify: (payload) => desktopNotifications.push(payload),
+  getLabels: () => ({
+    errorGeneric: labels.value.drop_error,
+    errorTitle: labels.value.notif_error_title,
+    publishSuccess: labels.value.notif_publish_success,
+    publishUpgradeSuccess: labels.value.notif_publish_upgrade_success,
+    installCancelled: labels.value.notif_install_cancelled,
+  }),
   async onInstalled(app, { x, y, method }) {
     const position = resolveDropPosition(x, y)
     return handleInstallUserApp(app, position, method)
@@ -1010,7 +1082,9 @@ function onWindowDragEnd() {
 }
 
 function methodLabel(job) {
-  return job.method === 'appstore' ? labels.value.drop_method_appstore : labels.value.drop_method_local
+  if (job.method === 'publish') return labels.value.drop_method_publish
+  if (job.method === 'appstore') return labels.value.drop_method_appstore
+  return labels.value.drop_method_local
 }
 
 function touchRecentApp(appId) {
@@ -1028,6 +1102,59 @@ function onOpenIcon(app) {
   shell.openApp(app, wm)
   schedulePersist()
 }
+
+const rootApp = getCurrentInstance()?.appContext?.app
+const initialSlugOpened = ref(false)
+
+async function ensureCatalogItemForSlug(slug) {
+  let item = appStore.findCatalogItem(slug)
+  if (item) return item
+
+  const api = getHostApiForApp(rootApp)
+  if (!api?.apps || !isBackendReadyForApp(rootApp)) return null
+
+  const loadOpts = { backendReady: true, perPage: 48 }
+  await appStore.loadCatalog(api, { ...loadOpts, mode: CATALOG_MODE_STORE })
+  item = appStore.findCatalogItem(slug)
+  if (item) return item
+
+  await appStore.loadCatalog(api, { ...loadOpts, mode: CATALOG_MODE_DRAFT })
+  return appStore.findCatalogItem(slug)
+}
+
+async function tryOpenAppBySlug(slug) {
+  const normalized = String(slug ?? '').trim()
+  if (!normalized) return false
+
+  let app = shell.findUserAppBySlug(normalized)
+  if (!app) {
+    const item = await ensureCatalogItemForSlug(normalized)
+    if (item) {
+      appStore.installApp(normalized)
+      shell.onUserAppInstalled(item)
+      app = shell.findUserAppBySlug(normalized)
+    }
+  }
+
+  if (app) {
+    onOpenIcon(app)
+    return true
+  }
+  return false
+}
+
+async function tryInitialOpenSlug() {
+  if (initialSlugOpened.value || !props.initialOpenSlug || !moduleOptions?.hasToken) return
+  const ok = await tryOpenAppBySlug(props.initialOpenSlug)
+  if (ok) initialSlugOpened.value = true
+}
+
+watch(
+  () => moduleOptions?.hasToken,
+  (hasToken) => {
+    if (hasToken) tryInitialOpenSlug()
+  },
+)
 
 function onDesktopClick(event) {
   if (event.target.closest('.apphub-icon-folder')) return
@@ -1080,6 +1207,13 @@ function onContextMenuPin() {
   closeIconContextMenu()
   if (!app?.id) return
   toggleAppPin(app.id)
+}
+
+function onContextMenuUninstall() {
+  const app = iconContextMenu.app
+  closeIconContextMenu()
+  if (!app) return
+  handleUninstallUserApp(app)
 }
 
 function onContextMenuFavorite() {
@@ -1272,11 +1406,17 @@ onMounted(async () => {
     ensureBuiltinPositions()
     assignDefaultIconPositions()
     schedulePersist()
+    await tryInitialOpenSlug()
     return
   }
 
   ensureBuiltinPositions()
   assignDefaultIconPositions()
+
+  if (props.initialOpenSlug) {
+    await tryInitialOpenSlug()
+    return
+  }
 
   if (props.openAppStoreOnMount) {
     const app = iconList.find((a) => a.builtin && a.module === 'app-store')

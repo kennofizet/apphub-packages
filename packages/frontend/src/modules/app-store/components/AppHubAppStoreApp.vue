@@ -80,8 +80,11 @@
                 :app="app"
                 :labels="labels"
                 :installed="appStore.isInstalled(app.slug)"
+                :installed-version="installedVersionFor(app.slug)"
                 :can-install="appStore.canInstall(app)"
                 @install="onInstall"
+                @update="onUpdate"
+                @uninstall="onUninstall"
               />
             </li>
           </ul>
@@ -110,7 +113,10 @@ import AppHubAppStoreCard from './AppHubAppStoreCard.vue'
 import AppHubAppStoreSettingsPanel from './AppHubAppStoreSettingsPanel.vue'
 
 const props = defineProps({
+  getInstalledVersion: { type: Function, default: null },
   onInstalled: { type: Function, default: null },
+  onUpdateApp: { type: Function, default: null },
+  onUninstalled: { type: Function, default: null },
 })
 
 const settingsOpen = ref(false)
@@ -136,6 +142,9 @@ const labels = computed(() => ({
   app_store_status_draft: t('app_store_status_draft', lang.value),
   app_store_status_offline: t('app_store_status_offline', lang.value),
   app_store_installed: t('app_store_installed', lang.value),
+  app_store_uninstall: t('app_store_uninstall', lang.value),
+  app_store_update: t('app_store_update', lang.value),
+  app_store_installed_version: t('app_store_installed_version', lang.value),
   settings: t('app_store_settings_btn', lang.value),
   settings_title: t('app_store_settings_title', lang.value),
   settings_close: t('app_store_settings_close', lang.value),
@@ -163,9 +172,22 @@ const { rootRef: scrollRoot, sentinelRef: scrollSentinel } = useCatalogInfiniteS
   onLoadMore: loadMore,
 })
 
+function installedVersionFor(slug) {
+  return props.getInstalledVersion?.(slug) ?? null
+}
+
 async function onInstall(app) {
   if (!appStore.installApp(app.slug)) return
   await props.onInstalled?.(app)
+}
+
+async function onUpdate(app) {
+  await props.onUpdateApp?.(app)
+}
+
+async function onUninstall(app) {
+  if (!appStore.uninstallApp(app.slug)) return
+  await props.onUninstalled?.(app)
 }
 
 onMounted(() => {

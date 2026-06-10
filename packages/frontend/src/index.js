@@ -26,6 +26,7 @@ function buildPublicOptions(options = {}) {
     openAppStoreOnMount: options.openAppStoreOnMount !== false,
     allowedRuntimeOrigins: origins,
     coreUrl: options.coreUrl || '',
+    backendUrl: (options.backendUrl || '').replace(/\/$/, ''),
     hasToken: !!(options.token),
   }
 }
@@ -52,8 +53,11 @@ function createApiFacade() {
     verifyLaunchToken: (...args) => impl?.verifyLaunchToken?.(...args),
     usage: (...args) => impl?.usage?.(...args),
     devApps: (...args) => impl?.devApps?.(...args),
+    devInspectBundle: (...args) => impl?.devInspectBundle?.(...args),
     devDisableApp: (...args) => impl?.devDisableApp?.(...args),
     devSetAppStatus: (...args) => impl?.devSetAppStatus?.(...args),
+    registerApp: (...args) => impl?.registerApp?.(...args),
+    appVersions: (...args) => impl?.appVersions?.(...args),
     integrationDocs: (...args) => impl?.integrationDocs?.(...args),
     integrationDocsInternal: (...args) => impl?.integrationDocsInternal?.(...args),
     grantBridgeScope: (...args) => impl?.grantBridgeScope?.(...args),
@@ -71,6 +75,7 @@ function applyModuleOptions(store, options = {}) {
     openAppStoreOnMount: nextPublic.openAppStoreOnMount,
     allowedRuntimeOrigins: nextPublic.allowedRuntimeOrigins,
     coreUrl: nextPublic.coreUrl,
+    backendUrl: nextPublic.backendUrl,
     hasToken: nextPublic.hasToken,
   })
   Object.assign(store.credentials, buildCredentials(options))
@@ -173,6 +178,12 @@ export { useAppHubZoneContext } from './composables/useAppHubZoneContext.js'
 export { createAppHubApi } from './api/index.js'
 export { createCoreApi } from './api/coreApi.js'
 export { AppHubDesktop } from './modules/desktop/index.js'
+export {
+  createDesktopNotificationsState,
+  useDesktopNotifications,
+  AppHubDesktopNotifications,
+  parseApiError,
+} from './modules/notifications/index.js'
 export { AppHubRunner } from './modules/runner/index.js'
 export { resolveLang } from './i18n/resolveLang.js'
 export { resolveTheme, normalizeTheme, isThemeLocked } from './i18n/resolveTheme.js'

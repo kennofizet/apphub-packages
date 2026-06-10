@@ -80,7 +80,7 @@ export function sanitizeUserApp(app) {
     : (isValidSlug(app.id?.replace(/^user-/, '')) ? app.id.replace(/^user-/, '') : null)
   if (!slug) return null
 
-  const installMethod = app.installMethod === 'local' || app.installMethod === 'appstore'
+  const installMethod = app.installMethod === 'local' || app.installMethod === 'appstore' || app.installMethod === 'publish'
     ? app.installMethod
     : (app.local ? 'local' : 'appstore')
 
@@ -94,11 +94,17 @@ export function sanitizeUserApp(app) {
   return {
     id: `user-${slug}`,
     slug,
+    installedVersion: typeof app.installedVersion === 'string'
+      ? clampString(app.installedVersion, 64) || null
+      : (typeof app.version === 'string' ? clampString(app.version, 64) || null : null),
+    version: typeof app.installedVersion === 'string'
+      ? clampString(app.installedVersion, 64) || null
+      : (typeof app.version === 'string' ? clampString(app.version, 64) || null : null),
     name: clampString(app.name) || slug,
     icon: clampString(app.icon, MAX_ICON) || '📦',
     hint: clampString(app.hint ?? app.description, MAX_HINT),
     status,
-    runtime_type: app.runtime_type === 'iframe' || app.runtime_type === 'connected' || app.runtime_type === 'native'
+    runtime_type: app.runtime_type === 'iframe' || app.runtime_type === 'hosted' || app.runtime_type === 'connected' || app.runtime_type === 'native'
       ? app.runtime_type
       : 'iframe',
     entry_url: typeof app.entry_url === 'string' ? clampString(app.entry_url, 2048) || null : null,

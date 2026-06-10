@@ -1,24 +1,52 @@
 import { reactive } from 'vue'
 import { defaultAppStoreCatalog } from '../../app-store/data/defaultCatalog.js'
+import { normalizeCatalogApp } from '../../app-store/utils/normalizeCatalogApp.js'
+import { parseApiError } from '../../notifications/utils/parseApiError.js'
 import { parseDropFiles } from '../utils/dropPackageParser.js'
 import { simulateInstallProgress } from './simulateInstallProgress.js'
 
 let jobSeq = 0
 
 /**
- * Desktop drag-drop install — highlight zone, progress badge, app store vs local.
+ * Desktop drag-drop — local install, app store slug, or hosted publish (zip → draft API).
  */
 export function createDesktopDropInstall(options = {}) {
   const onInstalled = options.onInstalled ?? (() => {})
   const onPersist = options.onPersist ?? (() => {})
+  const onNotify = options.onNotify ?? (() => {})
+  const getLabels = options.getLabels ?? (() => ({}))
   const getAppStore = options.getAppStore ?? (() => null)
-  const resolveDuplicate = options.resolveDuplicate ?? (async () => 'keep')
+  const getHostApi = options.getHostApi ?? (() => null)
 
   const state = reactive({
     dragActive: false,
     dragDepth: 0,
     jobs: [],
   })
+
+  function label(key, fallback = '') {
+    const labels = getLabels()
+    return labels[key] ?? fallback
+  }
+
+  function notify(payload) {
+    onNotify(payload)
+  }
+
+  function failJob(job, err) {
+    const message = parseApiError(err, label('errorGeneric', 'Something went wrong.'))
+    job.status = 'error'
+    job.errorMessage = message
+    notify({
+      type: 'error',
+      title: job.name || label('errorTitle', 'App Hub'),
+      message,
+    })
+    setTimeout(() => {
+      const idx = state.jobs.findIndex((j) => j.id === job.id)
+      if (idx !== -1) state.jobs.splice(idx, 1)
+    }, 2000)
+  }
 
   function canAcceptDrop(hasOpenWindows) {
     return !hasOpenWindows
@@ -75,9 +103,96 @@ export function createDesktopDropInstall(options = {}) {
     await runInstall(job)
   }
 
+  async function submitHostedPublish(job) {
+    const api = getHostApi()
+    if (!api?.registerApp) {
+      const err = new Error('no_api')
+      err.code = 'no_api'
+      throw err
+    }
+
+    const body = new FormData()
+    body.append('bundle', job.intent.zipFile)
+
+    const res = await api.registerApp(body)
+    return res?.data?.data ?? null
+  }
+
   async function runInstall(job) {
     const appStore = getAppStore()
     try {
+      if (job.method === 'publish') {
+        await simulateInstallProgress(job, (value) => {
+          job.progress = value
+        })
+
+        const registered = await submitHostedPublish(job)
+        const catalogApp = normalizeCatalogApp(registered) ?? {
+          slug: registered?.slug ?? job.intent.slug,
+          name: registered?.name ?? job.intent.name,
+          icon: registered?.icon ?? job.intent.icon,
+          description: job.intent.description ?? '',
+          status: registered?.status ?? 'draft',
+          runtime_type: registered?.runtime_type ?? 'hosted',
+          entry_url: null,
+          healthcheck_url: null,
+        }
+
+        appStore?.installApp?.(catalogApp.slug)
+
+        const result = await onInstalled(
+          {
+            slug: catalogApp.slug,
+            name: catalogApp.name,
+            icon: catalogApp.icon,
+            description: catalogApp.description,
+            status: catalogApp.status,
+            runtime_type: catalogApp.runtime_type,
+            version: catalogApp.version,
+            entry_url: catalogApp.entry_url,
+            healthcheck_url: catalogApp.healthcheck_url,
+          },
+          { x: job.x, y: job.y, method: 'publish' },
+        )
+
+        if (result === 'cancelled') {
+          const message = label('installCancelled', 'Install cancelled.')
+          job.status = 'error'
+          job.errorMessage = message
+          notify({
+            type: 'warning',
+            title: catalogApp.name,
+            message,
+          })
+          setTimeout(() => {
+            const idx = state.jobs.findIndex((j) => j.id === job.id)
+            if (idx !== -1) state.jobs.splice(idx, 1)
+          }, 800)
+          return
+        }
+
+        job.status = 'done'
+        job.progress = 100
+        job.name = catalogApp.name
+        job.icon = catalogApp.icon
+        job.publishSubmitted = true
+
+        notify({
+          type: 'success',
+          title: catalogApp.name,
+          message: result === 'updated'
+            ? label('publishUpgradeSuccess', 'New version submitted. Update from App Store when you want to run it.')
+            : label('publishSuccess', 'Draft submitted and installed on your desktop.'),
+        })
+
+        setTimeout(() => {
+          const idx = state.jobs.findIndex((j) => j.id === job.id)
+          if (idx !== -1) state.jobs.splice(idx, 1)
+          onPersist()
+        }, 2200)
+        return
+      }
+
       await simulateInstallProgress(job, (value) => {
         job.progress = value
       })
@@ -114,7 +229,14 @@ export function createDesktopDropInstall(options = {}) {
 
       const result = await onInstalled(app, { x: job.x, y: job.y, method: job.method })
       if (result === 'cancelled') {
+        const message = label('installCancelled', 'Install cancelled.')
         job.status = 'error'
+        job.errorMessage = message
+        notify({
+          type: 'warning',
+          title: app.name,
+          message,
+        })
         setTimeout(() => {
           const idx = state.jobs.findIndex((j) => j.id === job.id)
           if (idx !== -1) state.jobs.splice(idx, 1)
@@ -127,12 +249,8 @@ export function createDesktopDropInstall(options = {}) {
         if (idx !== -1) state.jobs.splice(idx, 1)
         onPersist()
       }, 1200)
-    } catch {
-      job.status = 'error'
-      setTimeout(() => {
-        const idx = state.jobs.findIndex((j) => j.id === job.id)
-        if (idx !== -1) state.jobs.splice(idx, 1)
-      }, 2000)
+    } catch (err) {
+      failJob(job, err)
     }
   }
 

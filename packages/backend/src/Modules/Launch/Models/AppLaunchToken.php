@@ -16,6 +16,7 @@ class AppLaunchToken extends Model
         'user_id',
         'token_hash',
         'session_id',
+        'bundle_version',
         'scopes_granted',
         'expires_at',
         'used_at',

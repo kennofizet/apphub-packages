@@ -37,6 +37,15 @@
     >
       {{ renameLabel }}
     </button>
+    <button
+      v-if="showUninstall"
+      type="button"
+      class="apphub-icon-menu__item apphub-icon-menu__item--danger"
+      role="menuitem"
+      @click="emit('uninstall')"
+    >
+      {{ uninstallLabel }}
+    </button>
     <div class="apphub-icon-menu__sep" role="separator" />
     <button type="button" class="apphub-icon-menu__item" role="menuitem" @click="emit('info')">
       {{ propertiesLabel }}
@@ -52,12 +61,14 @@ defineProps({
   canRename: { type: Boolean, default: true },
   showPin: { type: Boolean, default: false },
   showFavorite: { type: Boolean, default: false },
+  showUninstall: { type: Boolean, default: false },
   openLabel: { type: String, default: '' },
   pinLabel: { type: String, default: '' },
   favoriteLabel: { type: String, default: '' },
   renameLabel: { type: String, default: '' },
+  uninstallLabel: { type: String, default: '' },
   propertiesLabel: { type: String, default: '' },
 })
 
-const emit = defineEmits(['open', 'pin', 'favorite', 'rename', 'info', 'close'])
+const emit = defineEmits(['open', 'pin', 'favorite', 'uninstall', 'rename', 'info', 'close'])
 </script>

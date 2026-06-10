@@ -46,7 +46,7 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     integrationDocsInternal: () =>
       client.get('/integration-docs/internal', { headers: hostHeaders() }),
     apps: (params) => client.get('/apps', { params }),
-    launch: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/launch`),
+    launch: (slug, payload) => client.post(`/apps/${encodeURIComponent(slug)}/launch`, payload ?? {}),
     ping: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/ping`),
     verifyLaunchToken: (launchToken, appSlug) =>
       client.post('/verify-launch-token', {
@@ -56,10 +56,18 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     usage: (slug, payload) =>
       client.post(`/apps/${encodeURIComponent(slug)}/usage`, payload),
     devApps: (params) => client.get('/dev/apps', { params }),
+    devInspectBundle: (slug) =>
+      client.get(`/dev/apps/${encodeURIComponent(slug)}/bundle-inspect`),
     devDisableApp: (slug) =>
       client.post(`/dev/apps/${encodeURIComponent(slug)}/disable`),
     devSetAppStatus: (slug, status) =>
       client.post(`/dev/apps/${encodeURIComponent(slug)}/status`, { status }),
+    registerApp: (formData) =>
+      client.post('/apps/register', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120_000,
+      }),
+    appVersions: (slug) => client.get(`/apps/${encodeURIComponent(slug)}/versions`),
     grantBridgeScope: (launchToken, scope) =>
       client.post('/bridge/scopes', { launch_token: launchToken, scope }),
     bridgeUser: (launchToken, appSlug) =>

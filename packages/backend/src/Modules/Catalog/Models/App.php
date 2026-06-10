@@ -19,6 +19,7 @@ class App extends Model
     protected $fillable = [
         'owner_user_id',
         'slug',
+        'version',
         'name',
         'short_description',
         'icon',
@@ -27,6 +28,9 @@ class App extends Model
         'entry_url',
         'healthcheck_url',
         'manifest',
+        'bundle_path',
+        'bundle_hash',
+        'bundle_entry',
     ];
 
     protected $casts = [
@@ -60,6 +64,11 @@ class App extends Model
         return $this->hasMany(AppUsageLog::class, 'app_id');
     }
 
+    public function versions(): HasMany
+    {
+        return $this->hasMany(AppVersion::class, 'app_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === AppStatus::ACTIVE;
@@ -83,5 +92,10 @@ class App extends Model
     public function usesIframeRuntime(): bool
     {
         return $this->runtime_type === AppRuntimeType::IFRAME;
+    }
+
+    public function usesHostedRuntime(): bool
+    {
+        return $this->runtime_type === AppRuntimeType::HOSTED;
     }
 }

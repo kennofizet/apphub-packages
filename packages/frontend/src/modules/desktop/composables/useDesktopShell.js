@@ -5,7 +5,20 @@ import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps, getTaskbarBuiltinApps } fr
 import AppHubGuideApp from '../components/AppHubGuideApp.vue'
 import AppHubSettingsApp from '../components/AppHubSettingsApp.vue'
 import AppHubPlaceholderApp from '../components/AppHubPlaceholderApp.vue'
+import { AppHubRunner } from '../../runner/index.js'
 import { findAppByName, nextDuplicateName, nextDuplicateSlug } from '../utils/duplicateAppUtils.js'
+
+function isUserRuntimeApp(app) {
+  return Boolean(app && !app.builtin && app.slug)
+}
+
+function resolveShellLanguage(options) {
+  const lang = options.language
+  if (lang && typeof lang === 'object' && 'value' in lang) {
+    return lang.value ?? 'vi'
+  }
+  return typeof lang === 'string' ? lang : 'vi'
+}
 
 /**
  * Desktop shell — Windows-style surface, icons, launches windows via window-manager.
@@ -43,24 +56,53 @@ export function createDesktopShell(options = {}) {
     if (app.module === 'draft-store') return AppHubDraftStoreApp
     if (app.module === 'guide') return AppHubGuideApp
     if (app.module === 'settings') return AppHubSettingsApp
+    if (isUserRuntimeApp(app)) return AppHubRunner
     return AppHubPlaceholderApp
   }
 
   const handleInstall = options.handleInstall ?? null
+  const handleUninstall = options.handleUninstall ?? null
 
   function resolveWindowProps(app) {
     if (app.module === 'app-store' || app.module === 'draft-store') {
       return {
+        getInstalledVersion: (slug) => findUserAppBySlug(slug)?.installedVersion ?? null,
         onInstalled: async (item) => {
           if (handleInstall) return handleInstall(item, null, 'appstore')
           return onUserAppInstalled(item)
         },
+        onUpdateApp: async (item) => {
+          if (options.onUpdateApp) return options.onUpdateApp(item)
+          return updateInstalledVersion(item?.slug, item?.version)
+        },
+        onUninstalled: async (item) => {
+          if (handleUninstall) return handleUninstall(item)
+          if (item?.slug) removeUserApp(`user-${item.slug}`)
+        },
+      }
+    }
+    if (isUserRuntimeApp(app)) {
+      return {
+        slug: app.slug,
+        status: app.status ?? 'active',
+        installedVersion: app.installedVersion ?? app.version ?? null,
+        entryUrl: app.entry_url ?? null,
+        healthcheckUrl: app.healthcheck_url ?? null,
+        icon: app.icon ?? '📦',
+        language: resolveShellLanguage(options),
+        runtimeType: app.runtime_type ?? 'iframe',
       }
     }
     return { title: app.name, icon: app.icon }
   }
 
   function buildWindowDefinition(app) {
+    const runner = isUserRuntimeApp(app)
+    const defaultWidth = runner ? 960 : 720
+    const defaultHeight = runner ? 600 : 480
+    const defaultMiniWidth = runner ? 720 : 720
+    const defaultMiniHeight = runner ? 480 : 480
+
     return {
       id: `win-${app.id}`,
       title: app.windowTitle ?? app.name,
@@ -69,10 +111,10 @@ export function createDesktopShell(options = {}) {
       props: resolveWindowProps(app),
       layoutKey: app.layoutKey,
       defaultDisplay: app.defaultDisplay,
-      miniWidth: app.miniWidth ?? app.width ?? 720,
-      miniHeight: app.miniHeight ?? app.height ?? 480,
-      width: app.width ?? app.miniWidth ?? 720,
-      height: app.height ?? app.miniHeight ?? 480,
+      miniWidth: app.miniWidth ?? defaultMiniWidth,
+      miniHeight: app.miniHeight ?? defaultMiniHeight,
+      width: app.width ?? defaultWidth,
+      height: app.height ?? defaultHeight,
     }
   }
 
@@ -110,11 +152,24 @@ export function createDesktopShell(options = {}) {
     if (idx !== -1) state.userApps.splice(idx, 1)
   }
 
+  function resolveInstalledVersion(app) {
+    if (typeof app.installedVersion === 'string' && app.installedVersion.trim()) {
+      return app.installedVersion.trim()
+    }
+    if (typeof app.version === 'string' && app.version.trim()) {
+      return app.version.trim()
+    }
+    return null
+  }
+
   function buildUserApp(app, position, method = null) {
     const status = typeof app.status === 'string' ? app.status : 'active'
+    const installedVersion = resolveInstalledVersion(app)
     return {
       id: `user-${app.slug}`,
       slug: app.slug,
+      installedVersion,
+      version: installedVersion,
       name: app.name,
       icon: app.icon ?? '📦',
       hint: app.description ?? '',
@@ -124,11 +179,15 @@ export function createDesktopShell(options = {}) {
       healthcheck_url: typeof app.healthcheck_url === 'string' ? app.healthcheck_url : null,
       builtin: false,
       local: method === 'local' || app.local === true,
-      installMethod: method ?? (app.local ? 'local' : 'appstore'),
+      installMethod: method === 'local' || method === 'appstore' || method === 'publish'
+        ? method
+        : (app.local ? 'local' : 'appstore'),
       createdAt: app.createdAt ?? new Date().toISOString(),
       windowTitle: app.name,
-      width: 640,
-      height: 420,
+      width: 960,
+      height: 600,
+      miniWidth: 720,
+      miniHeight: 480,
       desktopX: position?.x ?? null,
       desktopY: position?.y ?? null,
     }
@@ -148,13 +207,37 @@ export function createDesktopShell(options = {}) {
 
   /**
    * Install user app with duplicate handling.
-   * @returns {'added'|'replaced'|'cancelled'|null} null if slug already exists without name conflict (app store)
+   * @returns {'added'|'replaced'|'updated'|'cancelled'|null}
    */
   function installUserApp(app, position, method = 'local', duplicateChoice = null) {
     if (!app?.slug && !app?.name) return null
 
+    const existingBySlug = app.slug
+      ? state.userApps.find((a) => a.slug === app.slug)
+      : null
+
+    // Same slug — publish upgrade or catalog refresh. Never show duplicate dialog.
+    if (existingBySlug) {
+      if (app.status) existingBySlug.status = app.status
+      if (app.runtime_type) existingBySlug.runtime_type = app.runtime_type
+      if (app.entry_url) existingBySlug.entry_url = app.entry_url
+      if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
+      if (app.description) existingBySlug.hint = app.description
+      if (method !== 'publish') {
+        const nextVersion = resolveInstalledVersion(app)
+        if (nextVersion && !existingBySlug.installedVersion) {
+          existingBySlug.installedVersion = nextVersion
+          existingBySlug.version = nextVersion
+        }
+      }
+      if (position) {
+        existingBySlug.desktopX = position.x
+        existingBySlug.desktopY = position.y
+      }
+      return 'updated'
+    }
+
     const existingByName = findAppByName(app.name, state.userApps)
-    const existingBySlug = state.userApps.find((a) => a.slug === app.slug)
 
     if (existingByName && duplicateChoice === null) {
       return { needsDuplicateChoice: true, existing: existingByName, app, position, method }
@@ -176,20 +259,21 @@ export function createDesktopShell(options = {}) {
       return 'added'
     }
 
-    if (existingBySlug && !existingByName) {
-      if (app.status) existingBySlug.status = app.status
-      if (app.runtime_type) existingBySlug.runtime_type = app.runtime_type
-      if (app.entry_url) existingBySlug.entry_url = app.entry_url
-      if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
-      if (position) {
-        existingBySlug.desktopX = position.x
-        existingBySlug.desktopY = position.y
-      }
-      return null
-    }
-
     state.userApps.push(buildUserApp(app, position, method))
     return 'added'
+  }
+
+  function updateInstalledVersion(slug, version) {
+    const normalizedSlug = String(slug ?? '').trim()
+    const normalizedVersion = String(version ?? '').trim()
+    if (!normalizedSlug || !normalizedVersion) return false
+
+    const app = findUserAppBySlug(normalizedSlug)
+    if (!app) return false
+
+    app.installedVersion = normalizedVersion
+    app.version = normalizedVersion
+    return true
   }
 
   function moveUserApp(appId, x, y) {
@@ -201,6 +285,12 @@ export function createDesktopShell(options = {}) {
 
   function findUserApp(appId) {
     return state.userApps.find((a) => a.id === appId) ?? null
+  }
+
+  function findUserAppBySlug(slug) {
+    const normalized = String(slug ?? '').trim()
+    if (!normalized) return null
+    return state.userApps.find((a) => a.slug === normalized) ?? null
   }
 
   function onUserAppInstalled(app, position = null) {
@@ -236,6 +326,8 @@ export function createDesktopShell(options = {}) {
     addDroppedApp,
     moveUserApp,
     findUserApp,
+    findUserAppBySlug,
+    updateInstalledVersion,
     renameUserApp,
     removeUserApp,
     tickClock,

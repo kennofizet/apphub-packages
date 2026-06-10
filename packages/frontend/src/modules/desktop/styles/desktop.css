@@ -1047,6 +1047,15 @@
   cursor: pointer;
 }
 
+.apphub-store__btn--secondary {
+  background: #334155;
+  border: 1px solid #475569;
+}
+
+.apphub-store__btn--secondary:hover {
+  background: #475569;
+}
+
 .apphub-store__installed {
   color: #4ade80;
   font-weight: 600;
@@ -1369,6 +1378,165 @@
   border: 1px solid rgba(248, 113, 113, 0.25);
 }
 
+.apphub-runner {
+  width: 100%;
+  min-height: 400px;
+  background: #0f172a;
+  box-sizing: border-box;
+}
+
+.apphub-runner__frame {
+  display: block;
+  width: 100%;
+  min-height: 400px;
+  height: 100%;
+  border: none;
+  background: #000;
+}
+
+.apphub-runner__msg,
+.apphub-runner__error {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.apphub-runner__error {
+  color: #f87171;
+}
+
+.apphub-runner__preflight {
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.apphub-runner__preflight-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.apphub-runner__preflight-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #1e293b;
+  font-size: 1.5rem;
+}
+
+.apphub-runner__preflight-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.apphub-runner__preflight-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.apphub-runner__preflight-badge--hosted {
+  margin-left: 6px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.apphub-runner__preflight-dl {
+  margin: 0 0 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.apphub-runner__preflight-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+
+.apphub-runner__preflight-row:last-child {
+  margin-bottom: 0;
+}
+
+.apphub-runner__preflight-row dt {
+  color: #94a3b8;
+}
+
+.apphub-runner__preflight-row dd {
+  margin: 0;
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+.apphub-runner__preflight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.apphub-runner__btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #334155;
+  color: #f1f5f9;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.apphub-runner__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.apphub-runner__btn--primary {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.apphub-runner__btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.apphub-runner__btn--secondary:hover:not(:disabled) {
+  background: #475569;
+}
+
+.apphub-runner__preflight-msg {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.apphub-runner__preflight-msg--ok {
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.apphub-runner__preflight-msg--bad {
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
 .apphub-store-settings {
   padding: 16px;
   box-sizing: border-box;
@@ -1556,6 +1724,344 @@
   color: #e2e8f0;
   cursor: pointer;
   font-size: 0.875rem;
+}
+
+/* Publish hosted package — Draft Store */
+.apphub-publish {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid;
+}
+
+.apphub-publish__head {
+  margin-bottom: 12px;
+}
+
+.apphub-publish__title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.apphub-publish__intro {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.apphub-publish__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.apphub-publish__tab {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid;
+  background: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.apphub-publish__tab--active {
+  font-weight: 600;
+}
+
+.apphub-publish__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.apphub-publish__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apphub-publish__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.apphub-publish__input,
+.apphub-publish__file {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 0.85rem;
+}
+
+.apphub-publish__file-name {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.apphub-publish__msg {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.apphub-publish__msg--ok {
+  color: #86efac;
+}
+
+.apphub-publish__msg--error {
+  color: #fca5a5;
+}
+
+.apphub-publish__msg--warn {
+  color: var(--ah-draft-accent-strong, #fbbf24);
+}
+
+.apphub-publish__submit {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.apphub-publish__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* DEV bundle review — App Store settings */
+.apphub-dev-review {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #334155;
+}
+
+.apphub-dev-review__title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.apphub-dev-review__hint {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.apphub-dev-review__msg {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.apphub-dev-review__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.apphub-dev-review__item {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #1e293b;
+}
+
+.apphub-dev-review__item-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.apphub-dev-review__icon {
+  font-size: 1.25rem;
+}
+
+.apphub-dev-review__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.apphub-dev-review__slug {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.apphub-dev-review__badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  background: #334155;
+  width: fit-content;
+}
+
+.apphub-dev-review__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apphub-dev-review__btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #475569;
+  color: #fff;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.apphub-dev-review__btn--primary {
+  background: #2563eb;
+}
+
+.apphub-dev-review__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.apphub-dev-review__dl {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+}
+
+.apphub-dev-review__row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.apphub-dev-review__row dt {
+  color: #94a3b8;
+  min-width: 90px;
+}
+
+.apphub-dev-review__mono {
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+
+.apphub-dev-review__files {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #334155;
+}
+
+.apphub-dev-review__files-head {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.apphub-dev-review__file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+}
+
+.apphub-dev-review__file {
+  padding: 2px 0;
+  color: #cbd5e1;
+}
+
+.apphub-dev-review__version {
+  font-size: 0.72rem;
+  color: #86efac;
+}
+
+.apphub-version-history {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #334155;
+}
+
+.apphub-version-history__head {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.apphub-version-history__msg {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.apphub-version-history__msg--error {
+  color: #fca5a5;
+}
+
+.apphub-version-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.apphub-version-history__item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.apphub-version-history__item--current {
+  border-color: #2563eb;
+}
+
+.apphub-version-history__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.apphub-version-history__badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.apphub-version-history__meta,
+.apphub-version-history__hash {
+  margin: 4px 0 0;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-family: ui-monospace, monospace;
+}
+
+.apphub-store__version {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  color: #86efac;
+  font-weight: 600;
+}
+
+.apphub-store__version-installed {
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .apphub-placeholder {
@@ -1875,6 +2381,14 @@
 
 .apphub-icon-menu__item:hover {
   background: rgba(96, 165, 250, 0.35);
+}
+
+.apphub-icon-menu__item--danger {
+  color: #fca5a5;
+}
+
+.apphub-icon-menu__item--danger:hover {
+  background: rgba(248, 113, 113, 0.2);
 }
 
 .apphub-icon-menu__sep {
