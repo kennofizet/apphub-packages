@@ -1,0 +1,13 @@
+{
+  "slug": "demo-simple-html",
+  "name": "demo-simple-html",
+  "version": "1.0.2",
+  "description": "Plain HTML, CSS, and JavaScript hosted bundle example.",
+  "main": "index.html",
+  "type": "module",
+  "keywords": ["demo", "html", "hosted"],
+  "author": "App Hub Examples",
+  "license": "MIT",
+  "icon": "📄",
+  "runtime_type": "hosted"
+}
