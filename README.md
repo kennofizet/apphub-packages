@@ -26,6 +26,12 @@ Publisher docs explain **how to use** the bridge. Endpoint security is documente
 | Frontend | [packages/frontend/README.md](./packages/frontend/README.md) | Windows desktop shell + App Store module |
 | Backend | `packages/backend` | Not started (minimal rebuild) |
 
+## Hub host starter (download & deploy)
+
+> **⚠️ For integrators:** use **[hub-host-starter/](./hub-host-starter/)** — a minimal Vue 3 app for your **App Hub subdomain**. Clone or copy that folder, deploy to e.g. `apphub.yourcompany.com`, and embed it in your main product **iframe**. Do **not** install the Hub module inside your product SPA.
+
+See [hub-host-starter/README.md](./hub-host-starter/README.md) for setup, CI/CD `.env`, and parent `postMessage` (`apphub:host`) flow.
+
 ## Quick start (host app — install in `____TEST/test`, not this repo)
 
 **Backend**
