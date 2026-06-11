@@ -33,8 +33,8 @@ Publisher docs explain **how to use** the bridge. Endpoint security is documente
 **Clone (standalone repo — recommended for clients):**
 
 ```bash
-git clone https://github.com/kennofizet/apphub-hub-host-starter.git
-cd apphub-hub-host-starter
+git clone https://github.com/kennofizet/apphub-host-starter.git
+cd apphub-host-starter
 cp .env.example .env
 npm install
 npm run build
