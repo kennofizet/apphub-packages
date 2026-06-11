@@ -28,6 +28,12 @@ function filterItems(items, search) {
   )
 }
 
+function hostApiReady(hostApi) {
+  if (!hostApi?.apps) return false
+  if (typeof hostApi.hasImpl === 'function') return hostApi.hasImpl()
+  return true
+}
+
 /**
  * Independent App Store module — separate catalog buckets per mode (store / draft).
  */
@@ -102,7 +108,7 @@ export function createAppStoreState(options = {}) {
     const append = options.append === true
     const backendReady = options.backendReady !== false
 
-    if (!backendReady || !hostApi?.apps) {
+    if (!backendReady || !hostApiReady(hostApi)) {
       if (!append) {
         bucket.items = []
         bucket.error = 'no_api'

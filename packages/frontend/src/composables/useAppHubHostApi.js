@@ -1,9 +1,16 @@
-import { getCurrentInstance } from 'vue'
-import { getAppHubStore } from '../moduleStore.js'
+import { getCurrentInstance, inject } from 'vue'
+import { APPHUB_MODULE_STORE_KEY, getAppHubStore } from '../moduleStore.js'
 
 export function resolveRootApp(instance = getCurrentInstance()) {
   if (!instance) return null
   return instance.appContext?.app ?? instance.app ?? null
+}
+
+/** Resolve module store — inject first (always same instance), then WeakMap by Vue app. */
+export function useAppHubModuleStore() {
+  const fromInject = inject(APPHUB_MODULE_STORE_KEY, null)
+  if (fromInject) return fromInject
+  return getAppHubStore(resolveRootApp())
 }
 
 export function getHostApiForApp(app) {
@@ -20,5 +27,9 @@ export function isBackendReadyForApp(app) {
  * so publisher app code cannot access grantBridgeScope or internal docs.
  */
 export function useAppHubHostApi() {
-  return getHostApiForApp(resolveRootApp())
+  return useAppHubModuleStore()?.facade ?? null
+}
+
+export function isBackendReadyFromStore(store) {
+  return !!(store?.credentials?.backendUrl && store?.credentials?.token)
 }

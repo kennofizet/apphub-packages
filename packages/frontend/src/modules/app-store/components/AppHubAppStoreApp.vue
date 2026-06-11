@@ -97,11 +97,11 @@
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, inject, onMounted, ref, watch } from 'vue'
+import { computed, inject, onMounted, ref, watch } from 'vue'
 import {
-  getHostApiForApp,
-  isBackendReadyForApp,
-  resolveRootApp,
+  isBackendReadyFromStore,
+  useAppHubHostApi,
+  useAppHubModuleStore,
 } from '../../../composables/useAppHubHostApi.js'
 import { useAppHubZoneContext } from '../../../composables/useAppHubZoneContext.js'
 import { t } from '../../../i18n/index.js'
@@ -122,7 +122,9 @@ const props = defineProps({
 const settingsOpen = ref(false)
 const appStore = useAppStore()
 const catalog = appStore.catalogs.store
-const rootApp = resolveRootApp(getCurrentInstance())
+const hubStore = useAppHubModuleStore()
+const hostApi = useAppHubHostApi()
+const rootApp = inject('apphubHostApp', null)
 const zone = useAppHubZoneContext()
 const moduleOptions = inject('apphubOptions', {})
 const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
@@ -152,19 +154,17 @@ const labels = computed(() => ({
 
 function hostApiOptions() {
   return {
-    backendReady: isBackendReadyForApp(rootApp),
+    backendReady: isBackendReadyFromStore(hubStore),
     mode: CATALOG_MODE_STORE,
   }
 }
 
 async function reloadCatalog() {
-  if (!rootApp) return
-  await appStore.loadCatalog(getHostApiForApp(rootApp), hostApiOptions())
+  await appStore.loadCatalog(hostApi, hostApiOptions())
 }
 
 async function loadMore() {
-  if (!rootApp) return
-  await appStore.loadMoreCatalog(getHostApiForApp(rootApp), CATALOG_MODE_STORE, hostApiOptions())
+  await appStore.loadMoreCatalog(hostApi, CATALOG_MODE_STORE, hostApiOptions())
 }
 
 const { rootRef: scrollRoot, sentinelRef: scrollSentinel } = useCatalogInfiniteScroll({
@@ -198,6 +198,15 @@ watch(
   () => moduleOptions?.hasToken,
   (hasToken) => {
     if (hasToken && !catalog.loaded) reloadCatalog()
+  },
+)
+
+watch(
+  () => moduleOptions?.originBootstrapLoading,
+  (loading, wasLoading) => {
+    if (wasLoading && !loading && !moduleOptions?.originBlocked) {
+      if (!catalog.loaded || catalog.error === 'no_api') reloadCatalog()
+    }
   },
 )
 
