@@ -120,7 +120,6 @@ function applyBootstrapOrigins(store, bootstrapResponse, { fromCache = false } =
   }
 
   store.options.serverOriginsResolved = true
-  store.options.originBootstrapLoading = false
 
   if (!fromCache) {
     saveBootstrapCache(store.credentials.backendUrl, bootstrapResponse)
@@ -132,7 +131,11 @@ function applyBootstrapOrigins(store, bootstrapResponse, { fromCache = false } =
     store.zoneContext.state.user.name = user.name
   }
 
+  // Reconcile while originBootstrapLoading may still be true so enableModuleApi runs
+  // after disableModuleServices (wasLoading must be captured before clearing the flag).
   reconcileOriginSafety(store)
+  store.options.originBootstrapLoading = false
+  applyOriginSafety(store.options)
 }
 
 function applyCachedBootstrapIfAny(store) {
