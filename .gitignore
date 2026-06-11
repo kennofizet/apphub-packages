@@ -12,3 +12,5 @@ docs/*
 
 *.log
 .DS_Store
+
+COMMIT.md

@@ -28,9 +28,19 @@ Publisher docs explain **how to use** the bridge. Endpoint security is documente
 
 ## Hub host starter (download & deploy)
 
-> **⚠️ For integrators:** use **[hub-host-starter/](./hub-host-starter/)** — a minimal Vue 3 app for your **App Hub subdomain**. Clone or copy that folder, deploy to e.g. `apphub.yourcompany.com`, and embed it in your main product **iframe**. Do **not** install the Hub module inside your product SPA.
+> **⚠️ For integrators:** use the **hub-host-starter** Vue app for your **App Hub subdomain**. Deploy to e.g. `apphub.yourcompany.com` and embed it in your main product **iframe**. Do **not** install the Hub module inside your product SPA.
 
-See [hub-host-starter/README.md](./hub-host-starter/README.md) for setup, CI/CD `.env`, and parent `postMessage` (`apphub:host`) flow.
+**Clone (standalone repo — recommended for clients):**
+
+```bash
+git clone https://github.com/kennofizet/apphub-hub-host-starter.git
+cd apphub-hub-host-starter
+cp .env.example .env
+npm install
+npm run build
+```
+
+Full setup (`.env`, iframe `postMessage`, CORS): [hub-host-starter/README.md](./hub-host-starter/README.md).
 
 ## Quick start (host app — install in `____TEST/test`, not this repo)
 
