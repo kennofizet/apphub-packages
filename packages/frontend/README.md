@@ -31,16 +31,25 @@ const app = createApp(App)
 const hostApi = installAppHubModule(app, {
   coreUrl: 'https://your-api/api/knf',
   backendUrl: 'https://your-api/api/knf/apphub',
-  token: sessionTokenFromHost, // from host auth — never hardcode in source
-  hostAccessSecret: import.meta.env.VITE_APPHUB_HOST_ACCESS_SECRET, // matches APPHUB_HOST_ACCESS_SECRET
+  token: sessionTokenFromHost,
+  hostAccessSecret: import.meta.env.VITE_APPHUB_HOST_ACCESS_SECRET,
   language: 'vi',
   theme: 'dark',
   themeToggle: false,
-  allowedRuntimeOrigins: ['https://publisher-app.example.com'], // production: restrict iframe launch URLs
+  allowedRuntimeOrigins: ['https://publisher-app.example.com'],
 })
-
-// hostApi.grantBridgeScope, integrationDocsInternal — host app only, not inject()
 ```
+
+**Local dev:** `backendUrl` + `token` is enough on `localhost` — the package auto-relaxes origin checks.
+
+**Production:** Bootstrap auto-derives URLs from existing Laravel env (no extra App Hub vars):
+
+- Hub host → browser `Origin` on `GET /bootstrap` (where the Vue app runs)
+- Runtime API → `{APP_URL}/{KNF_CORE_API_PREFIX}/{APPHUB_API_PREFIX}` (Laravel backend)
+
+Set `APP_URL` to your Laravel API host. Hub SPA can be on a different origin (e.g. Vite `:3000` in dev, `apphub.` subdomain in prod) — bootstrap learns it from the request. Optional overrides: `hubOrigin`, `runtimePublicUrl`. Embed the Hub URL in your product iframe — do not mount Hub inside the product Vue app.
+
+`hostApi.grantBridgeScope`, `integrationDocsInternal` — host app only, not `inject()`.
 
 Hub shell components use `useAppHubHostApi()` from the package. The host token and `hostAccessSecret` stay in private module credentials — not in `inject('apphubOptions')` and not via `provide('apphubApi')`.
 

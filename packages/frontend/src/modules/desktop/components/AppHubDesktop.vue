@@ -1,5 +1,17 @@
 <template>
+  <AppHubOriginLoadingScreen v-if="originBootstrapLoading" />
+
+  <AppHubOriginBlockScreen
+    v-else-if="!originSafety.safe"
+    :reason="originSafety.reason"
+    :parent-origin="originSafety.parentOrigin"
+    :expected-hub-origin="originSafety.expectedHubOrigin"
+    :expected-runtime-origin="originSafety.expectedRuntimeOrigin"
+    :labels="originBlockLabels"
+  />
+
   <div
+    v-else
     ref="desktopRoot"
     class="apphub-desktop"
     :class="{
@@ -234,6 +246,8 @@
       <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
     </footer>
 
+    <AppHubDesktopDevOriginBar placement="corner" />
+
     <AppHubDesktopNotifications />
   </div>
 </template>
@@ -263,7 +277,11 @@ import AppHubDesktopIconRenameDialog from './AppHubDesktopIconRenameDialog.vue'
 import AppHubDropInstallBadge from './AppHubDropInstallBadge.vue'
 import AppHubDesktopIconGroup from './AppHubDesktopIconGroup.vue'
 import AppHubDesktopIconFolder from './AppHubDesktopIconFolder.vue'
+import AppHubOriginBlockScreen from './AppHubOriginBlockScreen.vue'
+import AppHubOriginLoadingScreen from './AppHubOriginLoadingScreen.vue'
+import AppHubDesktopDevOriginBar from './AppHubDesktopDevOriginBar.vue'
 import { createDesktopDropInstall } from '../composables/useDesktopDropInstall.js'
+import { evaluateOriginSafety } from '../../../utils/originSafety.js'
 import { createDesktopShell } from '../composables/useDesktopShell.js'
 import { useDesktopIconDrag } from '../composables/useDesktopIconDrag.js'
 import { buildDesktopItems, getGroupDisplayName, migrateGroupDisplayName, setGroupDisplayName } from '../utils/desktopIconGroups.js'
@@ -317,8 +335,43 @@ const props = defineProps({
 })
 
 const moduleOptions = inject('apphubOptions', {})
+const rootApp = getCurrentInstance()?.appContext?.app
 
 const lang = computed(() => resolveLang(moduleOptions?.language, props.language))
+
+const originBootstrapLoading = computed(() => moduleOptions?.originBootstrapLoading === true)
+
+const originSafety = computed(() => {
+  if (moduleOptions && Object.prototype.hasOwnProperty.call(moduleOptions, 'originBlocked')) {
+    return {
+      safe: !moduleOptions.originBlocked,
+      pending: moduleOptions.originCheckPending === true,
+      loading: moduleOptions.originBootstrapLoading === true,
+      reason: moduleOptions.originBlockReason ?? null,
+      parentOrigin: moduleOptions.originBlockParentOrigin ?? null,
+      expectedHubOrigin: moduleOptions.originBlockExpectedHubOrigin ?? null,
+      expectedRuntimeOrigin: moduleOptions.originBlockExpectedRuntimeOrigin ?? null,
+    }
+  }
+  return evaluateOriginSafety(moduleOptions)
+})
+
+const desktopReady = computed(() => !originBootstrapLoading.value && originSafety.value.safe)
+
+const originBlockLabels = computed(() => ({
+  title: t('origin_block_title', lang.value),
+  same_origin_embed: t('origin_block_same_origin_embed', lang.value),
+  not_configured: t('origin_block_not_configured', lang.value),
+  wrong_origin: t('origin_block_wrong_origin', lang.value),
+  runtime_not_configured: t('origin_block_runtime_not_configured', lang.value),
+  runtime_same_origin: t('origin_block_runtime_same_origin', lang.value),
+  generic: t('origin_block_generic', lang.value),
+  hint: t('origin_block_hint', lang.value),
+  current_origin: t('origin_block_current_origin', lang.value),
+  expected_hub_origin: t('origin_block_expected_hub_origin', lang.value),
+  expected_runtime_origin: t('origin_block_expected_runtime_origin', lang.value),
+  parent_origin: t('origin_block_parent_origin', lang.value),
+}))
 
 const activeTheme = computed(() => {
   const locked = resolveTheme(props.theme) ?? resolveTheme(moduleOptions?.theme)
@@ -1103,7 +1156,6 @@ function onOpenIcon(app) {
   schedulePersist()
 }
 
-const rootApp = getCurrentInstance()?.appContext?.app
 const initialSlugOpened = ref(false)
 
 async function ensureCatalogItemForSlug(slug) {
@@ -1379,6 +1431,18 @@ function onDocumentDragOver(event) {
 }
 
 onMounted(async () => {
+  if (!desktopReady.value) return
+  await initDesktopShell()
+})
+
+watch(desktopReady, async (ready) => {
+  if (ready) await initDesktopShell()
+})
+
+async function initDesktopShell() {
+  if (initDesktopShell.done) return
+  initDesktopShell.done = true
+
   shell.tickClock()
   clockTimer = setInterval(shell.tickClock, 30_000)
   window.addEventListener('beforeunload', persistSession)
@@ -1426,9 +1490,11 @@ onMounted(async () => {
       schedulePersist()
     }
   }
-})
+}
 
 onUnmounted(() => {
+  if (!initDesktopShell.done) return
+
   if (clockTimer) clearInterval(clockTimer)
   if (persistTimer) clearTimeout(persistTimer)
   iconDrag.cleanup()

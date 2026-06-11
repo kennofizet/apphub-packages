@@ -1,4 +1,29 @@
 export default {
+  origin_block_title: 'App Hub must run on a separate origin',
+  origin_block_same_origin_embed:
+    'App Hub is embedded in an iframe on the same origin as your main product. Hosted apps could read shared browser storage (localStorage, cookies).',
+  origin_block_not_configured:
+    'App Hub was started inside your main product without a dedicated origin. Do not add installAppHubModule to the product app — deploy a separate App Hub frontend.',
+  origin_block_wrong_origin:
+    'This page origin does not match the configured hubOrigin. App Hub must run only on its dedicated URL.',
+  origin_block_generic: 'This page origin is not allowed to run App Hub.',
+  origin_block_runtime_not_configured:
+    'runtimePublicUrl is required. Hosted app bundles must be served from a separate origin (e.g. https://apps.yourcompany.com/api/.../apphub).',
+  origin_block_runtime_same_origin:
+    'runtimePublicUrl must use a different origin than the Hub page so publisher apps cannot read Hub localStorage.',
+  origin_block_hint:
+    'Local dev on localhost works automatically. Hub host = your frontend origin (bootstrap reads browser Origin). Runtime API = APP_URL + KNF_CORE_API_PREFIX + APPHUB_API_PREFIX. Embed only the Hub URL in your product iframe.',
+  origin_block_current_origin: 'Current page origin',
+  origin_block_expected_hub_origin: 'Configured hubOrigin',
+  origin_block_expected_runtime_origin: 'Configured runtimePublicUrl',
+  origin_block_parent_origin: 'Parent page origin',
+  origin_loading_title: 'Starting App Hub…',
+  origin_loading_hint: 'Checking origin safety and loading configuration from the server.',
+  dev_origin_bar_title: 'Origin safety (dev)',
+  dev_origin_status_relaxed: 'Relaxed — localhost bypass active',
+  dev_origin_status_strict: 'Strict — production origin rules active',
+  dev_origin_action_strict: 'Enable strict checks',
+  dev_origin_action_relaxed: 'Relax (dev mode)',
   desktop_start: 'Start',
   desktop_app_store: 'App Store',
   desktop_app_store_hint: 'Install and open apps',

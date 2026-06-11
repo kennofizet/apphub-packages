@@ -1,11 +1,16 @@
+import { resolveRuntimeApiBase } from './originSafety.js'
+
 const BLOCKED_PROTOCOLS = new Set(['javascript:', 'data:', 'blob:', 'file:'])
 
 export const RUNTIME_HOSTED = 'hosted'
 export const RUNTIME_IFRAME = 'iframe'
 
-/** Hub-served bundle under backendUrl/apps/{slug}/runtime/ */
-export function isHubHostedRuntimeUrl(url, backendUrl) {
-  const base = (backendUrl || '').replace(/\/$/, '')
+/** Hub-served bundle under {runtimeBase}/apps/{slug}/runtime/ */
+export function isHubHostedRuntimeUrl(url, runtimeBaseOrOptions) {
+  const base = typeof runtimeBaseOrOptions === 'object'
+    ? resolveRuntimeApiBase(runtimeBaseOrOptions)
+    : String(runtimeBaseOrOptions ?? '').replace(/\/$/, '')
+
   if (!base || !url || typeof url !== 'string') return false
   try {
     const parsed = new URL(url)
@@ -19,14 +24,14 @@ export function isHubHostedRuntimeUrl(url, backendUrl) {
 
 /**
  * @param {string} url
- * @param {string[]} [allowedOrigins] Host-configured publisher origins (e.g. https://app.example.com)
- * @param {{ backendUrl?: string, runtimeType?: string }} [options]
+ * @param {string[]} [allowedOrigins]
+ * @param {{ backendUrl?: string, runtimePublicUrl?: string, runtimeType?: string }} [options]
  */
 export function isAllowedLaunchUrl(url, allowedOrigins = [], options = {}) {
   if (!url || typeof url !== 'string') return false
 
-  if (options.runtimeType === RUNTIME_HOSTED || isHubHostedRuntimeUrl(url, options.backendUrl)) {
-    return isHubHostedRuntimeUrl(url, options.backendUrl)
+  if (options.runtimeType === RUNTIME_HOSTED || isHubHostedRuntimeUrl(url, options)) {
+    return isHubHostedRuntimeUrl(url, options)
   }
 
   let parsed
@@ -76,7 +81,6 @@ export function isEntryUrlAllowed(entryUrl, allowedOrigins = []) {
 
 export function resolveLaunchUrl(responseData) {
   const data = responseData?.data ?? responseData
-  const runtimeType = data?.runtime_type ?? RUNTIME_IFRAME
   const base = data?.runtime_url ?? data?.entry_url ?? data?.launch?.url ?? ''
   const token = data?.launch_token
   if (!base) return ''
@@ -91,9 +95,17 @@ export function resolveLaunchUrl(responseData) {
   }
 }
 
-export function iframeSandboxAttrs(runtimeType) {
+/**
+ * Hosted apps use opaque iframe origin (no allow-same-origin) so publisher JS cannot read Hub localStorage.
+ * @param {string} runtimeType
+ * @param {{ hostedSandboxSameOrigin?: boolean }} [options]
+ */
+export function iframeSandboxAttrs(runtimeType, options = {}) {
   if (runtimeType === RUNTIME_HOSTED) {
-    return 'allow-scripts allow-forms allow-popups allow-same-origin'
+    if (options.hostedSandboxSameOrigin === true) {
+      return 'allow-scripts allow-forms allow-popups allow-same-origin'
+    }
+    return 'allow-scripts allow-forms allow-popups'
   }
   return 'allow-scripts allow-forms allow-popups'
 }

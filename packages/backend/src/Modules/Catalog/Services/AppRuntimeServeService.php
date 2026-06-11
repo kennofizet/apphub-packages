@@ -18,32 +18,43 @@ final class AppRuntimeServeService
         private readonly AppBundleStorageService $bundles,
         private readonly LaunchTokenService $launchTokens,
         private readonly AppVersionService $versions,
+        private readonly AppHubPublicUrlService $publicUrls,
     ) {
     }
 
-    public function buildRuntimeIndexUrl(App $app, string $baseUrl, ?string $entry = null): string
+    public function runtimeApiBaseUrl(): string
+    {
+        return $this->publicUrls->apiBaseUrl();
+    }
+
+    public function buildRuntimeIndexUrl(App $app, ?string $baseUrl = null, ?string $entry = null): string
     {
         $entry = ltrim($entry ?? (string) ($app->bundle_entry ?: 'index.html'), '/');
+        $base = rtrim($baseUrl ?? $this->runtimeApiBaseUrl(), '/');
 
-        return rtrim($baseUrl, '/')
+        return $base
             . '/apps/' . rawurlencode($app->slug)
             . '/runtime/' . implode('/', array_map('rawurlencode', explode('/', $entry)));
     }
 
     public function serve(App $app, string $path, Request $request): Response
     {
+        if ($request->isMethod('OPTIONS')) {
+            return $this->corsPreflight();
+        }
+
         if ($app->runtime_type !== AppRuntimeType::HOSTED) {
-            return new Response('Not a hosted app', 404);
+            return $this->runtimeError('Not a hosted app', 404);
         }
 
         $token = $this->authorize($app, $request);
         if ($token === null) {
-            return new Response('Invalid or expired launch token', 401);
+            return $this->runtimeError('Invalid or expired launch token', 401);
         }
 
         $bundle = $this->versions->resolveBundle($app, $token->bundle_version);
         if ($bundle === null) {
-            return new Response('Bundle not published', 404);
+            return $this->runtimeError('Bundle not published', 404);
         }
 
         $path = ltrim(str_replace('\\', '/', $path), '/');
@@ -52,44 +63,132 @@ final class AppRuntimeServeService
         }
 
         if (str_contains($path, '..')) {
-            return new Response('Invalid path', 400);
+            return $this->runtimeError('Invalid path', 400);
         }
 
         try {
             $absolute = $this->bundles->absolutePath($bundle['path'], $path);
         } catch (RuntimeException) {
-            return new Response('Invalid path', 400);
+            return $this->runtimeError('Invalid path', 400);
         }
 
         if (!is_file($absolute)) {
-            return new Response('Not found', 404);
+            return $this->runtimeError('Not found', 404);
         }
 
-        $response = new BinaryFileResponse($absolute);
-        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($absolute));
-        $response->headers->set('Content-Type', $this->mimeType($absolute));
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *");
+        $plainToken = (string) $request->query('launch_token', '');
 
         if ($this->isHtml($absolute)) {
-            $cookieName = $this->runtimeCookieName($app->slug);
-            $token = (string) $request->query('launch_token', '');
-            if ($token !== '') {
-                $response->headers->setCookie(cookie(
-                    $cookieName,
-                    hash('sha256', $token),
-                    (int) config('apphub.launch_token_ttl', 180) / 60,
-                    '/',
-                    null,
-                    $request->isSecure(),
-                    true,
-                    false,
-                    'lax',
-                ));
+            $content = (string) file_get_contents($absolute);
+            if ($plainToken !== '') {
+                $content = $this->rewriteHtmlLaunchToken($content, $plainToken);
             }
+
+            $response = new Response($content);
+            $response->headers->set('Content-Type', $this->mimeType($absolute));
+            $this->applyRuntimeSecurityHeaders($response);
+
+            if ($plainToken !== '') {
+                $response->headers->setCookie($this->runtimeAuthCookie($app->slug, $plainToken, $request));
+            }
+        } else {
+            $response = new BinaryFileResponse($absolute);
+            $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($absolute));
+            $response->headers->set('Content-Type', $this->mimeType($absolute));
+            $this->applyRuntimeSecurityHeaders($response);
         }
 
+        $this->applyRuntimeCors($response);
+
         return $response;
+    }
+
+    private function corsPreflight(): Response
+    {
+        $response = new Response('', 204);
+        $this->applyRuntimeCors($response);
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type');
+        $response->headers->set('Access-Control-Max-Age', '86400');
+
+        return $response;
+    }
+
+    private function runtimeError(string $message, int $status): Response
+    {
+        $response = new Response($message, $status);
+        $this->applyRuntimeCors($response);
+
+        return $response;
+    }
+
+    /**
+     * Hosted apps load in a sandboxed iframe (opaque origin). Vite bundles use crossorigin on assets,
+     * so subresources require CORS. Auth uses launch_token query param (cookie is unreliable cross-site).
+     */
+    private function applyRuntimeCors(Response $response): void
+    {
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+    }
+
+    private function applyRuntimeSecurityHeaders(Response $response): void
+    {
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set(
+            'Content-Security-Policy',
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *",
+        );
+    }
+
+    /** @return \Symfony\Component\HttpFoundation\Cookie */
+    private function runtimeAuthCookie(string $slug, string $plainToken, Request $request): \Symfony\Component\HttpFoundation\Cookie
+    {
+        $ttlMinutes = max(1, (int) config('apphub.launch_token_ttl', 180) / 60);
+
+        return cookie(
+            $this->runtimeCookieName($slug),
+            hash('sha256', $plainToken),
+            $ttlMinutes,
+            '/',
+            null,
+            $request->isSecure(),
+            true,
+            false,
+            $request->isSecure() ? 'none' : 'lax',
+        );
+    }
+
+    private function rewriteHtmlLaunchToken(string $html, string $launchToken): string
+    {
+        $appendToken = static function (string $url) use ($launchToken): string {
+            if (
+                $url === ''
+                || str_starts_with($url, 'data:')
+                || str_starts_with($url, 'blob:')
+                || str_starts_with($url, 'javascript:')
+            ) {
+                return $url;
+            }
+
+            $separator = str_contains($url, '?') ? '&' : '?';
+
+            return $url . $separator . 'launch_token=' . rawurlencode($launchToken);
+        };
+
+        $rewritten = preg_replace_callback(
+            '/\b(src|href)\s*=\s*(["\'])([^"\']+)\2/i',
+            static function (array $matches) use ($appendToken): string {
+                $attr = strtolower($matches[1]);
+                if ($attr !== 'src' && $attr !== 'href') {
+                    return $matches[0];
+                }
+
+                return $matches[1] . '=' . $matches[2] . $appendToken($matches[3]) . $matches[2];
+            },
+            $html,
+        );
+
+        return is_string($rewritten) ? $rewritten : $html;
     }
 
     private function authorize(App $app, Request $request): ?AppLaunchToken

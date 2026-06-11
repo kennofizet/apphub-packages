@@ -19,7 +19,7 @@ function parseUserFromBootstrap(resp) {
 /**
  * Hub session — user (apphub bootstrap) + zones (packages-core).
  */
-export function createZoneContextState(getCoreApi, getHostApi) {
+export function createZoneContextState(getCoreApi, getHostApi, hooks = {}) {
   const state = reactive({
     user: { id: null, name: null },
     zones: [],
@@ -73,11 +73,17 @@ export function createZoneContextState(getCoreApi, getHostApi) {
   }
 
   async function refreshUser() {
+    if (hooks.ensureBootstrapSession) {
+      await hooks.ensureBootstrapSession()
+      return
+    }
+
     const hostApi = getHostApi?.()
     if (!hostApi?.bootstrap) return
 
     try {
       const res = await hostApi.bootstrap()
+      hooks.onBootstrap?.(res)
       const user = parseUserFromBootstrap(res)
       if (user) {
         state.user.id = user.id
@@ -120,10 +126,14 @@ export function createZoneContextState(getCoreApi, getHostApi) {
     }
   }
 
-  async function refresh() {
+  async function refresh(options = {}) {
     state.loading = true
     try {
-      await Promise.all([refreshUser(), refreshZones()])
+      if (options.skipBootstrap) {
+        await refreshZones()
+      } else {
+        await Promise.all([refreshUser(), refreshZones()])
+      }
     } finally {
       state.loading = false
     }

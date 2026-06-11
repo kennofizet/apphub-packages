@@ -2064,6 +2064,286 @@
   font-weight: 400;
 }
 
+/* Origin safety block — same-origin iframe embed */
+.apphub-origin-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.apphub-origin-block__panel {
+  max-width: 520px;
+  padding: 28px 32px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  text-align: center;
+}
+
+.apphub-origin-block__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.apphub-origin-block__title {
+  margin: 16px 0 12px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.apphub-origin-block__message,
+.apphub-origin-block__hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.apphub-origin-block__hint {
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.apphub-origin-block__dl {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+  text-align: left;
+}
+
+.apphub-origin-block__row {
+  margin-bottom: 8px;
+}
+
+.apphub-origin-block__row dt {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.apphub-origin-block__row dd {
+  margin: 0;
+  font-size: 0.78rem;
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+  color: #cbd5e1;
+}
+
+.apphub-origin-block__dev {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+  text-align: left;
+}
+
+.apphub-origin-block__dev-title {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.apphub-origin-block__dev-status {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.apphub-origin-block__dev-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.apphub-origin-block__dev-btn:hover {
+  background: #1e293b;
+  border-color: #64748b;
+}
+
+/* Origin bootstrap loading — first visit before cache */
+.apphub-origin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.apphub-origin-loading__panel {
+  max-width: 420px;
+  padding: 32px 36px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  text-align: center;
+}
+
+.apphub-origin-loading__spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 20px;
+  border: 3px solid #334155;
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: apphub-origin-loading-spin 0.85s linear infinite;
+}
+
+@keyframes apphub-origin-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.apphub-origin-loading__title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.apphub-origin-loading__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* DEV origin mode */
+.apphub-dev-origin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+.apphub-dev-origin-bar--corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  max-width: min(420px, calc(100% - 24px));
+  padding: 8px 12px;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.apphub-dev-origin-bar--taskbar {
+  margin-left: auto;
+  margin-right: 8px;
+  max-width: min(360px, 42vw);
+  border-color: rgba(124, 58, 237, 0.45);
+  background: rgba(30, 27, 75, 0.85);
+}
+
+.apphub-dev-origin-bar--settings {
+  margin-top: 20px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  border-color: rgba(124, 58, 237, 0.45);
+  background: rgba(30, 27, 75, 0.65);
+}
+
+.apphub-settings-panel__dev-origin {
+  display: block;
+}
+
+.apphub-dev-origin-bar__badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.apphub-dev-origin-bar__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apphub-dev-origin-bar__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.apphub-dev-origin-bar__status {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.apphub-dev-origin-bar__status--inline {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+@media (min-width: 900px) {
+  .apphub-dev-origin-bar__status--inline {
+    max-width: 200px;
+  }
+}
+
+.apphub-dev-origin-bar__btn {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.apphub-dev-origin-bar__btn:hover {
+  background: #334155;
+}
+
+.apphub-desktop--light .apphub-dev-origin-bar {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(100, 116, 139, 0.35);
+  color: #0f172a;
+}
+
+.apphub-desktop--light .apphub-dev-origin-bar__status {
+  color: #64748b;
+}
+
+.apphub-desktop--light .apphub-dev-origin-bar__btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 .apphub-placeholder {
   display: flex;
   flex-direction: column;

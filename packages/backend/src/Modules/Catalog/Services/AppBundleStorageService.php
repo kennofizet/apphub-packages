@@ -195,7 +195,12 @@ final class AppBundleStorageService
 
             $ext = strtolower($file->getExtension());
             if (in_array($ext, self::BLOCKED_EXTENSIONS, true)) {
-                throw new RuntimeException('Blocked file type in bundle: .' . $ext);
+                $relative = ltrim(str_replace('\\', '/', substr($path, strlen($root))), '/');
+                throw new RuntimeException(
+                    'Blocked file type in bundle: .' . $ext
+                    . ($relative !== '' ? ' (' . $relative . ')' : '')
+                    . '. Zip only build output (e.g. dist/ with index.html) — not node_modules or dev tooling.',
+                );
             }
         }
     }

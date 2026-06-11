@@ -96,7 +96,21 @@ npm install
 npm run pack
 ```
 
-Drop `release/demo-simple-vue.zip` on the Hub desktop.
+Drop **`release/demo-simple-vue.zip`** on the Hub desktop.
+
+### Do not zip the project folder manually
+
+On Windows, `node_modules/.bin/` contains `.cmd` / `.ps1` shims. If you zip the whole `vue/` folder (or include `node_modules`), upload fails with:
+
+> Blocked file type in bundle: .cmd
+
+`npm run pack` builds `dist/`, copies `manifest.json`, and zips **only**:
+
+- `index.html`
+- `assets/*.js`, `assets/*.css`
+- `manifest.json`
+
+No `.cmd` files — safe to drop on Hub.
 
 ---
 

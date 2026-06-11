@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubService;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppHubPublicUrlService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
 use Kennofizet\PackagesCore\Models\User;
 
@@ -15,6 +16,7 @@ class CatalogController extends Controller
     public function __construct(
         private readonly AppCatalogService $catalog,
         private readonly AppHubService $appHub,
+        private readonly AppHubPublicUrlService $publicUrls,
     ) {
     }
 
@@ -29,6 +31,7 @@ class CatalogController extends Controller
                 'installed' => [],
                 'is_dev_user' => $this->appHub->isDevUser($userId),
                 'zone_id' => $zoneId,
+                'origins' => $this->bootstrapOrigins($request),
             ],
         ]);
     }
@@ -49,6 +52,17 @@ class CatalogController extends Controller
             'data' => $result['items'],
             'meta' => $result['meta'],
         ]);
+    }
+
+    /** @return array{hub_public_url: string, frontend_origin: string, runtime_public_url: string, auto_derived: true} */
+    private function bootstrapOrigins(Request $request): array
+    {
+        return [
+            'hub_public_url' => $this->publicUrls->hubPublicUrlFromConfig(),
+            'frontend_origin' => $this->publicUrls->resolveHubPublicUrl($request),
+            'runtime_public_url' => $this->publicUrls->apiBaseUrl(),
+            'auto_derived' => true,
+        ];
     }
 
     private function currentZoneId(Request $request): ?int

@@ -12,6 +12,8 @@
       @update:snap-to-grid="hub.setSnapToGrid"
       @update:theme="hub.setTheme"
     />
+
+    <AppHubDesktopDevOriginBar v-if="devOriginVisible" placement="settings" class="apphub-settings-panel__dev-origin" />
   </div>
 </template>
 
@@ -20,9 +22,12 @@ import { computed, inject, unref } from 'vue'
 import { t } from '../../../../i18n/index.js'
 import { resolveLang } from '../../../../i18n/resolveLang.js'
 import { useDesktopHubSettings } from '../../composables/useDesktopHubSettings.js'
+import { useDevOriginToggle } from '../../../../composables/useDevOriginToggle.js'
 import AppHubDesktopSettings from '../AppHubDesktopSettings.vue'
+import AppHubDesktopDevOriginBar from '../AppHubDesktopDevOriginBar.vue'
 
 const hub = useDesktopHubSettings()
+const { visible: devOriginVisible } = useDevOriginToggle()
 const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
 const activeTheme = computed(() => unref(hub.activeTheme) ?? 'dark')
 const showThemeToggle = computed(() => unref(hub.showThemeToggle) !== false)

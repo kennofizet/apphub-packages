@@ -1,4 +1,29 @@
 export default {
+  origin_block_title: 'App Hub phải chạy trên origin riêng',
+  origin_block_same_origin_embed:
+    'App Hub đang được nhúng iframe cùng origin với sản phẩm chính. App hosted có thể đọc chung localStorage/cookie của trình duyệt.',
+  origin_block_not_configured:
+    'App Hub được gọi trong app sản phẩm mà chưa khai báo origin riêng. Không gắn installAppHubModule vào app sản phẩm — hãy deploy frontend App Hub riêng.',
+  origin_block_wrong_origin:
+    'Origin trang hiện tại không khớp hubOrigin đã cấu hình. App Hub chỉ được chạy trên URL riêng của nó.',
+  origin_block_generic: 'Origin trang này không được phép chạy App Hub.',
+  origin_block_runtime_not_configured:
+    'Cần runtimePublicUrl. Bundle hosted phải phục vụ trên origin riêng (vd. https://apps.congty.com/api/.../apphub).',
+  origin_block_runtime_same_origin:
+    'runtimePublicUrl phải khác origin trang Hub để app publisher không đọc localStorage của Hub.',
+  origin_block_hint:
+    'Dev localhost tự động. Host Hub = origin frontend (bootstrap đọc Origin trình duyệt). Runtime API = APP_URL + KNF_CORE_API_PREFIX + APPHUB_API_PREFIX. Chỉ nhúng URL Hub vào iframe sản phẩm.',
+  origin_block_current_origin: 'Origin trang hiện tại',
+  origin_block_expected_hub_origin: 'hubOrigin đã cấu hình',
+  origin_block_expected_runtime_origin: 'runtimePublicUrl đã cấu hình',
+  origin_block_parent_origin: 'Origin trang cha',
+  origin_loading_title: 'Đang khởi động App Hub…',
+  origin_loading_hint: 'Đang kiểm tra an toàn origin và tải cấu hình từ máy chủ.',
+  dev_origin_bar_title: 'An toàn origin (dev)',
+  dev_origin_status_relaxed: 'Nới lỏng — bỏ qua localhost',
+  dev_origin_status_strict: 'Nghiêm — quy tắc origin như production',
+  dev_origin_action_strict: 'Bật kiểm tra nghiêm',
+  dev_origin_action_relaxed: 'Nới lỏng (dev)',
   desktop_start: 'Start',
   desktop_app_store: 'App Store',
   desktop_app_store_hint: 'Cài và mở ứng dụng',

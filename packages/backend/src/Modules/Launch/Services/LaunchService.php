@@ -88,11 +88,7 @@ final class LaunchService
                 return null;
             }
 
-            return $this->runtimeServe->buildRuntimeIndexUrl(
-                $app,
-                $this->hubApiBaseUrl(),
-                $bundle['entry'],
-            );
+            return $this->runtimeServe->buildRuntimeIndexUrl($app, null, $bundle['entry']);
         }
 
         return $app->entry_url;
@@ -107,13 +103,5 @@ final class LaunchService
         $normalized = AppSemver::normalize($version);
 
         return $normalized !== '' && AppSemver::isValid($normalized) ? $normalized : null;
-    }
-
-    private function hubApiBaseUrl(): string
-    {
-        $prefix = trim((string) config('packages-core.api_prefix', 'api/knf'), '/');
-        $hub = trim((string) config('apphub.api_prefix', 'apphub'), '/');
-
-        return rtrim(request()->getSchemeAndHttpHost(), '/') . '/' . $prefix . '/' . $hub;
     }
 }

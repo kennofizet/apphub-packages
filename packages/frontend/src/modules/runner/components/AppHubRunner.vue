@@ -153,7 +153,11 @@ const preflightTargetLabel = computed(() => {
 const isDraft = computed(() => props.status === 'draft')
 const showPreflight = computed(() => isDraft.value && !launched.value)
 
-const iframeSandbox = computed(() => iframeSandboxAttrs(isHosted.value ? RUNTIME_HOSTED : props.runtimeType))
+const iframeSandbox = computed(() =>
+  iframeSandboxAttrs(isHosted.value ? RUNTIME_HOSTED : props.runtimeType, {
+    hostedSandboxSameOrigin: moduleOptions?.hostedSandboxSameOrigin === true,
+  }),
+)
 
 const loading = ref(false)
 const launching = ref(false)
@@ -178,6 +182,7 @@ const pingLabel = computed(() => {
 function launchOptions() {
   return {
     backendUrl: backendUrl.value,
+    runtimePublicUrl: moduleOptions?.runtimePublicUrl ?? '',
     runtimeType: launchRuntimeType.value,
   }
 }
