@@ -1,8 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
+import manifest from '../manifest.json'
 
 const hello = ref('')
 const hasToken = computed(() => new URLSearchParams(window.location.search).has('launch_token'))
+const version = manifest.version ?? '—'
 
 function onHello() {
   hello.value = 'Hello from demo-simple-vue!'
@@ -12,6 +14,7 @@ function onHello() {
 <template>
   <main class="app">
     <h1>Demo Simple (Vue)</h1>
+    <p class="app__version">Version {{ version }}</p>
     <p class="app__lead">Hosted bundle: Vue 3 + Vite.</p>
     <p class="app__status">
       {{ hasToken ? 'Launch token present in URL.' : 'Ready.' }}

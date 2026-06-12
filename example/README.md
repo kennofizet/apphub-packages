@@ -63,6 +63,31 @@ No `"action": "replace"` — bump `version` in `manifest.json` and drop again.
 
 ---
 
+## Quick pack (both demos)
+
+From **`example/`** (one command for re-testing on Hub):
+
+```bash
+cd example
+npm install
+npm run pack
+```
+
+This will:
+
+1. **Bump patch version** in `demo-simple/html/manifest.json` and `demo-simple/vue/manifest.json`
+2. **Delete old `.zip` files** in `example/release/` and demo `release/` folders
+3. **Build** the Vue demo and create fresh zips:
+
+| Output | Slug |
+|--------|------|
+| `release/demo-simple-html.zip` | `demo-simple-html` |
+| `release/demo-simple-vue.zip` | `demo-simple-vue` |
+
+Drop both zips on the App Hub desktop (close windows first). Each run increments version so re-upload succeeds.
+
+---
+
 ## Publish on App Hub (test host)
 
 1. Build a zip with `manifest.json` and your app files at the **zip root** (or one subfolder).
@@ -77,18 +102,20 @@ No `"action": "replace"` — bump `version` in `manifest.json` and drop again.
 
 ## HTML demo
 
-Zip these files together (flat root):
+Packed automatically by `npm run pack` from `example/`. Manual zip root files:
 
 - `manifest.json`
 - `index.html`
 - `styles.css`
 - `app.js`
 
-Bump `version` in `manifest.json` before re-uploading the same slug.
+When the app runs inside App Hub, the runtime API requires `launch_token` on every file request (not only `index.html`). The HTML demo appends the token from the page URL when fetching `manifest.json` for the version badge.
 
 ---
 
 ## Vue demo
+
+Also packed by `npm run pack` from `example/`. Vue-only:
 
 ```bash
 cd example/demo-simple/vue
@@ -96,7 +123,7 @@ npm install
 npm run pack
 ```
 
-Drop **`release/demo-simple-vue.zip`** on the Hub desktop.
+Drop **`release/demo-simple-vue.zip`** (from `example/release/` when using root pack) on the Hub desktop.
 
 ### Do not zip the project folder manually
 
@@ -116,5 +143,5 @@ No `.cmd` files — safe to drop on Hub.
 
 ## Notes
 
-- `node_modules/`, `dist/`, and `release/` are gitignored.
+- `node_modules/`, `dist/`, and `release/` are gitignored (including `example/release/`).
 - Version history is stored per app; DEV / owner can view it in App Store → Settings.

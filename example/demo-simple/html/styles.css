@@ -23,6 +23,19 @@ body {
   font-size: 0.9rem;
 }
 
+.app__version {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #93c5fd;
+  background: #1e3a5f;
+  border: 1px solid #334155;
+}
+
 .app__status {
   font-size: 0.85rem;
   color: #86efac;

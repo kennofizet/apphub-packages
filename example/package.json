@@ -1,0 +1,12 @@
+{
+  "name": "apphub-examples",
+  "private": true,
+  "description": "App Hub publisher example apps — bump versions and pack test zips",
+  "type": "module",
+  "scripts": {
+    "pack": "node scripts/pack-all.mjs"
+  },
+  "devDependencies": {
+    "archiver": "^7.0.1"
+  }
+}
