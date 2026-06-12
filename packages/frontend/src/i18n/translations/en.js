@@ -136,7 +136,7 @@ export default {
   notif_close: 'Dismiss notification',
   notif_error_title: 'App Hub',
   notif_publish_success: 'Draft submitted and installed on your desktop.',
-  notif_publish_upgrade_success: 'New version submitted. Update from App Store when you want to run it.',
+  notif_publish_upgrade_success: 'New version submitted and pinned on your desktop.',
   notif_install_cancelled: 'Install cancelled.',
   drop_method_publish: 'Submit hosted draft',
   drop_method_appstore: 'App Store package',

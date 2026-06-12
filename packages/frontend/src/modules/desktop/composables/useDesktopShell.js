@@ -223,9 +223,12 @@ export function createDesktopShell(options = {}) {
       if (app.entry_url) existingBySlug.entry_url = app.entry_url
       if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
       if (app.description) existingBySlug.hint = app.description
-      if (method !== 'publish') {
-        const nextVersion = resolveInstalledVersion(app)
-        if (nextVersion && !existingBySlug.installedVersion) {
+      const nextVersion = resolveInstalledVersion(app)
+      if (nextVersion) {
+        if (method === 'publish') {
+          existingBySlug.installedVersion = nextVersion
+          existingBySlug.version = nextVersion
+        } else if (!existingBySlug.installedVersion) {
           existingBySlug.installedVersion = nextVersion
           existingBySlug.version = nextVersion
         }

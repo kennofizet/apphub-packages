@@ -136,7 +136,7 @@ export default {
   notif_close: 'Đóng thông báo',
   notif_error_title: 'App Hub',
   notif_publish_success: 'Đã gửi draft và cài lên desktop của bạn.',
-  notif_publish_upgrade_success: 'Đã gửi phiên bản mới. Vào App Store bấm Cập nhật khi muốn chạy bản mới.',
+  notif_publish_upgrade_success: 'Đã gửi phiên bản mới và ghim trên desktop của bạn.',
   notif_install_cancelled: 'Đã hủy cài đặt.',
   drop_method_publish: 'Gửi draft hosted',
   drop_method_appstore: 'Gói App Store',

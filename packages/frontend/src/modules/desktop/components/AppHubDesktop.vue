@@ -657,6 +657,17 @@ function handleUpdateUserApp(app) {
   return ok
 }
 
+async function refreshDraftCatalogAfterPublish() {
+  const api = getHostApiForApp(rootApp)
+  if (!api?.apps || !isBackendReadyForApp(rootApp)) return
+
+  await appStore.loadCatalog(api, {
+    backendReady: true,
+    mode: CATALOG_MODE_DRAFT,
+    perPage: 48,
+  })
+}
+
 const shell = createDesktopShell({
   language: lang,
   getLabels: () => labels.value,
@@ -1074,6 +1085,12 @@ const dropInstall = createDesktopDropInstall({
   async onInstalled(app, { x, y, method }) {
     const position = resolveDropPosition(x, y)
     return handleInstallUserApp(app, position, method)
+  },
+  async onAfterPublish(catalogApp) {
+    if (catalogApp?.slug && typeof appStore.upsertCatalogItem === 'function') {
+      appStore.upsertCatalogItem(CATALOG_MODE_DRAFT, catalogApp)
+    }
+    await refreshDraftCatalogAfterPublish()
   },
   onPersist: schedulePersist,
 })

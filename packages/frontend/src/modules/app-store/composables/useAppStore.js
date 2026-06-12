@@ -1,6 +1,6 @@
 import { computed, inject, reactive } from 'vue'
 import { CATALOG_MODE_DRAFT, CATALOG_MODE_STORE } from '../constants/catalogModes.js'
-import { normalizeCatalogList } from '../utils/normalizeCatalogApp.js'
+import { normalizeCatalogApp, normalizeCatalogList } from '../utils/normalizeCatalogApp.js'
 
 const APP_STORE_KEY = 'apphubAppStore'
 
@@ -102,6 +102,22 @@ export function createAppStoreState(options = {}) {
     }
   }
 
+  function upsertCatalogItem(mode, row) {
+    const item = normalizeCatalogApp(row)
+    if (!item) return null
+    const bucket = bucketFor(mode)
+    const idx = bucket.items.findIndex((a) => a.slug === item.slug)
+    if (idx === -1) {
+      bucket.items.unshift(item)
+    } else {
+      bucket.items[idx] = { ...bucket.items[idx], ...item }
+    }
+    syncInstalledFlags()
+    bucket.loaded = true
+    bucket.error = ''
+    return item
+  }
+
   async function loadCatalog(hostApi, options = {}) {
     const mode = options.mode === CATALOG_MODE_DRAFT ? CATALOG_MODE_DRAFT : CATALOG_MODE_STORE
     const bucket = bucketFor(mode)
@@ -196,6 +212,7 @@ export function createAppStoreState(options = {}) {
     uninstallApp,
     loadCatalog,
     loadMoreCatalog,
+    upsertCatalogItem,
   })
 }
 

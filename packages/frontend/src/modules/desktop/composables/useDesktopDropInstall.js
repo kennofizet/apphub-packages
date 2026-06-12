@@ -17,6 +17,7 @@ export function createDesktopDropInstall(options = {}) {
   const getLabels = options.getLabels ?? (() => ({}))
   const getAppStore = options.getAppStore ?? (() => null)
   const getHostApi = options.getHostApi ?? (() => null)
+  const onAfterPublish = options.onAfterPublish ?? (async () => {})
 
   const state = reactive({
     dragActive: false,
@@ -177,11 +178,13 @@ export function createDesktopDropInstall(options = {}) {
         job.icon = catalogApp.icon
         job.publishSubmitted = true
 
+        await onAfterPublish(catalogApp)
+
         notify({
           type: 'success',
           title: catalogApp.name,
           message: result === 'updated'
-            ? label('publishUpgradeSuccess', 'New version submitted. Update from App Store when you want to run it.')
+            ? label('publishUpgradeSuccess', 'New version submitted and pinned on your desktop.')
             : label('publishSuccess', 'Draft submitted and installed on your desktop.'),
         })
 
