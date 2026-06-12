@@ -200,7 +200,7 @@ class CatalogDevController extends Controller
 
     public function rejectPending(Request $request, string $slug): JsonResponse
     {
-        $this->guardDevUser($request);
+        $userId = $this->guardDevUser($request);
 
         if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
             return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
