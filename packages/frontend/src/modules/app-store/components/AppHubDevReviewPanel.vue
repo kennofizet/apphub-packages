@@ -61,6 +61,8 @@
           :root-app="rootApp"
           :open="historySlug === app.slug"
           :labels="historyLabels"
+          :installed-version="installedVersionFor(app.slug)"
+          :catalog-version="app.version"
         />
 
         <div v-if="inspect[app.slug]" class="apphub-dev-review__files">
@@ -89,6 +91,7 @@ import AppHubAppVersionHistory from './AppHubAppVersionHistory.vue'
 const props = defineProps({
   rootApp: { type: Object, default: null },
   devApps: { type: Array, default: () => [] },
+  getInstalledVersion: { type: Function, default: null },
 })
 
 const emit = defineEmits(['refreshed'])
@@ -125,10 +128,15 @@ const historyLabels = computed(() => ({
   title: t('dev_review_history_title', lang.value),
   loading: t('dev_review_history_loading', lang.value),
   empty: t('dev_review_history_empty', lang.value),
-  current: t('dev_review_history_current', lang.value),
+  latest: t('dev_review_history_latest', lang.value),
+  yours: t('dev_review_history_yours', lang.value),
   no_api: t('app_store_no_api', lang.value),
   load_error: t('dev_review_history_error', lang.value),
 }))
+
+function installedVersionFor(slug) {
+  return props.getInstalledVersion?.(slug) ?? null
+}
 
 const draftApps = computed(() =>
   (props.devApps ?? []).filter((app) => app?.status === 'draft'),

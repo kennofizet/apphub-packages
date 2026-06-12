@@ -45,10 +45,12 @@
               :labels="labels"
               :root-app="rootApp"
               :installed="appStore.isInstalled(app.slug)"
+              :installed-version="installedVersionFor(app.slug)"
               :can-install="appStore.canInstall(app)"
               :pinging="pingingSlug === app.slug"
               :ping-result="pingResults[app.slug] ?? null"
               @install="onInstall"
+              @update="onUpdate"
               @uninstall="onUninstall"
               @ping="onPing"
             />
@@ -77,7 +79,9 @@ import { useAppStore } from '../composables/useAppStore.js'
 import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
 
 const props = defineProps({
+  getInstalledVersion: { type: Function, default: null },
   onInstalled: { type: Function, default: null },
+  onUpdateApp: { type: Function, default: null },
   onUninstalled: { type: Function, default: null },
 })
 
@@ -107,6 +111,8 @@ const labels = computed(() => ({
   app_store_status_draft: t('app_store_status_draft', lang.value),
   app_store_installed: t('app_store_installed', lang.value),
   app_store_uninstall: t('app_store_uninstall', lang.value),
+  app_store_update: t('app_store_update', lang.value),
+  app_store_installed_version: t('app_store_installed_version', lang.value),
   draft_ping_btn: t('draft_ping_btn', lang.value),
   draft_ping_pinging: t('draft_ping_pinging', lang.value),
   draft_ping_ok: t('draft_ping_ok', lang.value),
@@ -115,7 +121,8 @@ const labels = computed(() => ({
   dev_review_history_loading: t('dev_review_history_loading', lang.value),
   dev_review_history_title: t('dev_review_history_title', lang.value),
   dev_review_history_empty: t('dev_review_history_empty', lang.value),
-  dev_review_history_current: t('dev_review_history_current', lang.value),
+  dev_review_history_latest: t('dev_review_history_latest', lang.value),
+  dev_review_history_yours: t('dev_review_history_yours', lang.value),
   dev_review_history_error: t('dev_review_history_error', lang.value),
 }))
 
@@ -139,9 +146,17 @@ const { rootRef: scrollRoot, sentinelRef: scrollSentinel } = useCatalogInfiniteS
   onLoadMore: loadMore,
 })
 
+function installedVersionFor(slug) {
+  return props.getInstalledVersion?.(slug) ?? null
+}
+
 async function onInstall(app) {
   if (!appStore.installApp(app.slug)) return
   await props.onInstalled?.(app)
+}
+
+async function onUpdate(app) {
+  await props.onUpdateApp?.(app)
 }
 
 async function onUninstall(app) {

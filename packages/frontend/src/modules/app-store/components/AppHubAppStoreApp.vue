@@ -32,6 +32,7 @@
       <AppHubAppStoreSettingsPanel
         v-if="settingsOpen"
         :root-app="rootApp"
+        :get-installed-version="getInstalledVersion"
         @refreshed="reloadCatalog"
       />
       <div v-else ref="scrollRoot" class="apphub-store__panel apphub-store__panel--scroll">

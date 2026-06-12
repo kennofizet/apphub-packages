@@ -5,7 +5,11 @@
       <div class="apphub-draft-card__body">
         <h3 class="apphub-draft-card__name">{{ app.name }}</h3>
         <p class="apphub-draft-card__slug">
-          {{ app.slug }}<span v-if="app.version"> · v{{ app.version }}</span>
+          {{ app.slug }}
+          <span v-if="app.version"> · v{{ app.version }}</span>
+          <span v-if="installedVersion" class="apphub-draft-card__installed-ver">
+            · {{ labels.app_store_installed_version }} v{{ installedVersion }}
+          </span>
         </p>
         <p v-if="app.description" class="apphub-draft-card__desc">{{ app.description }}</p>
       </div>
@@ -31,6 +35,14 @@
           <span class="apphub-draft-card__installed-check" aria-hidden="true">✓</span>
           {{ labels.app_store_installed }}
         </span>
+        <button
+          v-if="updateAvailable"
+          type="button"
+          class="apphub-draft-card__btn apphub-draft-card__btn--primary"
+          @click="emit('update', app)"
+        >
+          {{ labels.app_store_update }}
+        </button>
         <button
           type="button"
           class="apphub-draft-card__btn apphub-draft-card__btn--secondary"
@@ -66,6 +78,8 @@
       :root-app="rootApp"
       :open="historyOpen"
       :labels="historyLabels"
+      :installed-version="installedVersion"
+      :catalog-version="app.version"
     />
 
     <p
@@ -80,6 +94,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { isSemverGreaterThan } from '../../../utils/semver.js'
 import AppHubAppVersionHistory from './AppHubAppVersionHistory.vue'
 
 const props = defineProps({
@@ -87,6 +102,7 @@ const props = defineProps({
   labels: { type: Object, required: true },
   rootApp: { type: Object, default: null },
   installed: { type: Boolean, default: false },
+  installedVersion: { type: String, default: null },
   canInstall: { type: Boolean, default: true },
   pinging: { type: Boolean, default: false },
   pingResult: { type: Object, default: null },
@@ -94,16 +110,23 @@ const props = defineProps({
 
 const historyOpen = ref(false)
 
+const updateAvailable = computed(() => {
+  if (!props.installed || !props.app?.version) return false
+  if (!props.installedVersion) return false
+  return isSemverGreaterThan(props.app.version, props.installedVersion)
+})
+
 const historyLabels = computed(() => ({
   title: props.labels.dev_review_history_title,
   loading: props.labels.dev_review_history_loading,
   empty: props.labels.dev_review_history_empty,
-  current: props.labels.dev_review_history_current,
+  latest: props.labels.dev_review_history_latest,
+  yours: props.labels.dev_review_history_yours,
   no_api: props.labels.app_store_no_api,
   load_error: props.labels.dev_review_history_error,
 }))
 
-const emit = defineEmits(['install', 'uninstall', 'ping'])
+const emit = defineEmits(['install', 'uninstall', 'update', 'ping'])
 
 const pingLabel = computed(() => {
   if (!props.pingResult) return ''

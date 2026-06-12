@@ -93,6 +93,7 @@
     <AppHubDevReviewPanel
       :root-app="rootApp"
       :dev-apps="devApps"
+      :get-installed-version="getInstalledVersion"
       @refreshed="onDevRefreshed"
     />
 
@@ -134,6 +135,7 @@ import AppHubDevReviewPanel from './AppHubDevReviewPanel.vue'
 
 const props = defineProps({
   rootApp: { type: Object, default: null },
+  getInstalledVersion: { type: Function, default: null },
 })
 
 const emit = defineEmits(['refreshed'])

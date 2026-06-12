@@ -1288,6 +1288,12 @@
   font-family: ui-monospace, monospace;
 }
 
+.apphub-draft-card__installed-ver {
+  color: #86efac;
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+}
+
 .apphub-draft-card__desc {
   margin: 0;
   font-size: 0.78rem;
@@ -2025,8 +2031,16 @@
   border: 1px solid #334155;
 }
 
-.apphub-version-history__item--current {
+.apphub-version-history__item--latest {
   border-color: #2563eb;
+}
+
+.apphub-version-history__item--yours {
+  border-color: #16a34a;
+}
+
+.apphub-version-history__item--latest.apphub-version-history__item--yours {
+  border-color: #0891b2;
 }
 
 .apphub-version-history__row {
@@ -2040,8 +2054,15 @@
   padding: 1px 6px;
   border-radius: 999px;
   font-size: 0.65rem;
-  background: #1d4ed8;
   color: #fff;
+}
+
+.apphub-version-history__badge--latest {
+  background: #1d4ed8;
+}
+
+.apphub-version-history__badge--yours {
+  background: #15803d;
 }
 
 .apphub-version-history__meta,
