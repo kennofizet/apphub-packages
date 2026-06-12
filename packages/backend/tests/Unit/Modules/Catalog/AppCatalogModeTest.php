@@ -18,5 +18,6 @@ final class AppCatalogModeTest extends TestCase
     {
         $this->assertSame(AppCatalogMode::DRAFT, AppCatalogMode::normalize('draft'));
         $this->assertSame(AppCatalogMode::DRAFT, AppCatalogMode::normalize('DRAFT'));
+        $this->assertSame(AppCatalogMode::PUBLISHER, AppCatalogMode::normalize('publisher'));
     }
 }

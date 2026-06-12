@@ -9,6 +9,7 @@ use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppBundleStorageService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubService;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppPublishService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppRuntimeType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -19,6 +20,7 @@ class CatalogDevController extends Controller
         private readonly AppHubService $appHub,
         private readonly AppCatalogService $catalog,
         private readonly AppBundleStorageService $bundles,
+        private readonly AppPublishService $publish,
     ) {
     }
 
@@ -59,7 +61,91 @@ class CatalogDevController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->catalog->toCatalogItem($app),
+            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
+        ]);
+    }
+
+    public function readBundleFile(Request $request, string $slug): JsonResponse
+    {
+        $this->guardDevUser($request);
+
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
+            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        }
+
+        $path = (string) $request->query('path', '');
+        if ($path === '' || str_contains($path, '..')) {
+            return response()->json(['success' => false, 'error' => 'Invalid file path'], 422);
+        }
+
+        $app = App::query()->where('slug', $slug)->first();
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
+        $reviewBundle = $this->publish->resolveReviewBundle($app);
+        if ($app->runtime_type !== AppRuntimeType::HOSTED || $reviewBundle === null) {
+            return response()->json(['success' => false, 'error' => 'App has no hosted bundle'], 422);
+        }
+
+        $compare = $request->boolean('compare');
+        $baseline = $compare ? $this->publish->resolveBaselineBundle($app) : null;
+        $changeStatus = 'added';
+
+        try {
+            $read = $this->bundles->readBundleTextFile($reviewBundle['path'], $path);
+        } catch (\RuntimeException $e) {
+            if ($baseline !== null) {
+                try {
+                    $oldRead = $this->bundles->readBundleTextFile($baseline['path'], $path);
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'slug' => $app->slug,
+                            'path' => $path,
+                            'content' => '',
+                            'old_content' => $oldRead['content'],
+                            'change_status' => 'deleted',
+                            'truncated' => false,
+                            'old_truncated' => $oldRead['truncated'],
+                            'size' => 0,
+                        ],
+                    ]);
+                } catch (\RuntimeException) {
+                    return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+                }
+            }
+
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+        }
+
+        $oldContent = null;
+        $oldTruncated = false;
+        if ($baseline !== null) {
+            try {
+                $oldRead = $this->bundles->readBundleTextFile($baseline['path'], $path);
+                $oldContent = $oldRead['content'];
+                $oldTruncated = $oldRead['truncated'];
+                $changeStatus = $oldRead['content'] === $read['content'] ? 'unchanged' : 'modified';
+            } catch (\RuntimeException) {
+                $changeStatus = 'added';
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'slug' => $app->slug,
+                'path' => $path,
+                'content' => $read['content'],
+                'old_content' => $oldContent,
+                'change_status' => $changeStatus,
+                'truncated' => $read['truncated'],
+                'old_truncated' => $oldTruncated,
+                'size' => $read['size'],
+                'baseline_version' => $baseline['version'] ?? null,
+            ],
         ]);
     }
 
@@ -76,12 +162,19 @@ class CatalogDevController extends Controller
             return response()->json(['success' => false, 'error' => 'App not found'], 404);
         }
 
-        if ($app->runtime_type !== AppRuntimeType::HOSTED || $app->bundle_path === null || $app->bundle_path === '') {
+        $reviewBundle = $this->publish->resolveReviewBundle($app);
+        if ($app->runtime_type !== AppRuntimeType::HOSTED || $reviewBundle === null) {
             return response()->json(['success' => false, 'error' => 'App has no hosted bundle'], 422);
         }
 
-        $files = $this->bundles->listBundleFiles($app->bundle_path);
-        $maxFiles = 200;
+        $baseline = $this->publish->resolveBaselineBundle($app);
+        $fileEntries = $this->bundles->compareBundleTrees(
+            $reviewBundle['path'],
+            $baseline['path'] ?? null,
+        );
+        $maxFiles = 500;
+        $truncated = count($fileEntries) > $maxFiles;
+        $fileEntries = array_slice($fileEntries, 0, $maxFiles);
 
         return response()->json([
             'success' => true,
@@ -90,13 +183,43 @@ class CatalogDevController extends Controller
                 'name' => $app->name,
                 'status' => $app->status,
                 'runtime_type' => $app->runtime_type,
-                'version' => $app->version,
-                'bundle_hash' => $app->bundle_hash,
-                'bundle_entry' => $app->bundle_entry,
-                'file_count' => count($files),
-                'files' => array_slice($files, 0, $maxFiles),
-                'files_truncated' => count($files) > $maxFiles,
+                'version' => $reviewBundle['version'],
+                'live_version' => $app->version,
+                'baseline_version' => $baseline['version'] ?? null,
+                'pending_version' => $app->pending_version,
+                'bundle_hash' => $reviewBundle['hash'],
+                'bundle_entry' => $reviewBundle['entry'],
+                'file_count' => count($fileEntries),
+                'file_entries' => $fileEntries,
+                'files' => array_column($fileEntries, 'path'),
+                'files_truncated' => $truncated,
+                'has_baseline' => $baseline !== null,
             ],
+        ]);
+    }
+
+    public function rejectPending(Request $request, string $slug): JsonResponse
+    {
+        $this->guardDevUser($request);
+
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
+            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        }
+
+        $app = App::query()->where('slug', $slug)->first();
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
+        try {
+            $app = $this->publish->rejectPendingVersion($app);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
         ]);
     }
 
@@ -118,7 +241,7 @@ class CatalogDevController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->catalog->toCatalogItem($app),
+            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
         ]);
     }
 

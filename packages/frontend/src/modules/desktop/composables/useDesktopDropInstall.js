@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { defaultAppStoreCatalog } from '../../app-store/data/defaultCatalog.js'
 import { normalizeCatalogApp } from '../../app-store/utils/normalizeCatalogApp.js'
+import { resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
 import { parseApiError } from '../../notifications/utils/parseApiError.js'
 import { parseDropFiles } from '../utils/dropPackageParser.js'
 import { simulateInstallProgress } from './simulateInstallProgress.js'
@@ -18,6 +19,7 @@ export function createDesktopDropInstall(options = {}) {
   const getAppStore = options.getAppStore ?? (() => null)
   const getHostApi = options.getHostApi ?? (() => null)
   const onAfterPublish = options.onAfterPublish ?? (async () => {})
+  const onPublishRegistered = options.onPublishRegistered ?? (() => {})
 
   const state = reactive({
     dragActive: false,
@@ -139,8 +141,7 @@ export function createDesktopDropInstall(options = {}) {
           healthcheck_url: null,
         }
 
-        appStore?.installApp?.(catalogApp.slug)
-
+        const pinVersion = resolvePublisherTestVersion(catalogApp)
         const result = await onInstalled(
           {
             slug: catalogApp.slug,
@@ -149,9 +150,13 @@ export function createDesktopDropInstall(options = {}) {
             description: catalogApp.description,
             status: catalogApp.status,
             runtime_type: catalogApp.runtime_type,
-            version: catalogApp.version,
+            version: pinVersion,
+            pending_version: catalogApp.pending_version ?? null,
+            catalog_version: catalogApp.version ?? null,
+            rejected_version: null,
             entry_url: catalogApp.entry_url,
             healthcheck_url: catalogApp.healthcheck_url,
+            permissions: catalogApp.permissions ?? job.intent.permissions ?? [],
           },
           { x: job.x, y: job.y, method: 'publish' },
         )
@@ -171,6 +176,10 @@ export function createDesktopDropInstall(options = {}) {
           }, 800)
           return
         }
+
+        onPublishRegistered(catalogApp)
+
+        appStore?.installApp?.(catalogApp.slug)
 
         job.status = 'done'
         job.progress = 100
@@ -205,7 +214,6 @@ export function createDesktopDropInstall(options = {}) {
         const catalogItem = defaultAppStoreCatalog.find((a) => a.slug === job.intent.slug)
           ?? appStore?.findCatalogItem?.(job.intent.slug)
         if (catalogItem) {
-          appStore?.installApp?.(catalogItem.slug)
           app = catalogItem
         } else {
           app = {
@@ -213,6 +221,7 @@ export function createDesktopDropInstall(options = {}) {
             name: job.intent.name,
             icon: job.intent.icon,
             description: job.intent.description ?? '',
+            permissions: job.intent.permissions ?? [],
           }
         }
       } else {
@@ -222,6 +231,7 @@ export function createDesktopDropInstall(options = {}) {
           icon: job.intent.icon,
           description: job.intent.description ?? '',
           local: true,
+          permissions: job.intent.permissions ?? [],
         }
       }
 
@@ -245,6 +255,10 @@ export function createDesktopDropInstall(options = {}) {
           if (idx !== -1) state.jobs.splice(idx, 1)
         }, 800)
         return
+      }
+
+      if (job.method === 'appstore' && app?.slug) {
+        appStore?.installApp?.(app.slug)
       }
 
       setTimeout(() => {

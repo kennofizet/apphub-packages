@@ -11,9 +11,19 @@ export function normalizeCatalogApp(row) {
   const entryUrl = typeof row.entry_url === 'string' ? row.entry_url.trim() : ''
   const healthcheckUrl = typeof row.healthcheck_url === 'string' ? row.healthcheck_url.trim() : ''
 
+  const pendingVersion = typeof row.pending_version === 'string' && row.pending_version.trim()
+    ? row.pending_version.trim()
+    : null
+
+  const rejectedVersion = typeof row.rejected_version === 'string' && row.rejected_version.trim()
+    ? row.rejected_version.trim()
+    : null
+
   return {
     slug,
     version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
+    pending_version: pendingVersion,
+    rejected_version: rejectedVersion,
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : slug,
     description: typeof row.description === 'string' ? row.description : '',
     icon: typeof row.icon === 'string' && row.icon ? row.icon : '📦',
@@ -27,7 +37,16 @@ export function normalizeCatalogApp(row) {
       ? Number(row.bundle_file_count)
       : null,
     installed: !!row.installed,
+    permissions: normalizePermissions(row.permissions),
   }
+}
+
+/** @param {unknown} raw */
+function normalizePermissions(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean)
 }
 
 /** @param {unknown} payload */

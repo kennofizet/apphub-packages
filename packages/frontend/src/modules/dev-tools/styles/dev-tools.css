@@ -1,0 +1,456 @@
+.apphub-dev-tools {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--apphub-panel-bg, #1a1d24);
+  color: var(--apphub-text, #e8eaed);
+}
+
+.apphub-dev-tools__header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+}
+
+.apphub-dev-tools__title {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.apphub-dev-tools__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.apphub-dev-tools__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+}
+
+.apphub-dev-tools__tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.apphub-dev-tools__tab--active {
+  background: var(--apphub-accent-dim, #2a3f5f);
+  color: var(--apphub-accent-text, #9ec5ff);
+}
+
+.apphub-dev-tools__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 16px;
+}
+
+.apphub-dev-tools__body:has(.apphub-dev-tools__code-review) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.apphub-dev-tools__msg {
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.apphub-dev-tools__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.apphub-dev-tools__item {
+  border: 1px solid var(--apphub-border, #2d323c);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--apphub-card-bg, #22262e);
+}
+
+.apphub-dev-tools__item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.apphub-dev-tools__meta {
+  flex: 1;
+  min-width: 160px;
+}
+
+.apphub-dev-tools__meta strong {
+  display: block;
+}
+
+.apphub-dev-tools__slug {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.apphub-dev-tools__badge {
+  display: inline-block;
+  margin-top: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  background: #3a3f4b;
+}
+
+.apphub-dev-tools__badge--draft {
+  background: #4a3d1a;
+  color: #f5d76e;
+}
+
+.apphub-dev-tools__badge--active {
+  background: #1a3d2a;
+  color: #7dcea0;
+}
+
+.apphub-dev-tools__badge--disabled {
+  background: #3d1a1a;
+  color: #f1948a;
+}
+
+.apphub-dev-tools__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.apphub-dev-tools__btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--apphub-border, #3d4450);
+  background: #2d323c;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.apphub-dev-tools__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.apphub-dev-tools__btn--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.apphub-dev-tools__btn--danger {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fecaca;
+}
+
+.apphub-dev-tools__btn--ok {
+  background: #14532d;
+  border-color: #166534;
+  color: #bbf7d0;
+}
+
+.apphub-dev-tools__code-review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.apphub-dev-tools__code-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+  background: var(--apphub-card-bg, #22262e);
+  flex-shrink: 0;
+}
+
+.apphub-dev-tools__code-review-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+  background: #1e2229;
+  flex-shrink: 0;
+}
+
+.apphub-dev-tools__diff-stat {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+}
+
+.apphub-dev-tools__diff-stat--modified {
+  background: #4a3d1a;
+  color: #f5d76e;
+}
+
+.apphub-dev-tools__diff-stat--added {
+  background: #1a3d2a;
+  color: #7dcea0;
+}
+
+.apphub-dev-tools__diff-stat--deleted {
+  background: #3d1a1a;
+  color: #f1948a;
+}
+
+.apphub-dev-tools__code-review-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.apphub-dev-tools__code-review-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--apphub-border, #2d323c);
+  background: #1e2229;
+}
+
+.apphub-dev-tools__code-review-sidebar-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+  flex-shrink: 0;
+}
+
+.apphub-dev-tools__filter-changed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.apphub-dev-tools__code-review-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: #16181d;
+}
+
+.apphub-dev-tools__code-review-file-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--apphub-border, #2d323c);
+  flex-shrink: 0;
+}
+
+.apphub-dev-tools__tree {
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+  background: #1e2229;
+}
+
+.apphub-dev-tools__tree--scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.apphub-dev-tools__tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  cursor: pointer;
+}
+
+.apphub-dev-tools__file-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.apphub-dev-tools__file-status {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.apphub-dev-tools__file-status--badge {
+  width: auto;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+}
+
+.apphub-dev-tools__file-status--modified {
+  color: #f5d76e;
+}
+
+.apphub-dev-tools__file-status--added {
+  color: #7dcea0;
+}
+
+.apphub-dev-tools__file-status--deleted {
+  color: #f1948a;
+}
+
+.apphub-dev-tools__file-status--unchanged {
+  color: #94a3b8;
+}
+
+.apphub-dev-tools__tree-item--modified .apphub-dev-tools__file-path {
+  color: #f5d76e;
+}
+
+.apphub-dev-tools__tree-item--added .apphub-dev-tools__file-path {
+  color: #7dcea0;
+}
+
+.apphub-dev-tools__tree-item--deleted .apphub-dev-tools__file-path {
+  color: #f1948a;
+}
+
+.apphub-dev-tools__tree-item:hover {
+  background: #2a303a;
+}
+
+.apphub-dev-tools__tree-item--active {
+  background: #2a3f5f;
+  color: #9ec5ff;
+}
+
+.apphub-code-diff {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.apphub-code-diff__empty {
+  padding: 16px;
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.apphub-code-diff__table {
+  min-width: 100%;
+}
+
+.apphub-code-diff__row {
+  display: grid;
+  grid-template-columns: 40px 40px 16px 1fr;
+  gap: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.apphub-code-diff__row--equal {
+  background: #16181d;
+}
+
+.apphub-code-diff__row--insert {
+  background: rgba(46, 160, 67, 0.18);
+}
+
+.apphub-code-diff__row--delete {
+  background: rgba(248, 81, 73, 0.18);
+}
+
+.apphub-code-diff__gutter {
+  padding: 0 6px;
+  text-align: right;
+  color: #64748b;
+  user-select: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.apphub-code-diff__sign {
+  text-align: center;
+  color: #94a3b8;
+  user-select: none;
+}
+
+.apphub-code-diff__row--insert .apphub-code-diff__sign {
+  color: #7dcea0;
+}
+
+.apphub-code-diff__row--delete .apphub-code-diff__sign {
+  color: #f1948a;
+}
+
+.apphub-code-diff__code {
+  padding: 0 10px 0 4px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.apphub-code-diff__hint {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  color: #f5d76e;
+  border-top: 1px solid var(--apphub-border, #2d323c);
+}
+
+.apphub-dev-tools__code-empty {
+  padding: 16px;
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.apphub-dev-tools__dl {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+}
+
+.apphub-dev-tools__row {
+  display: flex;
+  gap: 8px;
+}
+
+.apphub-dev-tools__row dt {
+  opacity: 0.7;
+  min-width: 72px;
+}
+
+.apphub-dev-tools__mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}

@@ -5,6 +5,7 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Kennofizet\PackagesCore\Models\User;
 
@@ -12,8 +13,10 @@ class BridgeController extends Controller
 {
     private const ALLOWED_MESSAGE_TYPES = ['toast', 'banner', 'host-hint'];
 
-    public function __construct(private readonly LaunchTokenService $launchTokens)
-    {
+    public function __construct(
+        private readonly LaunchTokenService $launchTokens,
+        private readonly AppVersionService $versions,
+    ) {
     }
 
     public function user(Request $request): JsonResponse
@@ -75,13 +78,18 @@ class BridgeController extends Controller
             'scope' => 'required|string|in:user.read,user.profile,desktop.notify,desktop.message,desktop.badge',
         ]);
 
-        $payload = $this->launchTokens->peek($validated['launch_token']);
-        if ($payload === null) {
+        $record = $this->launchTokens->recordForGrant($validated['launch_token']);
+        if ($record === null) {
             return response()->json(['success' => false, 'error' => 'Invalid launch token'], 404);
         }
 
-        if ((string) ($payload['user_id'] ?? '') !== (string) $userId) {
+        if ((string) $record->user_id !== (string) $userId) {
             return response()->json(['success' => false, 'error' => 'Launch session does not belong to this user'], 403);
+        }
+
+        $allowed = $this->versions->permissionsForLaunchBundle($record->app, $record->bundle_version);
+        if (!in_array($validated['scope'], $allowed, true)) {
+            return response()->json(['success' => false, 'error' => 'Scope not declared in app manifest'], 403);
         }
 
         if (!$this->launchTokens->grantScope($validated['launch_token'], $validated['scope'], (string) $userId)) {

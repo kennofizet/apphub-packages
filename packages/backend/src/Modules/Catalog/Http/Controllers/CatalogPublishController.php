@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppPublishService;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestParser;
 use RuntimeException;
 
@@ -53,7 +54,7 @@ class CatalogPublishController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->catalog->toCatalogItem($app),
+            'data' => $this->catalog->toCatalogItem($app, $userId, AppCatalogMode::PUBLISHER),
         ], 201);
     }
 }

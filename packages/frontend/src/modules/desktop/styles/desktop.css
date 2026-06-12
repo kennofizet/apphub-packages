@@ -151,6 +151,16 @@
   text-overflow: ellipsis;
 }
 
+.apphub-desktop__icon-flag--pending {
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.apphub-desktop__icon-flag--rejected {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
 .apphub-desktop__icon-label {
   margin-top: 6px;
   font-size: 0.75rem;
@@ -254,17 +264,6 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-}
-
-.apphub-start__lists::-webkit-scrollbar {
-  width: 6px;
-}
-
-.apphub-start__lists::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 3px;
 }
 
 .apphub-start__right {
@@ -794,12 +793,21 @@
 }
 
 .apphub-win__body {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #1e293b;
+}
+
+.apphub-win__body-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: transparent;
+  cursor: default;
 }
 
 .apphub-win__body > * {
@@ -1239,6 +1247,50 @@
   padding: 40px 20px;
   text-align: center;
   font-size: 0.9rem;
+}
+
+.apphub-draft-store__section {
+  margin-bottom: 20px;
+}
+
+.apphub-draft-store__section-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.apphub-draft-store__section-hint {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.apphub-draft-card__status {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.apphub-draft-card__status--draft {
+  background: #4a3d1a;
+  color: #f5d76e;
+}
+
+.apphub-draft-card__status--active {
+  background: #1a3d2a;
+  color: #7dcea0;
+}
+
+.apphub-draft-card__status--rejected {
+  background: #4a1a1a;
+  color: #f5a8a8;
+}
+
+.apphub-desktop__taskbar-dev-tools {
+  margin-left: 4px;
 }
 
 .apphub-draft-store__empty-icon {
@@ -2043,6 +2095,20 @@
   border-color: #0891b2;
 }
 
+.apphub-version-history__item--pending {
+  border-color: #ca8a04;
+}
+
+.apphub-version-history__item--rejected {
+  border-color: #b91c1c;
+  opacity: 0.92;
+}
+
+.apphub-version-history__item--skipped {
+  border-color: #475569;
+  opacity: 0.85;
+}
+
 .apphub-version-history__row {
   display: flex;
   align-items: center;
@@ -2063,6 +2129,23 @@
 
 .apphub-version-history__badge--yours {
   background: #15803d;
+}
+
+.apphub-version-history__badge--pending {
+  background: #a16207;
+}
+
+.apphub-version-history__badge--rejected {
+  background: #b91c1c;
+}
+
+.apphub-version-history__badge--published {
+  background: #334155;
+}
+
+.apphub-version-history__badge--skipped {
+  background: #475569;
+  color: #cbd5e1;
 }
 
 .apphub-version-history__meta,
@@ -2654,6 +2737,208 @@
   color: #94a3b8;
 }
 
+.apphub-install-perm-dialog {
+  --perm-overlay: rgba(2, 6, 23, 0.62);
+  --perm-surface: #1e293b;
+  --perm-surface-border: rgba(255, 255, 255, 0.14);
+  --perm-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --perm-text: #f8fafc;
+  --perm-text-body: #e2e8f0;
+  --perm-text-muted: #94a3b8;
+  --perm-item-bg: rgba(255, 255, 255, 0.06);
+  --perm-item-border: rgba(255, 255, 255, 0.1);
+  --perm-accent: #60a5fa;
+  --perm-accent-soft: rgba(96, 165, 250, 0.18);
+  --perm-scope-bg: rgba(15, 23, 42, 0.55);
+  --perm-scope-text: #93c5fd;
+  --perm-btn-border: rgba(255, 255, 255, 0.16);
+  --perm-btn-bg: rgba(255, 255, 255, 0.08);
+  --perm-btn-text: #f1f5f9;
+  --perm-btn-primary-bg: #2563eb;
+  --perm-btn-primary-border: #3b82f6;
+  --perm-btn-primary-text: #fff;
+  --perm-btn-ghost-text: #94a3b8;
+
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--perm-overlay);
+  backdrop-filter: blur(6px);
+  animation: apphub-badge-in 0.2s ease-out;
+}
+
+.apphub-install-perm-dialog--light {
+  --perm-overlay: rgba(15, 23, 42, 0.4);
+  --perm-surface: #f8fafc;
+  --perm-surface-border: rgba(15, 23, 42, 0.12);
+  --perm-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  --perm-text: #0f172a;
+  --perm-text-body: #334155;
+  --perm-text-muted: #64748b;
+  --perm-item-bg: #eef2f7;
+  --perm-item-border: rgba(15, 23, 42, 0.08);
+  --perm-accent: #1d6fd6;
+  --perm-accent-soft: rgba(29, 111, 214, 0.12);
+  --perm-scope-bg: #e2e8f0;
+  --perm-scope-text: #1e40af;
+  --perm-btn-border: rgba(15, 23, 42, 0.14);
+  --perm-btn-bg: #fff;
+  --perm-btn-text: #1e293b;
+  --perm-btn-primary-bg: #1d6fd6;
+  --perm-btn-primary-border: #2563eb;
+  --perm-btn-primary-text: #fff;
+  --perm-btn-ghost-text: #64748b;
+}
+
+.apphub-install-perm-dialog__panel {
+  width: min(460px, calc(100vw - 32px));
+  max-height: min(85vh, 640px);
+  overflow: auto;
+  padding: 22px 24px;
+  border-radius: 12px;
+  background: var(--perm-surface);
+  border: 1px solid var(--perm-surface-border);
+  box-shadow: var(--perm-shadow);
+  color: var(--perm-text);
+}
+
+.apphub-install-perm-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.apphub-install-perm-dialog__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--perm-accent-soft);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.apphub-install-perm-dialog__title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--perm-text);
+}
+
+.apphub-install-perm-dialog__message {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--perm-text-body);
+}
+
+.apphub-install-perm-dialog__list {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apphub-install-perm-dialog__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--perm-item-bg);
+  border: 1px solid var(--perm-item-border);
+}
+
+.apphub-install-perm-dialog__item-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--perm-accent);
+}
+
+.apphub-install-perm-dialog__item-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.apphub-install-perm-dialog__item-text {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--perm-text);
+  font-weight: 500;
+}
+
+.apphub-install-perm-dialog__item-scope {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--perm-scope-bg);
+  color: var(--perm-scope-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.apphub-install-perm-dialog__hint {
+  margin: 0 0 18px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--perm-text-muted);
+}
+
+.apphub-install-perm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.apphub-install-perm-dialog__btn {
+  padding: 9px 16px;
+  border: 1px solid var(--perm-btn-border);
+  border-radius: 8px;
+  background: var(--perm-btn-bg);
+  color: var(--perm-btn-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.apphub-install-perm-dialog__btn:hover {
+  filter: brightness(1.06);
+}
+
+.apphub-install-perm-dialog__btn--primary {
+  background: var(--perm-btn-primary-bg);
+  border-color: var(--perm-btn-primary-border);
+  color: var(--perm-btn-primary-text);
+}
+
+.apphub-install-perm-dialog__btn--ghost {
+  background: transparent;
+  color: var(--perm-btn-ghost-text);
+}
+
+.apphub-install-perm-dialog__btn--ghost:hover {
+  background: var(--perm-item-bg);
+}
+
 /* Desktop icon context menu */
 .apphub-icon-menu {
   position: absolute;
@@ -3072,6 +3357,16 @@
   color: #fcd34d;
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(251, 191, 36, 0.55);
+}
+
+.apphub-icon-folder__item-flag--pending {
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.apphub-icon-folder__item-flag--rejected {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.55);
 }
 
 .apphub-icon-folder__item-label {

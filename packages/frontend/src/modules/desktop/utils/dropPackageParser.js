@@ -1,4 +1,5 @@
 import { clampString, isValidSlug } from '../../../utils/safeStorage.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 
 const MAX_MANIFEST_BYTES = 64 * 1024
 
@@ -49,6 +50,7 @@ export async function parseDropFiles(dataTransfer) {
         name: clampString(manifest.name) || slug,
         icon: clampString(manifest.icon, 16) || '🛒',
         description: clampString(manifest.description, 500),
+        permissions: resolveAppPermissions(manifest),
       }
     }
 
@@ -61,6 +63,7 @@ export async function parseDropFiles(dataTransfer) {
         name: clampString(manifest.name) || stripExt(jsonFile.name),
         icon: clampString(manifest.icon, 16) || pickIcon(files),
         description: clampString(manifest.description, 500),
+        permissions: resolveAppPermissions(manifest),
       }
     }
   }
@@ -100,6 +103,7 @@ function buildPublishIntent(zipFile, manifest) {
     name: name || stripExt(zipFile.name),
     icon: clampString(manifest?.icon, 16) || '📦',
     description: clampString(manifest?.description ?? manifest?.short_description, 500),
+    permissions: resolveAppPermissions(manifest ?? {}),
   }
 }
 

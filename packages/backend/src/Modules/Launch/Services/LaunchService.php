@@ -59,14 +59,14 @@ final class LaunchService
         }
 
         $pinnedVersion = $this->normalizeBundleVersion($bundleVersion);
-        if ($pinnedVersion !== null && $this->versions->resolveBundle($app, $pinnedVersion) === null) {
+        if ($pinnedVersion !== null && $this->versions->resolveLaunchBundle($app, $pinnedVersion, $userId) === null) {
             throw new LaunchDeniedException('Requested app version is not available', 404);
         }
 
         $minted = $this->launchTokens->mint($app, $userId, $ip, $userAgent, $pinnedVersion);
         $this->usage->log($userId, $app, AppUsageService::ACTION_APP_OPEN);
 
-        $entryUrl = $this->resolveEntryUrl($app, $pinnedVersion);
+        $entryUrl = $this->resolveEntryUrl($app, $pinnedVersion, $userId);
 
         return [
             'slug' => $app->slug,
@@ -80,10 +80,10 @@ final class LaunchService
         ];
     }
 
-    private function resolveEntryUrl(App $app, ?string $bundleVersion = null): ?string
+    private function resolveEntryUrl(App $app, ?string $bundleVersion, int $userId): ?string
     {
         if ($app->runtime_type === AppRuntimeType::HOSTED) {
-            $bundle = $this->versions->resolveBundle($app, $bundleVersion);
+            $bundle = $this->versions->resolveLaunchBundle($app, $bundleVersion, $userId);
             if ($bundle === null) {
                 return null;
             }

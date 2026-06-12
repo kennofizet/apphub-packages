@@ -1,0 +1,87 @@
+/**
+ * Unified App Hub scrollbars (shell, teleported dialogs, runner iframe element).
+ * Hosted app html/body: runtime-document-scrollbars.css (injected at serve + iframe load).
+ */
+
+:root {
+  --ah-scrollbar-size: 8px;
+  --ah-scrollbar-track: transparent;
+  --ah-scrollbar-thumb: rgba(148, 163, 184, 0.38);
+  --ah-scrollbar-thumb-hover: rgba(203, 213, 225, 0.55);
+  --ah-scrollbar-radius: 4px;
+}
+
+.apphub-desktop--light,
+.apphub-install-perm-dialog--light {
+  --ah-scrollbar-thumb: rgba(100, 116, 139, 0.45);
+  --ah-scrollbar-thumb-hover: rgba(71, 85, 105, 0.62);
+}
+
+.apphub-desktop,
+.apphub-install-perm-dialog,
+.apphub-confirm,
+iframe.apphub-runner__frame {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ah-scrollbar-thumb) var(--ah-scrollbar-track);
+}
+
+.apphub-desktop *,
+.apphub-install-perm-dialog *,
+.apphub-confirm * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ah-scrollbar-thumb) var(--ah-scrollbar-track);
+}
+
+.apphub-desktop::-webkit-scrollbar,
+.apphub-desktop *::-webkit-scrollbar,
+.apphub-install-perm-dialog::-webkit-scrollbar,
+.apphub-install-perm-dialog *::-webkit-scrollbar,
+.apphub-confirm::-webkit-scrollbar,
+.apphub-confirm *::-webkit-scrollbar,
+iframe.apphub-runner__frame::-webkit-scrollbar {
+  width: var(--ah-scrollbar-size);
+  height: var(--ah-scrollbar-size);
+}
+
+.apphub-desktop::-webkit-scrollbar-track,
+.apphub-desktop *::-webkit-scrollbar-track,
+.apphub-install-perm-dialog::-webkit-scrollbar-track,
+.apphub-install-perm-dialog *::-webkit-scrollbar-track,
+.apphub-confirm::-webkit-scrollbar-track,
+.apphub-confirm *::-webkit-scrollbar-track,
+iframe.apphub-runner__frame::-webkit-scrollbar-track {
+  background: var(--ah-scrollbar-track);
+}
+
+.apphub-desktop::-webkit-scrollbar-thumb,
+.apphub-desktop *::-webkit-scrollbar-thumb,
+.apphub-install-perm-dialog::-webkit-scrollbar-thumb,
+.apphub-install-perm-dialog *::-webkit-scrollbar-thumb,
+.apphub-confirm::-webkit-scrollbar-thumb,
+.apphub-confirm *::-webkit-scrollbar-thumb,
+iframe.apphub-runner__frame::-webkit-scrollbar-thumb {
+  background: var(--ah-scrollbar-thumb);
+  border-radius: var(--ah-scrollbar-radius);
+}
+
+.apphub-desktop *::-webkit-scrollbar-thumb:hover,
+.apphub-install-perm-dialog *::-webkit-scrollbar-thumb:hover,
+.apphub-confirm *::-webkit-scrollbar-thumb:hover,
+iframe.apphub-runner__frame::-webkit-scrollbar-thumb:hover {
+  background: var(--ah-scrollbar-thumb-hover);
+}
+
+.apphub-desktop *::-webkit-scrollbar-corner,
+.apphub-install-perm-dialog *::-webkit-scrollbar-corner,
+iframe.apphub-runner__frame::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Taskbar strip — keep hidden horizontal scroll */
+.apphub-desktop__tasks {
+  scrollbar-width: none;
+}
+
+.apphub-desktop__tasks::-webkit-scrollbar {
+  display: none;
+}

@@ -10,6 +10,10 @@ use RuntimeException;
 
 final class AppHubService
 {
+    public function __construct(private readonly AppPublishService $publish)
+    {
+    }
+
     public function isDevUser(?int $userId = null): bool
     {
         if ($userId === null || $userId <= 0) {
@@ -46,10 +50,18 @@ final class AppHubService
             throw new RuntimeException('App not found');
         }
 
+        if ($status === AppStatus::ACTIVE && $app->hasPendingVersion()) {
+            $app = $this->publish->promotePendingVersion($app);
+            $this->ensureDefaultZoneAccess($app);
+
+            return $app;
+        }
+
         $app->status = $status;
         $app->save();
 
         if ($status === AppStatus::ACTIVE) {
+            $this->publish->markLiveVersionPublished($app);
             $this->ensureDefaultZoneAccess($app);
         }
 

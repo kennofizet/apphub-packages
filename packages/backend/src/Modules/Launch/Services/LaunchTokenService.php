@@ -109,6 +109,18 @@ final class LaunchTokenService
         return $this->toPayload($record);
     }
 
+    public function recordForGrant(string $token): ?AppLaunchToken
+    {
+        $record = $this->findByPlainToken($token);
+        if ($record === null || $record->isExpired()) {
+            return null;
+        }
+
+        $record->loadMissing('app');
+
+        return $record->app !== null ? $record : null;
+    }
+
     public function grantScope(string $token, string $scope, string $userId): bool
     {
         $record = $this->findByPlainToken($token);

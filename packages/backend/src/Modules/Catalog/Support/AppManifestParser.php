@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Catalog\Support;
 
 use Illuminate\Http\UploadedFile;
+use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use RuntimeException;
 use ZipArchive;
 
@@ -132,6 +133,11 @@ final class AppManifestParser
             if (!empty($manifest[$urlKey]) && is_string($manifest[$urlKey])) {
                 $document[$urlKey] = mb_substr(trim($manifest[$urlKey]), 0, 2048);
             }
+        }
+
+        $permissions = AppBridgeScope::normalizeList($manifest['permissions'] ?? null);
+        if ($permissions !== []) {
+            $document['permissions'] = $permissions;
         }
 
         return [

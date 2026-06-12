@@ -7,7 +7,9 @@
       'apphub-win--resizable': window.display !== 'fullscreen',
     }"
     :style="frameStyle"
-    @mousedown="onFocus"
+    :data-window-id="window.id"
+    @pointerdown.capture="onFocus"
+    @focusin.capture="onFocus"
   >
     <header
       class="apphub-win__titlebar"
@@ -30,8 +32,14 @@
         <button type="button" class="apphub-win__btn apphub-win__btn--close" :title="labels.window_close" @mousedown.stop @click.stop="onClose">×</button>
       </div>
     </header>
-    <section class="apphub-win__body">
+    <section ref="bodyRef" class="apphub-win__body" @pointerdown.capture="onFocus">
       <component :is="window.component" v-bind="window.props" />
+      <div
+        v-if="showIframeShield"
+        class="apphub-win__body-shield"
+        aria-hidden="true"
+        @pointerdown.stop.prevent="onIframeShieldPointerDown"
+      />
     </section>
 
     <template v-if="window.display !== 'fullscreen'">
@@ -47,10 +55,14 @@
 </template>
 
 <script setup>
-import { computed, inject, onBeforeUnmount, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, provide, ref } from 'vue'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { t } from '../../../i18n/index.js'
 import { useWindowManager } from '../composables/useWindowManager.js'
+import {
+  useWindowFrameActivation,
+  WINDOW_FRAME_ACTIVATE_KEY,
+} from '../composables/useWindowFrameActivation.js'
 import { applyWindowResize, clampWindowToWorkArea } from '../utils/windowLayout.js'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
@@ -76,6 +88,23 @@ const labels = computed(() => ({
 const wm = useWindowManager()
 const drag = ref(null)
 const resize = ref(null)
+const bodyRef = ref(null)
+
+function onFocus() {
+  if (!wm) return
+  wm.focusWindow(props.window.id)
+}
+
+provide(WINDOW_FRAME_ACTIVATE_KEY, onFocus)
+
+const { hasEmbeddedFrame } = useWindowFrameActivation(bodyRef, onFocus)
+
+/** Cross-origin iframe clicks never reach the parent — shield captures the first click. */
+const showIframeShield = computed(() => !props.active && hasEmbeddedFrame.value)
+
+function onIframeShieldPointerDown() {
+  onFocus()
+}
 
 const frameStyle = computed(() => ({
   width: `${props.window.width}px`,
@@ -90,10 +119,6 @@ function getPointerInWorkArea(clientX, clientY) {
   if (!el) return { x: clientX, y: clientY }
   const rect = el.getBoundingClientRect()
   return { x: clientX - rect.left, y: clientY - rect.top }
-}
-
-function onFocus() {
-  wm?.focusWindow(props.window.id)
 }
 
 function notifySession() {
@@ -125,6 +150,8 @@ function onTitlebarDblClick(event) {
 function onDragStart(event) {
   if (!wm) return
   if (event.target.closest('button, .apphub-win__controls')) return
+
+  wm.focusWindow(props.window.id)
 
   const win = wm.state.windows.find((w) => w.id === props.window.id)
   if (!win) return

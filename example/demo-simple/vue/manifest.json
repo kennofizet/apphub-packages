@@ -1,7 +1,7 @@
 {
   "slug": "demo-simple-vue",
   "name": "demo-simple-vue",
-  "version": "1.0.20",
+  "version": "1.0.69",
   "description": "Vue 3 + Vite build output hosted bundle example.",
   "main": "index.html",
   "type": "module",
@@ -14,5 +14,9 @@
   "author": "App Hub Examples",
   "license": "MIT",
   "icon": "💚",
-  "runtime_type": "hosted"
+  "runtime_type": "hosted",
+  "permissions": [
+    "user.read",
+    "desktop.notify"
+  ]
 }

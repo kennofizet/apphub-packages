@@ -13,6 +13,7 @@ class AppVersion extends Model
     protected $fillable = [
         'app_id',
         'version',
+        'review_status',
         'bundle_path',
         'bundle_hash',
         'bundle_entry',

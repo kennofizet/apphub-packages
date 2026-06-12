@@ -1,0 +1,60 @@
+/* App Hub — scrollbars inside hosted app documents (html/body). Injected by runtime serve + runner. */
+:root {
+  --ah-scrollbar-size: 8px;
+  --ah-scrollbar-track: transparent;
+  --ah-scrollbar-thumb: rgba(148, 163, 184, 0.38);
+  --ah-scrollbar-thumb-hover: rgba(203, 213, 225, 0.55);
+  --ah-scrollbar-radius: 4px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --ah-scrollbar-thumb: rgba(100, 116, 139, 0.45);
+    --ah-scrollbar-thumb-hover: rgba(71, 85, 105, 0.62);
+  }
+}
+
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ah-scrollbar-thumb) var(--ah-scrollbar-track);
+}
+
+html *,
+body * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ah-scrollbar-thumb) var(--ah-scrollbar-track);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+html *::-webkit-scrollbar,
+body *::-webkit-scrollbar {
+  width: var(--ah-scrollbar-size);
+  height: var(--ah-scrollbar-size);
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+html *::-webkit-scrollbar-track,
+body *::-webkit-scrollbar-track {
+  background: var(--ah-scrollbar-track);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+html *::-webkit-scrollbar-thumb,
+body *::-webkit-scrollbar-thumb {
+  background: var(--ah-scrollbar-thumb);
+  border-radius: var(--ah-scrollbar-radius);
+}
+
+html *::-webkit-scrollbar-thumb:hover,
+body *::-webkit-scrollbar-thumb:hover {
+  background: var(--ah-scrollbar-thumb-hover);
+}
+
+html *::-webkit-scrollbar-corner,
+body *::-webkit-scrollbar-corner {
+  background: transparent;
+}

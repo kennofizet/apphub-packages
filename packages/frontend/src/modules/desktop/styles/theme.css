@@ -25,6 +25,11 @@
   --ah-draft-card-bg: var(--ah-hover);
   --ah-draft-card-border: rgba(251, 191, 36, 0.22);
   --ah-draft-icon-bg: var(--ah-surface-input);
+  --ah-scrollbar-size: 8px;
+  --ah-scrollbar-track: transparent;
+  --ah-scrollbar-thumb: rgba(148, 163, 184, 0.38);
+  --ah-scrollbar-thumb-hover: rgba(203, 213, 225, 0.55);
+  --ah-scrollbar-radius: 4px;
   color: var(--ah-text);
   transition: color 0.2s ease;
 }
@@ -55,6 +60,8 @@
   --ah-draft-card-bg: #fff;
   --ah-draft-card-border: rgba(180, 130, 20, 0.28);
   --ah-draft-icon-bg: #f1f5f9;
+  --ah-scrollbar-thumb: rgba(100, 116, 139, 0.45);
+  --ah-scrollbar-thumb-hover: rgba(71, 85, 105, 0.62);
 }
 
 .apphub-desktop--light .apphub-desktop__wallpaper {

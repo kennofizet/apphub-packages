@@ -1,5 +1,6 @@
 import { computed, inject, reactive } from 'vue'
-import { CATALOG_MODE_DRAFT, CATALOG_MODE_STORE } from '../constants/catalogModes.js'
+import { clampPerPage } from '../../../utils/catalogPagination.js'
+import { CATALOG_MODE_DRAFT, CATALOG_MODE_PUBLISHER, CATALOG_MODE_STORE } from '../constants/catalogModes.js'
 import { normalizeCatalogApp, normalizeCatalogList } from '../utils/normalizeCatalogApp.js'
 
 const APP_STORE_KEY = 'apphubAppStore'
@@ -56,7 +57,10 @@ export function createAppStoreState(options = {}) {
   )
 
   function bucketFor(mode) {
-    return mode === CATALOG_MODE_DRAFT ? catalogs.draft : catalogs.store
+    if (mode === CATALOG_MODE_DRAFT || mode === CATALOG_MODE_PUBLISHER) {
+      return catalogs.draft
+    }
+    return catalogs.store
   }
 
   function findCatalogItem(slug) {
@@ -119,7 +123,9 @@ export function createAppStoreState(options = {}) {
   }
 
   async function loadCatalog(hostApi, options = {}) {
-    const mode = options.mode === CATALOG_MODE_DRAFT ? CATALOG_MODE_DRAFT : CATALOG_MODE_STORE
+    const mode = options.mode === CATALOG_MODE_DRAFT
+      ? CATALOG_MODE_DRAFT
+      : (options.mode === CATALOG_MODE_PUBLISHER ? CATALOG_MODE_PUBLISHER : CATALOG_MODE_STORE)
     const bucket = bucketFor(mode)
     const append = options.append === true
     const backendReady = options.backendReady !== false
@@ -146,7 +152,7 @@ export function createAppStoreState(options = {}) {
     try {
       const params = {
         mode,
-        per_page: options.perPage ?? 24,
+        per_page: clampPerPage(options.perPage),
       }
       if (append && bucket.nextCursor) {
         params.cursor = bucket.nextCursor

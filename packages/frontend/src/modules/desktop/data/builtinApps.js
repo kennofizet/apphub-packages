@@ -3,8 +3,11 @@ export const BUILTIN_APP_STORE_ID = 'builtin-app-store'
 export const BUILTIN_GUIDE_ID = 'builtin-guide'
 export const BUILTIN_SETTINGS_ID = 'builtin-settings'
 
-/** Draft App Store — taskbar only, not on desktop surface. */
+/** Publisher hub (draft + published) — taskbar only. */
 export const BUILTIN_DRAFT_STORE_ID = 'builtin-draft-store'
+
+/** Host DEV review tool — taskbar only, APPHUB_DEV_USER_IDS. */
+export const BUILTIN_DEV_TOOLS_ID = 'builtin-dev-tools'
 
 export const PILOT_DRAFT_SLUG = 'pilot-draft'
 
@@ -71,7 +74,23 @@ export function getTaskbarBuiltinApps(labels) {
       layoutKey: BUILTIN_DRAFT_STORE_ID,
       defaultDisplay: 'mini',
       miniWidth: 640,
-      miniHeight: 480,
+      miniHeight: 520,
+    },
+    {
+      id: BUILTIN_DEV_TOOLS_ID,
+      slug: BUILTIN_DEV_TOOLS_ID,
+      name: labels.dev_tools_app_name,
+      hint: labels.dev_tools_app_hint,
+      icon: '🛠️',
+      builtin: true,
+      taskbarOnly: true,
+      devOnly: true,
+      windowTitle: labels.dev_tools_title,
+      module: 'dev-tools',
+      layoutKey: BUILTIN_DEV_TOOLS_ID,
+      defaultDisplay: 'mini',
+      miniWidth: 900,
+      miniHeight: 560,
     },
   ]
 }

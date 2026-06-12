@@ -2,7 +2,8 @@
 
 return [
     'api_prefix' => env('APPHUB_API_PREFIX', 'apphub'),
-    'catalog_per_page' => (int) env('APPHUB_CATALOG_PER_PAGE', 24),
+    /** Default page size for GET /apps and GET dev/apps (max 50 — packages-core validator). */
+    'catalog_per_page' => min(50, max(1, (int) env('APPHUB_CATALOG_PER_PAGE', 24))),
     'launch_token_ttl' => (int) env('APPHUB_LAUNCH_TOKEN_TTL', 180),
     'launch_token_ttl_min' => 60,
     'launch_token_ttl_max' => 180,

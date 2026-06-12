@@ -53,7 +53,7 @@ Optional: `api_base_url`, `healthcheck_url`.
 | Case | Result |
 |------|--------|
 | New `slug` | Creates **draft** `1.0.0` (or your version) |
-| Same `slug`, you are **owner**, version **>** current | New draft version uploaded; app returns to **draft** for DEV approval |
+| Same `slug`, you are **owner**, version **>** current | New version queued for DEV approval; if already **active**, the live version stays in the App Store until approved |
 | Same `slug`, version **≤** current | Error: `Version must be greater than X` |
 | Same `slug`, **not** owner | Error: `App slug already exists` |
 
@@ -110,6 +110,8 @@ Packed automatically by `npm run pack` from `example/`. Manual zip root files:
 - `app.js`
 
 When the app runs inside App Hub, the runtime API requires `launch_token` on every file request (not only `index.html`). The HTML demo appends the token from the page URL when fetching `manifest.json` for the version badge.
+
+After the runner loads, click **Hello** to exercise the bridge (`user.read` → `getUserInfo`). See `docs/sdk-stub.js` for the full client stub.
 
 ---
 

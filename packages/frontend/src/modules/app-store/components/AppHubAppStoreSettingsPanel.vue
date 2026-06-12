@@ -89,58 +89,17 @@
         {{ labels.refresh }}
       </button>
     </section>
-
-    <AppHubDevReviewPanel
-      :root-app="rootApp"
-      :dev-apps="devApps"
-      :get-installed-version="getInstalledVersion"
-      @refreshed="onDevRefreshed"
-    />
-
-    <section v-if="devApps.length" class="apphub-store-settings__section">
-      <h3 class="apphub-store-settings__heading">{{ labels.dev_title }}</h3>
-      <p class="apphub-store-settings__hint">{{ labels.dev_hint }}</p>
-      <ul class="apphub-store-settings__dev-list">
-        <li v-for="app in devApps" :key="app.slug" class="apphub-store-settings__dev-item">
-          <span>{{ app.name }} ({{ app.status }})</span>
-          <button
-            v-if="app.status !== 'disabled'"
-            type="button"
-            class="apphub-store-settings__dev-btn"
-            @click="disableApp(app.slug)"
-          >
-            {{ labels.dev_disable }}
-          </button>
-          <button
-            v-else
-            type="button"
-            class="apphub-store-settings__dev-btn"
-            @click="setAppStatus(app.slug, 'active')"
-          >
-            {{ labels.dev_enable }}
-          </button>
-        </li>
-      </ul>
-    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref } from 'vue'
-import { getHostApiForApp } from '../../../composables/useAppHubHostApi.js'
+import { computed, inject, onMounted } from 'vue'
 import { useAppHubZoneContext } from '../../../composables/useAppHubZoneContext.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
-import AppHubDevReviewPanel from './AppHubDevReviewPanel.vue'
-
-const props = defineProps({
-  rootApp: { type: Object, default: null },
-  getInstalledVersion: { type: Function, default: null },
-})
 
 const emit = defineEmits(['refreshed'])
 
-const devApps = ref([])
 const zone = useAppHubZoneContext()
 const moduleOptions = inject('apphubOptions', {})
 const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
@@ -166,10 +125,6 @@ const labels = computed(() => ({
   zone_name: (id) => t('app_store_settings_zone_name', lang.value, { id }),
   timezone: t('app_store_settings_timezone', lang.value),
   refresh: t('app_store_settings_refresh', lang.value),
-  dev_title: t('app_store_settings_dev_title', lang.value),
-  dev_hint: t('app_store_settings_dev_hint', lang.value),
-  dev_disable: t('app_store_settings_dev_disable', lang.value),
-  dev_enable: t('app_store_settings_dev_enable', lang.value),
 }))
 
 const userDisplay = computed(() => ({
@@ -203,66 +158,14 @@ function onViewAllChange(event) {
   zone.setViewAllZones(event.target.checked)
 }
 
-async function loadDevApps() {
-  const api = getHostApiForApp(props.rootApp)
-  if (!api?.bootstrap || !api?.devApps) {
-    devApps.value = []
-    return
-  }
-  try {
-    const boot = await api.bootstrap()
-    const isDev = boot?.data?.data?.is_dev_user === true
-    if (!isDev) {
-      devApps.value = []
-      return
-    }
-    const res = await api.devApps()
-    devApps.value = res?.data?.data ?? []
-  } catch {
-    devApps.value = []
-  }
-}
-
-async function disableApp(slug) {
-  const api = getHostApiForApp(props.rootApp)
-  if (!api?.devDisableApp) return
-  try {
-    await api.devDisableApp(slug)
-    await loadDevApps()
-    emit('refreshed')
-  } catch {
-    /* ignore */
-  }
-}
-
-async function setAppStatus(slug, status) {
-  const api = getHostApiForApp(props.rootApp)
-  if (!api?.devSetAppStatus) return
-  try {
-    await api.devSetAppStatus(slug, status)
-    await loadDevApps()
-    emit('refreshed')
-  } catch {
-    /* ignore */
-  }
-}
-
-async function onDevRefreshed() {
-  await loadDevApps()
-  emit('refreshed')
-}
-
 async function onRefresh() {
   await zone.refresh()
-  await loadDevApps()
   emit('refreshed')
 }
 
 onMounted(() => {
   if (!zone.state.zones.length && !zone.state.loading) {
     onRefresh()
-  } else {
-    loadDevApps()
   }
 })
 </script>

@@ -20,6 +20,7 @@ class App extends Model
         'owner_user_id',
         'slug',
         'version',
+        'pending_version',
         'name',
         'short_description',
         'icon',
@@ -77,6 +78,18 @@ class App extends Model
     public function isDraft(): bool
     {
         return $this->status === AppStatus::DRAFT;
+    }
+
+    public function hasPendingVersion(): bool
+    {
+        $pending = trim((string) ($this->pending_version ?? ''));
+
+        return $pending !== '';
+    }
+
+    public function awaitsReview(): bool
+    {
+        return $this->isDraft() || $this->hasPendingVersion();
     }
 
     public function isDisabled(): bool

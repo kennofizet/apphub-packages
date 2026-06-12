@@ -44,6 +44,8 @@ class CatalogVersionController extends Controller
             'data' => [
                 'slug' => $app->slug,
                 'current_version' => $app->version,
+                'pending_version' => $app->pending_version,
+                'app_status' => $app->status,
                 'versions' => $items,
             ],
         ]);

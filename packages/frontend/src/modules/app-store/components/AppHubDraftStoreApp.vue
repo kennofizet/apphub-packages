@@ -30,17 +30,43 @@
       </p>
 
       <div
-        v-else-if="!catalog.loading && !appStore.filteredTestingApps.length"
+        v-else-if="!catalog.loading && !pendingApps.length && !publishedApps.length"
         class="apphub-draft-store__empty"
       >
         <span class="apphub-draft-store__empty-icon" aria-hidden="true">📭</span>
         <p>{{ labels.draft_store_empty }}</p>
       </div>
 
-      <template v-else-if="appStore.filteredTestingApps.length">
-        <ul class="apphub-draft-store__list">
-          <li v-for="app in appStore.filteredTestingApps" :key="app.slug">
-            <AppHubDraftStoreCard
+      <template v-else>
+        <section v-if="pendingApps.length" class="apphub-draft-store__section">
+          <h3 class="apphub-draft-store__section-title">{{ labels.publisher_pending_title }}</h3>
+          <p class="apphub-draft-store__section-hint">{{ labels.publisher_pending_hint }}</p>
+          <ul class="apphub-draft-store__list">
+            <li v-for="app in pendingApps" :key="app.slug">
+              <AppHubDraftStoreCard
+                :app="app"
+                :labels="labels"
+                :root-app="rootApp"
+                :installed="appStore.isInstalled(app.slug)"
+                :installed-version="installedVersionFor(app.slug)"
+                :can-install="appStore.canInstall(app)"
+                :pinging="pingingSlug === app.slug"
+                :ping-result="pingResults[app.slug] ?? null"
+                @install="onInstall"
+                @update="onUpdate"
+                @uninstall="onUninstall"
+                @ping="onPing"
+              />
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="publishedApps.length" class="apphub-draft-store__section">
+          <h3 class="apphub-draft-store__section-title">{{ labels.publisher_published_title }}</h3>
+          <p class="apphub-draft-store__section-hint">{{ labels.publisher_published_hint }}</p>
+          <ul class="apphub-draft-store__list">
+            <li v-for="app in publishedApps" :key="app.slug">
+              <AppHubDraftStoreCard
               :app="app"
               :labels="labels"
               :root-app="rootApp"
@@ -54,8 +80,10 @@
               @uninstall="onUninstall"
               @ping="onPing"
             />
-          </li>
-        </ul>
+            </li>
+          </ul>
+        </section>
+
         <p v-if="catalog.loadingMore" class="apphub-catalog-footer">{{ labels.app_store_loading_more }}</p>
         <div ref="scrollSentinel" class="apphub-catalog-sentinel" aria-hidden="true" />
       </template>
@@ -73,7 +101,7 @@ import {
 import { useAppHubZoneContext } from '../../../composables/useAppHubZoneContext.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
-import { CATALOG_MODE_DRAFT } from '../constants/catalogModes.js'
+import { CATALOG_MODE_PUBLISHER } from '../constants/catalogModes.js'
 import { useCatalogInfiniteScroll } from '../composables/useCatalogInfiniteScroll.js'
 import { useAppStore } from '../composables/useAppStore.js'
 import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
@@ -123,13 +151,32 @@ const labels = computed(() => ({
   dev_review_history_empty: t('dev_review_history_empty', lang.value),
   dev_review_history_latest: t('dev_review_history_latest', lang.value),
   dev_review_history_yours: t('dev_review_history_yours', lang.value),
+  dev_review_history_status_pending: t('dev_review_history_status_pending', lang.value),
+  dev_review_history_status_rejected: t('dev_review_history_status_rejected', lang.value),
+  dev_review_history_status_skipped: t('dev_review_history_status_skipped', lang.value),
+  dev_review_history_status_published: t('dev_review_history_status_published', lang.value),
   dev_review_history_error: t('dev_review_history_error', lang.value),
+  app_store_status_active: t('app_store_status_active', lang.value),
+  publisher_pending_title: t('publisher_pending_title', lang.value),
+  publisher_pending_hint: t('publisher_pending_hint', lang.value),
+  publisher_published_title: t('publisher_published_title', lang.value),
+  publisher_published_hint: t('publisher_published_hint', lang.value),
+  publisher_pending_version_badge: t('publisher_pending_version_badge', lang.value),
+  publisher_rejected_version_badge: t('publisher_rejected_version_badge', lang.value),
 }))
+
+const pendingApps = computed(() =>
+  appStore.filteredTestingApps.filter((a) => a?.status === 'draft' || a?.pending_version),
+)
+
+const publishedApps = computed(() =>
+  appStore.filteredTestingApps.filter((a) => a?.status === 'active'),
+)
 
 function hostApiOptions() {
   return {
     backendReady: isBackendReadyFromStore(hubStore),
-    mode: CATALOG_MODE_DRAFT,
+    mode: CATALOG_MODE_PUBLISHER,
   }
 }
 
@@ -138,7 +185,7 @@ async function reloadCatalog() {
 }
 
 async function loadMore() {
-  await appStore.loadMoreCatalog(hostApi, CATALOG_MODE_DRAFT, hostApiOptions())
+  await appStore.loadMoreCatalog(hostApi, CATALOG_MODE_PUBLISHER, hostApiOptions())
 }
 
 const { rootRef: scrollRoot, sentinelRef: scrollSentinel } = useCatalogInfiniteScroll({
@@ -151,12 +198,14 @@ function installedVersionFor(slug) {
 }
 
 async function onInstall(app) {
-  if (!appStore.installApp(app.slug)) return
-  await props.onInstalled?.(app)
+  const result = await props.onInstalled?.(app)
+  if (result === 'cancelled') return
+  appStore.installApp(app.slug)
 }
 
 async function onUpdate(app) {
-  await props.onUpdateApp?.(app)
+  const ok = await props.onUpdateApp?.(app)
+  if (ok === false) return
 }
 
 async function onUninstall(app) {

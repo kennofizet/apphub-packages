@@ -86,6 +86,67 @@ final class AppBundleStorageService
     /**
      * @return list<string> Paths relative to bundle root (sorted).
      */
+    /**
+     * Compare two bundle trees (review vs live baseline).
+     *
+     * @return list<array{path: string, status: string}>
+     */
+    public function compareBundleTrees(?string $newPath, ?string $oldPath): array
+    {
+        $newPath = $newPath !== null ? trim(str_replace('\\', '/', $newPath), '/') : '';
+        $oldPath = $oldPath !== null ? trim(str_replace('\\', '/', $oldPath), '/') : '';
+
+        $newFiles = $newPath !== '' ? $this->listBundleFiles($newPath) : [];
+        if ($oldPath === '') {
+            return array_map(
+                static fn (string $path): array => ['path' => $path, 'status' => 'added'],
+                $newFiles,
+            );
+        }
+
+        $oldFiles = $this->listBundleFiles($oldPath);
+        $paths = array_values(array_unique(array_merge($oldFiles, $newFiles)));
+        sort($paths);
+
+        $oldSet = array_fill_keys($oldFiles, true);
+        $newSet = array_fill_keys($newFiles, true);
+        $entries = [];
+
+        foreach ($paths as $path) {
+            $inOld = isset($oldSet[$path]);
+            $inNew = isset($newSet[$path]);
+
+            if (!$inOld && $inNew) {
+                $entries[] = ['path' => $path, 'status' => 'added'];
+                continue;
+            }
+
+            if ($inOld && !$inNew) {
+                $entries[] = ['path' => $path, 'status' => 'deleted'];
+                continue;
+            }
+
+            $entries[] = [
+                'path' => $path,
+                'status' => $this->bundleFileHash($oldPath, $path) === $this->bundleFileHash($newPath, $path)
+                    ? 'unchanged'
+                    : 'modified',
+            ];
+        }
+
+        return $entries;
+    }
+
+    public function bundleFileHash(string $relativePath, string $file): string
+    {
+        $absolute = $this->absolutePath($relativePath, $file);
+        if (!is_file($absolute)) {
+            return '';
+        }
+
+        return hash_file('sha256', $absolute) ?: '';
+    }
+
     public function listBundleFiles(string $relativePath): array
     {
         $relativePath = trim(str_replace('\\', '/', $relativePath), '/');
@@ -109,6 +170,55 @@ final class AppBundleStorageService
         sort($files);
 
         return $files;
+    }
+
+    /**
+     * Read a text file from a stored bundle (dev review).
+     *
+     * @return array{content: string, truncated: bool, size: int}
+     */
+    public function readBundleTextFile(string $relativePath, string $file, int $maxBytes = 262_144): array
+    {
+        $absolute = $this->absolutePath($relativePath, $file);
+        if (!is_file($absolute)) {
+            throw new RuntimeException('File not found in bundle');
+        }
+
+        $ext = strtolower(pathinfo($absolute, PATHINFO_EXTENSION));
+        $allowed = ['html', 'htm', 'js', 'mjs', 'css', 'json', 'txt', 'md', 'svg', 'vue', 'ts', 'jsx', 'tsx', 'map'];
+        if ($ext !== '' && !in_array($ext, $allowed, true)) {
+            throw new RuntimeException('File type not readable in review');
+        }
+
+        $size = (int) filesize($absolute);
+        $truncated = $size > $maxBytes;
+        $handle = fopen($absolute, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Could not read bundle file');
+        }
+
+        $content = $truncated ? (string) fread($handle, $maxBytes) : (string) stream_get_contents($handle);
+        fclose($handle);
+        $content = $this->normalizeTextContent($content);
+
+        return [
+            'content' => $content,
+            'truncated' => $truncated,
+            'size' => $size,
+        ];
+    }
+
+    private function normalizeTextContent(string $content): string
+    {
+        if ($content === '') {
+            return $content;
+        }
+
+        if (str_starts_with($content, "\xEF\xBB\xBF")) {
+            $content = substr($content, 3);
+        }
+
+        return str_replace("\r\n", "\n", str_replace("\r", "\n", $content));
     }
 
     private function assertZipUpload(UploadedFile $zip): void

@@ -52,7 +52,7 @@ final class AppRuntimeServeService
             return $this->runtimeError('Invalid or expired launch token', 401);
         }
 
-        $bundle = $this->versions->resolveBundle($app, $token->bundle_version);
+        $bundle = $this->versions->resolveLaunchBundle($app, $token->bundle_version, (int) $token->user_id);
         if ($bundle === null) {
             return $this->runtimeError('Bundle not published', 404);
         }
@@ -83,6 +83,7 @@ final class AppRuntimeServeService
             if ($plainToken !== '') {
                 $content = $this->rewriteHtmlLaunchToken($content, $plainToken);
             }
+            $content = $this->injectRuntimeScrollbarStyles($content);
 
             $response = new Response($content);
             $response->headers->set('Content-Type', $this->mimeType($absolute));
@@ -189,6 +190,51 @@ final class AppRuntimeServeService
         );
 
         return is_string($rewritten) ? $rewritten : $html;
+    }
+
+    private function injectRuntimeScrollbarStyles(string $html): string
+    {
+        $css = $this->runtimeDocumentScrollbarCss();
+        if ($css === '') {
+            return $html;
+        }
+
+        $styleTag = '<style id="apphub-runtime-scrollbars">' . $css . '</style>';
+
+        if (preg_match('/<head\b[^>]*>/i', $html) === 1) {
+            $injected = preg_replace('/<head\b[^>]*>/i', '$0' . $styleTag, $html, 1);
+
+            return is_string($injected) ? $injected : $html;
+        }
+
+        if (preg_match('/<html\b[^>]*>/i', $html) === 1) {
+            $injected = preg_replace('/<html\b[^>]*>/i', '$0' . $styleTag, $html, 1);
+
+            return is_string($injected) ? $injected : $html;
+        }
+
+        return $styleTag . $html;
+    }
+
+    private function runtimeDocumentScrollbarCss(): string
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $path = dirname(__DIR__, 5)
+            . '/frontend/src/modules/desktop/styles/runtime-document-scrollbars.css';
+
+        if (is_readable($path)) {
+            $cached = (string) file_get_contents($path);
+
+            return $cached;
+        }
+
+        $cached = '';
+
+        return $cached;
     }
 
     private function authorize(App $app, Request $request): ?AppLaunchToken

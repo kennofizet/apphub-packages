@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -34,9 +34,25 @@
           "launch_token": "Short-lived token for optional bridge HTTP calls from your app server."
         },
         "discovery": {
-          "in_window": "window.AppHubBridge",
+          "in_window": "window.AppHubBridge (provided by docs/sdk-stub.js in sandboxed iframe)",
           "cross_origin": "postMessage on channel apphub:bridge",
-          "handshake_event": "apphub:bridge:ready"
+          "handshake_event": "apphub:bridge:ready",
+          "sdk_stub": "docs/sdk-stub.js — copy into your app bundle or load via script tag",
+          "postmessage_protocol": {
+            "channel": "apphub:bridge",
+            "parent_to_child_ready": {
+              "event": "apphub:bridge:ready",
+              "context": { "app_slug": "string", "session_id": "string|null", "scopes_granted": "string[]" }
+            },
+            "child_to_parent_call": {
+              "event": "apphub:bridge:call",
+              "fields": { "id": "string", "method": "requestPermission|getUserInfo|...", "args": "array" }
+            },
+            "parent_to_child_result": {
+              "event": "apphub:bridge:result",
+              "fields": { "id": "string", "ok": "boolean", "result": "any", "error": "string optional" }
+            }
+          }
         },
         "permissions": [
           {
@@ -113,8 +129,9 @@
         }
       },
       "deploy": {
-        "local": "Drop a .zip or manifest on the desktop to test (private install).",
-        "public": "Submit to App Store catalog so all users can install (when listing API is available)."
+        "hosted": "Build dist/ → zip with manifest.json (runtime_type: hosted) → drop on Hub desktop → POST /apps/register (draft) → DEV approves → active in store.",
+        "local": "Drop a local manifest on the desktop for private install (no server listing).",
+        "iframe": "Self-hosted entry_url — register via host backend when iframe listing API is available."
       },
       "steps": [
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
@@ -216,7 +233,7 @@
         "path": "apps",
         "auth": "token",
         "audience": ["publisher", "end_user"],
-        "description": "App Store catalog. Query: mode=store|draft (default store), cursor?, per_page?. Response meta: has_more, next_cursor."
+        "description": "Catalog. Query: mode=store|draft|publisher (default store). publisher = owner draft+active. cursor?, per_page?. meta: has_more, next_cursor."
       },
       {
         "method": "GET",
@@ -266,6 +283,41 @@
         "auth": "token",
         "audience": ["host_dev"],
         "description": "Emergency disable app. Dev users only."
+      },
+      {
+        "method": "POST",
+        "path": "apps/register",
+        "auth": "token",
+        "audience": ["publisher"],
+        "description": "Hosted publish: multipart bundle zip (manifest.json inside). Creates or upgrades draft app."
+      },
+      {
+        "method": "GET",
+        "path": "apps/{slug}/versions",
+        "auth": "token",
+        "audience": ["publisher", "end_user"],
+        "description": "Version history for hosted app (semver, hash, uploaded_at)."
+      },
+      {
+        "method": "GET",
+        "path": "apps/{slug}/runtime/{path}",
+        "auth": "launch_token",
+        "audience": ["publisher", "end_user"],
+        "description": "Serve hosted bundle files. launch_token query on index; HttpOnly cookie for assets."
+      },
+      {
+        "method": "GET",
+        "path": "dev/apps/{slug}/bundle-inspect",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "DEV review: file tree + bundle hash for hosted app."
+      },
+      {
+        "method": "GET",
+        "path": "dev/apps/{slug}/bundle-file",
+        "auth": "token",
+        "audience": ["host_dev"],
+        "description": "DEV review: read text source file from hosted bundle. Query: path."
       }
     ]
   }

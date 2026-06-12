@@ -3,7 +3,16 @@
     <div class="apphub-draft-card__main">
       <div class="apphub-draft-card__icon" aria-hidden="true">{{ app.icon }}</div>
       <div class="apphub-draft-card__body">
-        <h3 class="apphub-draft-card__name">{{ app.name }}</h3>
+        <h3 class="apphub-draft-card__name">
+          {{ app.name }}
+          <span
+            v-if="statusLabel"
+            class="apphub-draft-card__status"
+            :class="statusBadgeClass"
+          >
+            {{ statusLabel }}
+          </span>
+        </h3>
         <p class="apphub-draft-card__slug">
           {{ app.slug }}
           <span v-if="app.version"> · v{{ app.version }}</span>
@@ -94,6 +103,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { isRunningRejectedVersion, resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
 import { isSemverGreaterThan } from '../../../utils/semver.js'
 import AppHubAppVersionHistory from './AppHubAppVersionHistory.vue'
 
@@ -110,10 +120,37 @@ const props = defineProps({
 
 const historyOpen = ref(false)
 
+const runningRejected = computed(() => isRunningRejectedVersion({
+  ...props.app,
+  installedVersion: props.installedVersion,
+}))
+
+const statusLabel = computed(() => {
+  if (props.app?.pending_version) return props.labels.publisher_pending_version_badge
+  if (runningRejected.value) return props.labels.publisher_rejected_version_badge
+  if (props.app?.status === 'draft') return props.labels.app_store_status_draft
+  if (props.app?.status === 'active') return props.labels.app_store_status_active
+  return ''
+})
+
+const statusBadgeClass = computed(() => {
+  if (props.app?.pending_version) return 'apphub-draft-card__status--draft'
+  if (runningRejected.value) return 'apphub-draft-card__status--rejected'
+  if (props.app?.status === 'draft') return 'apphub-draft-card__status--draft'
+  if (props.app?.status === 'active') return 'apphub-draft-card__status--active'
+  return ''
+})
+
 const updateAvailable = computed(() => {
-  if (!props.installed || !props.app?.version) return false
-  if (!props.installedVersion) return false
-  return isSemverGreaterThan(props.app.version, props.installedVersion)
+  if (!props.installed || !props.installedVersion) return false
+
+  if (runningRejected.value && props.app?.version) {
+    return props.installedVersion !== props.app.version
+  }
+
+  const catalogVersion = resolvePublisherTestVersion(props.app)
+  if (!catalogVersion) return false
+  return isSemverGreaterThan(catalogVersion, props.installedVersion)
 })
 
 const historyLabels = computed(() => ({
@@ -122,6 +159,10 @@ const historyLabels = computed(() => ({
   empty: props.labels.dev_review_history_empty,
   latest: props.labels.dev_review_history_latest,
   yours: props.labels.dev_review_history_yours,
+  status_pending: props.labels.dev_review_history_status_pending,
+  status_rejected: props.labels.dev_review_history_status_rejected,
+  status_skipped: props.labels.dev_review_history_status_skipped,
+  status_published: props.labels.dev_review_history_status_published,
   no_api: props.labels.app_store_no_api,
   load_error: props.labels.dev_review_history_error,
 }))

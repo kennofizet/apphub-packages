@@ -32,6 +32,18 @@
           <span class="apphub-icon-folder__item-icon-wrap">
             <span class="apphub-icon-folder__item-icon">{{ app.icon }}</span>
             <span v-if="app.status === 'draft'" class="apphub-icon-folder__item-flag">D</span>
+            <span
+              v-else-if="showsPendingTest(app)"
+              class="apphub-icon-folder__item-flag apphub-icon-folder__item-flag--pending"
+            >
+              P
+            </span>
+            <span
+              v-else-if="showsRejectedTest(app)"
+              class="apphub-icon-folder__item-flag apphub-icon-folder__item-flag--rejected"
+            >
+              R
+            </span>
           </span>
           <span class="apphub-icon-folder__item-label">{{ app.name }}</span>
         </button>
@@ -42,6 +54,16 @@
 </template>
 
 <script setup>
+import { isRunningRejectedVersion, isTestingPendingVersion } from '../../../utils/publisherTestVersion.js'
+
+function showsPendingTest(app) {
+  return isTestingPendingVersion(app)
+}
+
+function showsRejectedTest(app) {
+  return isRunningRejectedVersion(app)
+}
+
 defineProps({
   open: { type: Boolean, default: false },
   preview: { type: Boolean, default: false },

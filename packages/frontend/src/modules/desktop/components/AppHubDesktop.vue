@@ -73,11 +73,25 @@
           <span class="apphub-desktop__icon-img-wrap">
             <span class="apphub-desktop__icon-img">{{ item.app.icon }}</span>
             <span
-              v-if="item.app.status === 'draft'"
+              v-if="iconShowsDraftStatus(item.app)"
               class="apphub-desktop__icon-flag"
               :title="labels.desktop_icon_draft_hint"
             >
               {{ labels.app_store_status_draft }}
+            </span>
+            <span
+              v-else-if="iconShowsPendingTest(item.app)"
+              class="apphub-desktop__icon-flag apphub-desktop__icon-flag--pending"
+              :title="labels.desktop_icon_pending_hint"
+            >
+              {{ labels.publisher_pending_icon_badge }}
+            </span>
+            <span
+              v-else-if="iconShowsRejectedTest(item.app)"
+              class="apphub-desktop__icon-flag apphub-desktop__icon-flag--rejected"
+              :title="labels.desktop_icon_rejected_hint"
+            >
+              {{ labels.publisher_rejected_icon_badge }}
             </span>
           </span>
           <span class="apphub-desktop__icon-label" :title="item.app.name">{{ item.app.name }}</span>
@@ -179,6 +193,20 @@
       @cancel="onDuplicateCancel"
     />
 
+    <AppHubInstallPermissionsDialog
+      :open="installPermDialog.open"
+      :theme="activeTheme"
+      :title="installPermTitle"
+      :message="installPermMessage"
+      :hint="labels.install_perm_hint"
+      :accept-label="labels.install_perm_accept"
+      :refuse-label="labels.install_perm_refuse"
+      :permission-scopes="installPermDialog.permissions"
+      :permission-labels="installPermLabels"
+      @accept="onInstallPermAccept"
+      @refuse="onInstallPermRefuse"
+    />
+
     <div ref="workAreaRef" class="apphub-desktop__workarea">
       <AppHubWindowFrame
         v-for="win in visibleWindows"
@@ -243,6 +271,17 @@
         <span class="apphub-desktop__taskbar-draft-store-label">{{ draftStoreApp.name }}</span>
       </button>
 
+      <button
+        v-if="devToolsApp"
+        type="button"
+        class="apphub-desktop__taskbar-draft-store apphub-desktop__taskbar-dev-tools"
+        :title="devToolsApp.hint || devToolsApp.name"
+        @click="onOpenIcon(devToolsApp)"
+      >
+        <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{ devToolsApp.icon }}</span>
+        <span class="apphub-desktop__taskbar-draft-store-label">{{ devToolsApp.name }}</span>
+      </button>
+
       <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
     </footer>
 
@@ -255,7 +294,11 @@
 <script setup>
 import { computed, getCurrentInstance, inject, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue'
 import { getHostApiForApp, isBackendReadyForApp } from '../../../composables/useAppHubHostApi.js'
-import { CATALOG_MODE_DRAFT, CATALOG_MODE_STORE } from '../../app-store/constants/catalogModes.js'
+import {
+  CATALOG_MODE_DRAFT,
+  CATALOG_MODE_PUBLISHER,
+  CATALOG_MODE_STORE,
+} from '../../app-store/constants/catalogModes.js'
 import { useAppStore } from '../../app-store/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { isThemeLocked, resolveTheme } from '../../../i18n/resolveTheme.js'
@@ -271,6 +314,7 @@ import AppHubStartButton from './AppHubStartButton.vue'
 import AppHubStartMenu from './AppHubStartMenu.vue'
 import AppHubTaskbarPins from './AppHubTaskbarPins.vue'
 import AppHubDuplicateAppDialog from './AppHubDuplicateAppDialog.vue'
+import AppHubInstallPermissionsDialog from './AppHubInstallPermissionsDialog.vue'
 import AppHubDesktopIconContextMenu from './AppHubDesktopIconContextMenu.vue'
 import AppHubDesktopIconInfoDialog from './AppHubDesktopIconInfoDialog.vue'
 import AppHubDesktopIconRenameDialog from './AppHubDesktopIconRenameDialog.vue'
@@ -281,7 +325,19 @@ import AppHubOriginBlockScreen from './AppHubOriginBlockScreen.vue'
 import AppHubOriginLoadingScreen from './AppHubOriginLoadingScreen.vue'
 import AppHubDesktopDevOriginBar from './AppHubDesktopDevOriginBar.vue'
 import { createDesktopDropInstall } from '../composables/useDesktopDropInstall.js'
+import { clampPerPage } from '../../../utils/catalogPagination.js'
+import {
+  isRunningRejectedVersion,
+  isTestingPendingVersion,
+  resolvePublisherTestVersion,
+} from '../../../utils/publisherTestVersion.js'
 import { evaluateOriginSafety } from '../../../utils/originSafety.js'
+import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import {
+  clearInstalledPermissions,
+  saveInstalledPermissions,
+} from '../../../utils/installedAppPermissions.js'
 import { createDesktopShell } from '../composables/useDesktopShell.js'
 import { useDesktopIconDrag } from '../composables/useDesktopIconDrag.js'
 import { buildDesktopItems, getGroupDisplayName, migrateGroupDisplayName, setGroupDisplayName } from '../utils/desktopIconGroups.js'
@@ -410,6 +466,14 @@ const duplicateDialog = reactive({
 })
 let duplicateResolve = null
 
+const installPermDialog = reactive({
+  open: false,
+  app: null,
+  action: 'install',
+  permissions: [],
+})
+let installPermResolve = null
+
 const iconContextMenu = reactive({ open: false, x: 0, y: 0, app: null, group: null })
 const iconInfoDialog = reactive({ open: false, app: null, group: null })
 const iconRenameDialog = reactive({ open: false, app: null, group: null, error: '' })
@@ -431,6 +495,10 @@ const labels = computed(() => ({
   app_store_title: t('app_store_title', lang.value),
   app_store_status_draft: t('app_store_status_draft', lang.value),
   desktop_icon_draft_hint: t('desktop_icon_draft_hint', lang.value),
+  publisher_pending_icon_badge: t('publisher_pending_icon_badge', lang.value),
+  desktop_icon_pending_hint: t('desktop_icon_pending_hint', lang.value),
+  publisher_rejected_icon_badge: t('publisher_rejected_icon_badge', lang.value),
+  desktop_icon_rejected_hint: t('desktop_icon_rejected_hint', lang.value),
   drop_hint: t('drop_hint', lang.value),
   drop_installing: t('drop_installing', lang.value),
   drop_error: t('drop_error', lang.value),
@@ -448,11 +516,19 @@ const labels = computed(() => ({
   duplicate_app_replace: t('duplicate_app_replace', lang.value),
   duplicate_app_keep: t('duplicate_app_keep', lang.value),
   duplicate_app_cancel: t('duplicate_app_cancel', lang.value),
+  install_perm_hint: t('install_perm_hint', lang.value),
+  install_perm_accept: t('install_perm_accept', lang.value),
+  install_perm_refuse: t('install_perm_refuse', lang.value),
+  install_perm_refused_install: t('install_perm_refused_install', lang.value),
+  install_perm_refused_update: t('install_perm_refused_update', lang.value),
   desktop_icon_move_hint: t('desktop_icon_move_hint', lang.value),
   desktop_icon_hold_hint: t('desktop_icon_hold_hint', lang.value),
   draft_store_app_name: t('draft_store_app_name', lang.value),
   draft_store_app_hint: t('draft_store_app_hint', lang.value),
   draft_store_title: t('draft_store_title', lang.value),
+  dev_tools_app_name: t('dev_tools_app_name', lang.value),
+  dev_tools_app_hint: t('dev_tools_app_hint', lang.value),
+  dev_tools_title: t('dev_tools_title', lang.value),
   group_label: t('group_label', lang.value),
   group_drop_hint: t('group_drop_hint', lang.value),
   group_folder_title: t('group_folder_title', lang.value),
@@ -617,7 +693,92 @@ const iconInfoRows = computed(() => {
   return rows
 })
 
+const installPermTitle = computed(() => {
+  const key = installPermDialog.action === 'update'
+    ? 'install_perm_title_update'
+    : 'install_perm_title_install'
+  return t(key, lang.value)
+})
+
+const installPermMessage = computed(() => {
+  const name = installPermDialog.app?.name || installPermDialog.app?.slug || ''
+  const key = installPermDialog.action === 'update'
+    ? 'install_perm_message_update'
+    : 'install_perm_message_install'
+  return formatLabel(key, { name })
+})
+
+const installPermLabels = computed(() => {
+  const appLabel = installPermDialog.app?.name || installPermDialog.app?.slug || ''
+  return installPermDialog.permissions.map((scope) =>
+    bridgeScopeLabel(scope, appLabel, (key) => t(key, lang.value)),
+  )
+})
+
+function askInstallPermissions(app, action = 'install') {
+  let permissions = resolveAppPermissions(app)
+  if (!permissions.length && app?.slug) {
+    const catalog = appStore.findCatalogItem(app.slug)
+    permissions = resolveAppPermissions(catalog)
+  }
+  if (!permissions.length) return Promise.resolve(true)
+
+  installPermDialog.app = app
+  installPermDialog.action = action
+  installPermDialog.permissions = permissions
+
+  return new Promise((resolve) => {
+    installPermResolve = resolve
+    nextTick(() => {
+      installPermDialog.open = true
+    })
+  })
+}
+
+function closeInstallPerm(accepted) {
+  const app = installPermDialog.app
+  const action = installPermDialog.action
+  const permissions = [...installPermDialog.permissions]
+  installPermDialog.open = false
+  installPermResolve?.(accepted)
+  installPermResolve = null
+  installPermDialog.app = null
+  installPermDialog.permissions = []
+  installPermDialog.action = 'install'
+
+  if (accepted && app?.slug) {
+    if (permissions.length) {
+      saveInstalledPermissions(app.slug, permissions)
+    } else {
+      clearInstalledPermissions(app.slug)
+    }
+  }
+
+  if (!accepted && app) {
+    desktopNotifications.push({
+      type: 'warning',
+      title: app.name || app.slug || labels.value.notif_error_title,
+      message: action === 'update'
+        ? labels.value.install_perm_refused_update
+        : labels.value.install_perm_refused_install,
+    })
+  }
+}
+
+function onInstallPermAccept() {
+  closeInstallPerm(true)
+}
+
+function onInstallPermRefuse() {
+  closeInstallPerm(false)
+}
+
 async function handleInstallUserApp(app, position, method = 'local') {
+  if (method !== 'publish') {
+    const permitted = await askInstallPermissions(app, 'install')
+    if (!permitted) return 'cancelled'
+  }
+
   let result = shell.installUserApp(app, position, method)
   while (result?.needsDuplicateChoice) {
     const choice = await askDuplicateChoice(result.app, result.existing)
@@ -637,6 +798,8 @@ function handleUninstallUserApp(appOrSlug) {
 
   if (slug) appStore.uninstallApp(slug)
 
+  if (slug) clearInstalledPermissions(slug)
+
   const winId = `win-${app.id}`
   if (wm.state.windows?.some((w) => w.id === winId)) {
     wm.closeWindow(winId)
@@ -650,22 +813,118 @@ function handleUninstallUserApp(appOrSlug) {
   return true
 }
 
-function handleUpdateUserApp(app) {
-  if (!app?.slug || !app?.version) return false
-  const ok = shell.updateInstalledVersion(app.slug, app.version)
-  if (ok) schedulePersist()
+function iconShowsDraftStatus(app) {
+  if (!app || app.builtin) return false
+  if (app.status === 'draft') return true
+  const catalog = appStore.findCatalogItem(app.slug)
+  return catalog?.status === 'draft'
+}
+
+function syncUserAppPublisherFields(catalogApp) {
+  const slug = catalogApp?.slug
+  if (!slug || !shell.findUserAppBySlug(slug)) return false
+
+  shell.patchUserAppBySlug(slug, {
+    status: catalogApp.status,
+    runtime_type: catalogApp.runtime_type,
+    entry_url: catalogApp.entry_url,
+    healthcheck_url: catalogApp.healthcheck_url,
+    name: catalogApp.name,
+    description: catalogApp.description,
+    permissions: Array.isArray(catalogApp.permissions) ? catalogApp.permissions : [],
+    pending_version: catalogApp.pending_version ?? null,
+    catalog_version: catalogApp.version ?? null,
+    rejected_version: catalogApp.rejected_version ?? null,
+  })
+
+  const pinVersion = resolvePublisherTestVersion(catalogApp)
+  if (pinVersion) {
+    shell.updateInstalledVersion(slug, pinVersion)
+  }
+
+  return true
+}
+
+function iconShowsPendingTest(app) {
+  if (!app || app.builtin || iconShowsDraftStatus(app)) return false
+  if (isTestingPendingVersion(app)) return true
+
+  const catalog = appStore.findCatalogItem(app.slug)
+  if (!catalog?.pending_version) return false
+
+  const installed = app.installedVersion ?? app.version
+  return Boolean(installed && installed === catalog.pending_version)
+}
+
+function iconShowsRejectedTest(app) {
+  if (!app || app.builtin || iconShowsDraftStatus(app)) return false
+  if (iconShowsPendingTest(app)) return false
+  if (isRunningRejectedVersion(app)) return true
+
+  const catalog = appStore.findCatalogItem(app.slug)
+  if (!catalog?.rejected_version) return false
+
+  const installed = app.installedVersion ?? app.version
+  return Boolean(installed && installed === catalog.rejected_version)
+}
+
+function syncPublisherVersionBadgesFromCatalog() {
+  for (const userApp of shell.state.userApps) {
+    if (!userApp?.slug || userApp.builtin) continue
+    const catalog = appStore.findCatalogItem(userApp.slug)
+    if (!catalog) continue
+    syncUserAppPublisherFields(catalog)
+  }
+}
+
+async function handleUpdateUserApp(app) {
+  const permitted = await askInstallPermissions(app, 'update')
+  if (!permitted) return false
+
+  const version = resolvePublisherTestVersion(app)
+  if (!app?.slug || !version) return false
+  const ok = shell.updateInstalledVersion(app.slug, version)
+  if (ok) {
+    shell.patchUserAppBySlug(app.slug, {
+      pending_version: app.pending_version ?? null,
+      catalog_version: app.version ?? null,
+      rejected_version: app.rejected_version ?? null,
+    })
+    schedulePersist()
+  }
   return ok
 }
 
-async function refreshDraftCatalogAfterPublish() {
+async function refreshPublisherCatalog() {
   const api = getHostApiForApp(rootApp)
   if (!api?.apps || !isBackendReadyForApp(rootApp)) return
 
   await appStore.loadCatalog(api, {
     backendReady: true,
-    mode: CATALOG_MODE_DRAFT,
-    perPage: 48,
+    mode: CATALOG_MODE_PUBLISHER,
+    perPage: clampPerPage(48),
   })
+  syncPublisherVersionBadgesFromCatalog()
+}
+
+async function refreshPublisherCatalogIfReady() {
+  if (!isBackendReadyForApp(rootApp)) return
+  await refreshPublisherCatalog()
+}
+
+async function handleCatalogAppChanged(catalogApp) {
+  if (!catalogApp?.slug) return
+  syncUserAppPublisherFields(catalogApp)
+  const api = getHostApiForApp(rootApp)
+  if (api?.apps && isBackendReadyForApp(rootApp)) {
+    await appStore.loadCatalog(api, { backendReady: true, mode: CATALOG_MODE_STORE, perPage: clampPerPage(48) })
+    await refreshPublisherCatalog()
+  }
+  if (typeof appStore.upsertCatalogItem === 'function') {
+    appStore.upsertCatalogItem(CATALOG_MODE_PUBLISHER, catalogApp)
+  }
+  syncUserAppPublisherFields(catalogApp)
+  schedulePersist()
 }
 
 const shell = createDesktopShell({
@@ -674,6 +933,7 @@ const shell = createDesktopShell({
   handleInstall: handleInstallUserApp,
   handleUninstall: handleUninstallUserApp,
   onUpdateApp: handleUpdateUserApp,
+  onCatalogChanged: handleCatalogAppChanged,
   onAppOpened: (appId) => touchRecentApp(appId),
 })
 
@@ -702,11 +962,20 @@ const taskbarPinnedApps = computed(() =>
   startMenuCatalogApps.value.filter((a) => isAppVisibleInStart(startMenuPins, a.id)),
 )
 
-const draftStoreApp = computed(() => {
+const taskbarExtraApps = computed(() => {
   const apps = shell.taskbarBuiltinApps
   const list = apps?.value ?? apps ?? []
-  return list[0] ?? null
+  const isDev = moduleOptions?.isDevUser === true
+  return list.filter((a) => !a.devOnly || isDev)
 })
+
+const draftStoreApp = computed(() =>
+  taskbarExtraApps.value.find((a) => a.module === 'draft-store') ?? null,
+)
+
+const devToolsApp = computed(() =>
+  taskbarExtraApps.value.find((a) => a.module === 'dev-tools') ?? null,
+)
 
 const visibleInStartIds = computed(() =>
   startMenuCatalogApps.value
@@ -1086,11 +1355,20 @@ const dropInstall = createDesktopDropInstall({
     const position = resolveDropPosition(x, y)
     return handleInstallUserApp(app, position, method)
   },
-  async onAfterPublish(catalogApp) {
+  onPublishRegistered(catalogApp) {
+    syncUserAppPublisherFields(catalogApp)
     if (catalogApp?.slug && typeof appStore.upsertCatalogItem === 'function') {
-      appStore.upsertCatalogItem(CATALOG_MODE_DRAFT, catalogApp)
+      appStore.upsertCatalogItem(CATALOG_MODE_PUBLISHER, catalogApp)
     }
-    await refreshDraftCatalogAfterPublish()
+    schedulePersist()
+  },
+  async onAfterPublish(catalogApp) {
+    await refreshPublisherCatalog()
+    if (catalogApp?.slug && typeof appStore.upsertCatalogItem === 'function') {
+      appStore.upsertCatalogItem(CATALOG_MODE_PUBLISHER, catalogApp)
+    }
+    syncUserAppPublisherFields(catalogApp)
+    schedulePersist()
   },
   onPersist: schedulePersist,
 })
@@ -1182,12 +1460,12 @@ async function ensureCatalogItemForSlug(slug) {
   const api = getHostApiForApp(rootApp)
   if (!api?.apps || !isBackendReadyForApp(rootApp)) return null
 
-  const loadOpts = { backendReady: true, perPage: 48 }
+  const loadOpts = { backendReady: true, perPage: clampPerPage(48) }
   await appStore.loadCatalog(api, { ...loadOpts, mode: CATALOG_MODE_STORE })
   item = appStore.findCatalogItem(slug)
   if (item) return item
 
-  await appStore.loadCatalog(api, { ...loadOpts, mode: CATALOG_MODE_DRAFT })
+  await appStore.loadCatalog(api, { ...loadOpts, mode: CATALOG_MODE_PUBLISHER })
   return appStore.findCatalogItem(slug)
 }
 
@@ -1441,10 +1719,35 @@ function restoreInstalledApps(slugs) {
 watch(() => wm.state.windows, () => schedulePersist(), { deep: true })
 watch(() => shell.state.userApps, () => schedulePersist(), { deep: true })
 watch(() => appStore.state.installedSlugs, () => schedulePersist(), { deep: true })
+watch(
+  () => appStore.catalogs.draft.items,
+  () => syncPublisherVersionBadgesFromCatalog(),
+  { deep: true },
+)
 
 function onDocumentDragOver(event) {
   if (!isMainScreen.value) return
   dropInstall.onDragOver(event, false)
+}
+
+function onDocumentPointerDownCapture(event) {
+  if (!desktopReady.value) return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const frame = target.closest('[data-window-id]')
+  if (!frame) return
+  const id = frame.getAttribute('data-window-id')
+  if (id) wm.focusWindow(id)
+}
+
+function onDocumentFocusIn(event) {
+  if (!desktopReady.value) return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const frame = target.closest('[data-window-id]')
+  if (!frame) return
+  const id = frame.getAttribute('data-window-id')
+  if (id) wm.focusWindow(id)
 }
 
 onMounted(async () => {
@@ -1465,6 +1768,8 @@ async function initDesktopShell() {
   window.addEventListener('beforeunload', persistSession)
   window.addEventListener('dragend', onWindowDragEnd)
   document.addEventListener('dragover', onDocumentDragOver)
+  document.addEventListener('pointerdown', onDocumentPointerDownCapture, true)
+  document.addEventListener('focusin', onDocumentFocusIn, true)
   document.addEventListener('mousedown', onDocumentPointerDown)
   document.addEventListener('keydown', onDocumentKeyDown)
 
@@ -1488,6 +1793,7 @@ async function initDesktopShell() {
     assignDefaultIconPositions()
     schedulePersist()
     await tryInitialOpenSlug()
+    await refreshPublisherCatalogIfReady()
     return
   }
 
@@ -1496,6 +1802,7 @@ async function initDesktopShell() {
 
   if (props.initialOpenSlug) {
     await tryInitialOpenSlug()
+    await refreshPublisherCatalogIfReady()
     return
   }
 
@@ -1507,6 +1814,8 @@ async function initDesktopShell() {
       schedulePersist()
     }
   }
+
+  await refreshPublisherCatalogIfReady()
 }
 
 onUnmounted(() => {
@@ -1520,6 +1829,8 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', persistSession)
   window.removeEventListener('dragend', onWindowDragEnd)
   document.removeEventListener('dragover', onDocumentDragOver)
+  document.removeEventListener('pointerdown', onDocumentPointerDownCapture, true)
+  document.removeEventListener('focusin', onDocumentFocusIn, true)
   document.removeEventListener('mousedown', onDocumentPointerDown)
   document.removeEventListener('keydown', onDocumentKeyDown)
   persistSession()

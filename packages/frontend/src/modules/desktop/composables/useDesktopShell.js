@@ -1,4 +1,5 @@
 import { computed, reactive, watchEffect } from 'vue'
+import { resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
 import { AppHubAppStoreApp } from '../../app-store/index.js'
 import { AppHubDraftStoreApp } from '../../app-store/index.js'
 import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps, getTaskbarBuiltinApps } from '../data/builtinApps.js'
@@ -6,6 +7,7 @@ import AppHubGuideApp from '../components/AppHubGuideApp.vue'
 import AppHubSettingsApp from '../components/AppHubSettingsApp.vue'
 import AppHubPlaceholderApp from '../components/AppHubPlaceholderApp.vue'
 import { AppHubRunner } from '../../runner/index.js'
+import { AppHubDevToolsApp } from '../../dev-tools/index.js'
 import { findAppByName, nextDuplicateName, nextDuplicateSlug } from '../utils/duplicateAppUtils.js'
 
 function isUserRuntimeApp(app) {
@@ -54,6 +56,7 @@ export function createDesktopShell(options = {}) {
   function resolveWindowComponent(app) {
     if (app.module === 'app-store') return AppHubAppStoreApp
     if (app.module === 'draft-store') return AppHubDraftStoreApp
+    if (app.module === 'dev-tools') return AppHubDevToolsApp
     if (app.module === 'guide') return AppHubGuideApp
     if (app.module === 'settings') return AppHubSettingsApp
     if (isUserRuntimeApp(app)) return AppHubRunner
@@ -81,11 +84,17 @@ export function createDesktopShell(options = {}) {
         },
       }
     }
+    if (app.module === 'dev-tools') {
+      return {
+        onCatalogChanged: options.onCatalogChanged ?? (() => {}),
+      }
+    }
     if (isUserRuntimeApp(app)) {
       return {
         slug: app.slug,
         status: app.status ?? 'active',
         installedVersion: app.installedVersion ?? app.version ?? null,
+        permissions: Array.isArray(app.permissions) ? app.permissions : [],
         entryUrl: app.entry_url ?? null,
         healthcheckUrl: app.healthcheck_url ?? null,
         icon: app.icon ?? '📦',
@@ -162,10 +171,43 @@ export function createDesktopShell(options = {}) {
     return null
   }
 
+  function syncPublisherVersionFields(target, app, method = null) {
+    if (!target || !app) return
+
+    if (app.pending_version !== undefined) {
+      const pending = typeof app.pending_version === 'string' ? app.pending_version.trim() : ''
+      target.pending_version = pending || null
+    }
+
+    if (app.rejected_version !== undefined) {
+      const rejected = typeof app.rejected_version === 'string' ? app.rejected_version.trim() : ''
+      target.rejected_version = rejected || null
+    }
+
+    if (app.catalog_version !== undefined) {
+      const live = typeof app.catalog_version === 'string' ? app.catalog_version.trim() : ''
+      target.catalog_version = live || null
+    } else if (app.pending_version && typeof app.version === 'string' && app.version.trim()) {
+      const live = app.version.trim()
+      const pinned = resolvePublisherTestVersion(app)
+      if (pinned && pinned !== live) {
+        target.catalog_version = live
+      }
+    }
+
+    if ((method === 'appstore' || method === 'publish') && app.pending_version) {
+      const testVersion = resolvePublisherTestVersion(app)
+      if (testVersion) {
+        target.installedVersion = testVersion
+        target.version = testVersion
+      }
+    }
+  }
+
   function buildUserApp(app, position, method = null) {
     const status = typeof app.status === 'string' ? app.status : 'active'
     const installedVersion = resolveInstalledVersion(app)
-    return {
+    const entry = {
       id: `user-${app.slug}`,
       slug: app.slug,
       installedVersion,
@@ -190,7 +232,12 @@ export function createDesktopShell(options = {}) {
       miniHeight: 480,
       desktopX: position?.x ?? null,
       desktopY: position?.y ?? null,
+      pending_version: null,
+      catalog_version: null,
+      rejected_version: null,
     }
+    syncPublisherVersionFields(entry, app, method)
+    return entry
   }
 
   function renameUserApp(appId, newName) {
@@ -218,20 +265,22 @@ export function createDesktopShell(options = {}) {
 
     // Same slug — publish upgrade or catalog refresh. Never show duplicate dialog.
     if (existingBySlug) {
-      if (app.status) existingBySlug.status = app.status
-      if (app.runtime_type) existingBySlug.runtime_type = app.runtime_type
+      if (app.status !== undefined) existingBySlug.status = app.status
+      if (app.runtime_type !== undefined) existingBySlug.runtime_type = app.runtime_type
+      if (method === 'publish') existingBySlug.installMethod = 'publish'
       if (app.entry_url) existingBySlug.entry_url = app.entry_url
       if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
       if (app.description) existingBySlug.hint = app.description
-      const nextVersion = resolveInstalledVersion(app)
-      if (nextVersion) {
-        if (method === 'publish') {
-          existingBySlug.installedVersion = nextVersion
-          existingBySlug.version = nextVersion
-        } else if (!existingBySlug.installedVersion) {
-          existingBySlug.installedVersion = nextVersion
-          existingBySlug.version = nextVersion
-        }
+      syncPublisherVersionFields(existingBySlug, app, method)
+      const nextVersion = method === 'publish'
+        ? resolvePublisherTestVersion(app)
+        : resolveInstalledVersion(app)
+      if (nextVersion && method === 'publish') {
+        existingBySlug.installedVersion = nextVersion
+        existingBySlug.version = nextVersion
+      } else if (nextVersion && !existingBySlug.installedVersion) {
+        existingBySlug.installedVersion = nextVersion
+        existingBySlug.version = nextVersion
       }
       if (position) {
         existingBySlug.desktopX = position.x
@@ -264,6 +313,35 @@ export function createDesktopShell(options = {}) {
 
     state.userApps.push(buildUserApp(app, position, method))
     return 'added'
+  }
+
+  function patchUserAppBySlug(slug, patch) {
+    const normalized = String(slug ?? '').trim()
+    if (!normalized || !patch || typeof patch !== 'object') return false
+    const app = findUserAppBySlug(normalized)
+    if (!app) return false
+    if (patch.status !== undefined) app.status = patch.status
+    if (patch.runtime_type !== undefined) app.runtime_type = patch.runtime_type
+    if (patch.entry_url !== undefined) app.entry_url = patch.entry_url
+    if (patch.healthcheck_url !== undefined) app.healthcheck_url = patch.healthcheck_url
+    if (patch.name) {
+      app.name = patch.name
+      app.windowTitle = patch.name
+    }
+    if (patch.description) app.hint = patch.description
+    if (patch.pending_version !== undefined) {
+      const pending = typeof patch.pending_version === 'string' ? patch.pending_version.trim() : ''
+      app.pending_version = pending || null
+    }
+    if (patch.catalog_version !== undefined) {
+      const live = typeof patch.catalog_version === 'string' ? patch.catalog_version.trim() : ''
+      app.catalog_version = live || null
+    }
+    if (patch.rejected_version !== undefined) {
+      const rejected = typeof patch.rejected_version === 'string' ? patch.rejected_version.trim() : ''
+      app.rejected_version = rejected || null
+    }
+    return true
   }
 
   function updateInstalledVersion(slug, version) {
@@ -331,6 +409,7 @@ export function createDesktopShell(options = {}) {
     findUserApp,
     findUserAppBySlug,
     updateInstalledVersion,
+    patchUserAppBySlug,
     renameUserApp,
     removeUserApp,
     tickClock,

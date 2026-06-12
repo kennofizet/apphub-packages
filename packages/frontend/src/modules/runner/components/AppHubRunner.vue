@@ -75,13 +75,30 @@
       <p v-else-if="error" class="apphub-runner__error">{{ error }}</p>
       <iframe
         v-else-if="launchUrl"
+        :key="slug"
+        ref="iframeRef"
         :src="launchUrl"
         class="apphub-runner__frame"
         :title="slug"
         :sandbox="iframeSandbox"
         referrerpolicy="strict-origin-when-cross-origin"
+        @load="onIframeLoad"
       />
     </template>
+
+    <AppHubInstallPermissionsDialog
+      :open="scopeConsent.dialog.open"
+      theme="dark"
+      :title="labels.bridge_perm_title"
+      :message="scopeConsentMessage"
+      :hint="labels.bridge_perm_runtime_hint"
+      :accept-label="labels.install_perm_accept"
+      :refuse-label="labels.install_perm_refuse"
+      :permission-scopes="scopeConsentScopes"
+      :permission-labels="scopeConsentLabels"
+      @accept="scopeConsent.accept"
+      @refuse="scopeConsent.refuse"
+    />
   </div>
 </template>
 
@@ -91,6 +108,9 @@ import { getAppHubStore } from '../../../moduleStore.js'
 import { useAppHubHostApi } from '../../../composables/useAppHubHostApi.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
+import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
+import { useDesktopNotifications } from '../../notifications/index.js'
+import AppHubInstallPermissionsDialog from '../../desktop/components/AppHubInstallPermissionsDialog.vue'
 import {
   RUNTIME_HOSTED,
   iframeSandboxAttrs,
@@ -98,10 +118,20 @@ import {
   isEntryUrlAllowed,
   resolveLaunchUrl,
 } from '../../../utils/launchUrl.js'
+import {
+  applyInstallGrantedScopes,
+  addInstalledPermission,
+  hasInstalledPermission,
+} from '../../../utils/installedAppPermissions.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { useBridgeScopeConsent } from '../composables/useBridgeScopeConsent.js'
+import { injectRuntimeDocumentScrollbarsIntoIframe } from '../../../utils/runtimeDocumentScrollbars.js'
+import { useRunnerBridge } from '../composables/useRunnerBridge.js'
 
 const props = defineProps({
   slug: { type: String, required: true },
   installedVersion: { type: String, default: null },
+  permissions: { type: Array, default: () => [] },
   status: { type: String, default: 'active' },
   runtimeType: { type: String, default: 'iframe' },
   entryUrl: { type: String, default: null },
@@ -111,8 +141,12 @@ const props = defineProps({
 })
 
 const api = useAppHubHostApi()
+const notifications = useDesktopNotifications()
 const moduleOptions = inject('apphubOptions', {})
 const allowedOrigins = computed(() => moduleOptions?.allowedRuntimeOrigins ?? [])
+const iframeRef = ref(null)
+const launchContext = ref(null)
+const launchUrl = ref('')
 
 const backendUrl = computed(() => {
   const fromOptions = moduleOptions?.backendUrl
@@ -143,7 +177,75 @@ const labels = computed(() => ({
   err_no_entry: t('runner_no_entry_url', lang.value),
   err_no_bundle: t('runner_no_bundle', lang.value),
   err_generic: t('error_generic', lang.value),
+  bridge_perm_title: t('bridge_perm_title', lang.value),
+  bridge_perm_runtime_hint: t('bridge_perm_runtime_hint', lang.value),
+  bridge_perm_runtime_message: t('bridge_perm_runtime_message', lang.value),
+  install_perm_accept: t('install_perm_accept', lang.value),
+  install_perm_refuse: t('install_perm_refuse', lang.value),
 }))
+
+function translateBridgeKey(key) {
+  return t(key, lang.value)
+}
+
+const manifestPermissions = computed(() => resolveAppPermissions({ permissions: props.permissions }))
+
+function onRuntimeScopeGranted(scope) {
+  if (!scope) return
+  addInstalledPermission(props.slug, scope, manifestPermissions.value)
+  const ctx = launchContext.value
+  if (!ctx || !Array.isArray(ctx.scopes_granted)) return
+  if (ctx.scopes_granted.includes(scope)) return
+  ctx.scopes_granted = [...ctx.scopes_granted, scope]
+}
+
+const scopeConsent = useBridgeScopeConsent({
+  isPreGranted: (scope) => hasInstalledPermission(props.slug, scope, manifestPermissions.value),
+  onAccepted: onRuntimeScopeGranted,
+})
+
+const scopeConsentScopes = computed(() =>
+  scopeConsent.dialog.scope ? [scopeConsent.dialog.scope] : [],
+)
+
+const scopeConsentLabels = computed(() =>
+  scopeConsentScopes.value.map((scope) =>
+    bridgeScopeLabel(scope, props.slug, translateBridgeKey),
+  ),
+)
+
+const scopeConsentMessage = computed(() => {
+  const template = labels.value.bridge_perm_runtime_message
+  return template.replace(/\{app\}/g, props.slug)
+})
+
+const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
+  iframeRef,
+  launchContext,
+  launchUrl,
+  slug: props.slug,
+  appName: props.slug,
+  isHosted: () => isHosted.value,
+  entryUrl: () => props.entryUrl,
+  api,
+  requestScopeConsent: scopeConsent.requestScopeConsent,
+  onScopeGranted: onRuntimeScopeGranted,
+  onDesktopMessage(payload) {
+    const title = String(payload?.title ?? '').trim()
+    const body = String(payload?.body ?? '').trim()
+    if (!title && !body) return
+    notifications?.info(body || title, body ? title : '')
+  },
+  onNotify(payload) {
+    const title = String(payload?.title ?? '').trim()
+    const body = String(payload?.body ?? '').trim()
+    if (!title && !body) return
+    notifications?.info(body || title, body ? title : '')
+  },
+  onTaskbarBadge() {
+    /* badge UI deferred — scope recorded server-side */
+  },
+})
 
 const preflightTargetLabel = computed(() => {
   if (isHosted.value) return props.slug
@@ -164,7 +266,6 @@ const launching = ref(false)
 const launched = ref(false)
 const error = ref('')
 const preflightError = ref('')
-const launchUrl = ref('')
 const launchRuntimeType = ref(props.runtimeType)
 const pinging = ref(false)
 const pingResult = ref(null)
@@ -258,12 +359,35 @@ async function doLaunch() {
       return
     }
     launchUrl.value = candidate
+    const launchToken = data.launch_token ?? null
+    const initialScopes = Array.isArray(data.scopes_granted) ? [...data.scopes_granted] : []
+    const scopesGranted = await applyInstallGrantedScopes({
+      slug: props.slug,
+      token: launchToken,
+      existingScopes: initialScopes,
+      manifestPermissions: manifestPermissions.value,
+      api,
+    })
+    launchContext.value = {
+      launch_token: launchToken,
+      session_id: data.session_id ?? null,
+      scopes_granted: scopesGranted,
+      slug: data.slug ?? props.slug,
+    }
     launched.value = true
+    mountBridge()
   } catch {
     error.value = labels.value.err_generic
   } finally {
     loading.value = false
     launching.value = false
+  }
+}
+
+function onIframeLoad() {
+  injectRuntimeDocumentScrollbarsIntoIframe(iframeRef.value)
+  if (launchContext.value?.launch_token) {
+    sendBridgeReady()
   }
 }
 

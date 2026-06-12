@@ -5,7 +5,10 @@ namespace Kennofizet\AppHub\Modules\Catalog\Services;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Catalog\Models\AppVersion;
+use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppPermissionType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 
@@ -56,6 +59,24 @@ final class AppCatalogService
         return false;
     }
 
+    /** Owner, dev, draft testers, or manage permission — may launch pending/rejected bundles. */
+    public function userCanLaunchUnpublishedVersion(App $app, int $userId): bool
+    {
+        if ($this->appHub->isDevUser($userId)) {
+            return true;
+        }
+
+        if ((int) $app->owner_user_id === $userId) {
+            return true;
+        }
+
+        if ($app->isDraft()) {
+            return $this->userHasDraftAccess($app, $userId);
+        }
+
+        return $this->userCanViewVersionHistory($app, $userId);
+    }
+
     /**
      * Cursor-paginated catalog for a single mode (store = active zone apps, draft = test apps).
      *
@@ -99,7 +120,7 @@ final class AppCatalogService
         $last = $apps->last();
 
         return [
-            'items' => $apps->map(fn (App $app): array => $this->toCatalogItem($app))->all(),
+            'items' => $apps->map(fn (App $app): array => $this->toCatalogItem($app, $userId, $mode))->all(),
             'meta' => [
                 'mode' => $mode,
                 'per_page' => $perPage,
@@ -129,7 +150,9 @@ final class AppCatalogService
             ->paginate($perPage, ['*'], 'page', $page);
 
         return [
-            'items' => $this->mapPaginator($paginator),
+            'items' => collect($paginator->items())
+                ->map(fn (App $app): array => $this->toCatalogItem($app, null, 'dev'))
+                ->all(),
             'meta' => [
                 'page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
@@ -140,11 +163,15 @@ final class AppCatalogService
     }
 
     /** @return array<string, mixed> */
-    public function toCatalogItem(App $app): array
+    public function toCatalogItem(App $app, ?int $viewerUserId = null, ?string $catalogMode = null): array
     {
+        $showReviewFields = $this->canViewPublisherReviewFields($app, $viewerUserId, $catalogMode);
+
         return [
             'slug' => $app->slug,
             'version' => $app->version,
+            'pending_version' => $showReviewFields ? $app->pending_version : null,
+            'rejected_version' => $showReviewFields ? $this->publisherRejectedVersion($app) : null,
             'name' => $app->name,
             'description' => $app->short_description,
             'icon' => $app->icon,
@@ -155,12 +182,114 @@ final class AppCatalogService
             'bundle_hash' => $app->bundle_hash,
             'bundle_entry' => $app->bundle_entry,
             'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,
+            'permissions' => $this->resolvePermissionsForCatalog($app),
             'installed' => false,
         ];
     }
 
+    /** @return list<string> */
+    private function resolvePermissionsForCatalog(App $app): array
+    {
+        $fromApp = AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+        if ($fromApp !== []) {
+            return $fromApp;
+        }
+
+        $liveVersion = trim((string) ($app->version ?? ''));
+        if ($liveVersion !== '') {
+            $fromLive = $this->permissionsFromVersion($app->id, $liveVersion);
+            if ($fromLive !== []) {
+                return $fromLive;
+            }
+        }
+
+        $pending = trim((string) ($app->pending_version ?? ''));
+        if ($pending !== '') {
+            return $this->permissionsFromVersion($app->id, $pending);
+        }
+
+        return [];
+    }
+
+    /** @return list<string> */
+    private function permissionsFromVersion(int $appId, string $version): array
+    {
+        $row = AppVersion::query()
+            ->where('app_id', $appId)
+            ->where('version', $version)
+            ->first();
+
+        if ($row === null || !is_array($row->manifest)) {
+            return [];
+        }
+
+        return AppBridgeScope::fromManifest($row->manifest);
+    }
+
+    private function canViewPublisherReviewFields(App $app, ?int $viewerUserId, ?string $catalogMode): bool
+    {
+        $mode = AppCatalogMode::normalize($catalogMode ?? '');
+        if ($mode === AppCatalogMode::PUBLISHER || $mode === AppCatalogMode::DRAFT) {
+            return true;
+        }
+
+        if ($catalogMode === 'dev') {
+            return true;
+        }
+
+        if ($viewerUserId === null || $viewerUserId < 1) {
+            return false;
+        }
+
+        if ($this->appHub->isDevUser($viewerUserId)) {
+            return true;
+        }
+
+        if ((int) $app->owner_user_id === $viewerUserId) {
+            return true;
+        }
+
+        return $this->userCanViewVersionHistory($app, $viewerUserId);
+    }
+
+    private function publisherRejectedVersion(App $app): ?string
+    {
+        if (!$app->isActive()) {
+            return null;
+        }
+
+        $live = trim((string) ($app->version ?? ''));
+        $pending = trim((string) ($app->pending_version ?? ''));
+
+        $query = AppVersion::query()
+            ->where('app_id', $app->id)
+            ->where('review_status', AppVersionReviewStatus::REJECTED);
+
+        if ($live !== '') {
+            $query->where('version', '!=', $live);
+        }
+
+        $row = $query->orderByDesc('created_at')->first();
+        if ($row === null) {
+            return null;
+        }
+
+        $version = trim((string) $row->version);
+        if ($version === '' || ($pending !== '' && $version === $pending)) {
+            return null;
+        }
+
+        return $version;
+    }
+
     private function catalogQueryForMode(int $userId, ?int $currentZoneId, string $mode): Builder
     {
+        if ($mode === AppCatalogMode::PUBLISHER) {
+            return App::query()
+                ->where('owner_user_id', $userId)
+                ->whereIn('status', [AppStatus::DRAFT, AppStatus::ACTIVE]);
+        }
+
         if ($mode === AppCatalogMode::DRAFT) {
             return App::query()
                 ->where('status', AppStatus::DRAFT)

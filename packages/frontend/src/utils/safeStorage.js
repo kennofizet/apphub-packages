@@ -118,6 +118,15 @@ export function sanitizeUserApp(app) {
     height: clampNumber(app.height, 240, 4096, 420),
     desktopX: Number.isFinite(desktopX) ? Math.round(desktopX) : null,
     desktopY: Number.isFinite(desktopY) ? Math.round(desktopY) : null,
+    pending_version: typeof app.pending_version === 'string'
+      ? clampString(app.pending_version, 64) || null
+      : null,
+    catalog_version: typeof app.catalog_version === 'string'
+      ? clampString(app.catalog_version, 64) || null
+      : null,
+    rejected_version: typeof app.rejected_version === 'string'
+      ? clampString(app.rejected_version, 64) || null
+      : null,
   }
 }
 

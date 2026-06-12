@@ -17,7 +17,11 @@ Route::prefix('dev')->group(function (): void {
     Route::get('apps', [CatalogDevController::class, 'apps']);
     Route::get('apps/{slug}/bundle-inspect', [CatalogDevController::class, 'inspectBundle'])
         ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
+    Route::get('apps/{slug}/bundle-file', [CatalogDevController::class, 'readBundleFile'])
+        ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
     Route::post('apps/{slug}/status', [CatalogDevController::class, 'updateStatus'])
+        ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
+    Route::post('apps/{slug}/reject-pending', [CatalogDevController::class, 'rejectPending'])
         ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
     Route::post('apps/{slug}/disable', [CatalogDevController::class, 'disable'])
         ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');

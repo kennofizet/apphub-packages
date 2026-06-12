@@ -12,10 +12,31 @@
         :class="{
           'apphub-version-history__item--latest': row.isLatest,
           'apphub-version-history__item--yours': row.isYours,
+          'apphub-version-history__item--pending': row.review_status === 'pending',
+          'apphub-version-history__item--rejected': row.review_status === 'rejected',
+          'apphub-version-history__item--skipped': row.review_status === 'skipped',
         }"
       >
         <div class="apphub-version-history__row">
           <strong>v{{ row.version }}</strong>
+          <span
+            v-if="row.review_status === 'pending'"
+            class="apphub-version-history__badge apphub-version-history__badge--pending"
+          >
+            {{ labels.status_pending }}
+          </span>
+          <span
+            v-else-if="row.review_status === 'rejected'"
+            class="apphub-version-history__badge apphub-version-history__badge--rejected"
+          >
+            {{ labels.status_rejected }}
+          </span>
+          <span
+            v-else-if="row.review_status === 'skipped'"
+            class="apphub-version-history__badge apphub-version-history__badge--skipped"
+          >
+            {{ labels.status_skipped }}
+          </span>
           <span v-if="row.isLatest" class="apphub-version-history__badge apphub-version-history__badge--latest">
             {{ labels.latest }}
           </span>

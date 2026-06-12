@@ -1,0 +1,33 @@
+/** @type {readonly string[]} */
+export const APP_BRIDGE_SCOPES = Object.freeze([
+  'user.read',
+  'user.profile',
+  'desktop.notify',
+  'desktop.message',
+  'desktop.badge',
+])
+
+const SCOPE_SET = new Set(APP_BRIDGE_SCOPES)
+
+export function isValidBridgeScope(scope) {
+  return typeof scope === 'string' && SCOPE_SET.has(scope)
+}
+
+const BRIDGE_SCOPE_LABEL_KEYS = {
+  'user.read': 'bridge_perm_user_read',
+  'user.profile': 'bridge_perm_user_profile',
+  'desktop.notify': 'bridge_perm_desktop_notify',
+  'desktop.message': 'bridge_perm_desktop_message',
+  'desktop.badge': 'bridge_perm_desktop_badge',
+}
+
+/**
+ * @param {string} scope
+ * @param {string} appLabel
+ * @param {(key: string, params?: Record<string, string>) => string} translate
+ */
+export function bridgeScopeLabel(scope, appLabel, translate) {
+  const key = BRIDGE_SCOPE_LABEL_KEYS[scope] ?? 'bridge_perm_default'
+  const template = translate(key)
+  return template.replace(/\{app\}/g, appLabel).replace(/\{scope\}/g, scope)
+}

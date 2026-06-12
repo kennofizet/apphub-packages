@@ -65,21 +65,17 @@ export function createWindowManagerState() {
 
 
   function bringToFront(id) {
-
-    state.nextZ += 1
-
     const win = state.windows.find((w) => w.id === id)
+    if (!win) return
 
-    if (win) {
-
+    const topZ = state.windows.reduce((max, w) => Math.max(max, w.zIndex ?? 0), 0)
+    if (state.activeId !== id || win.zIndex < topZ) {
+      state.nextZ += 1
       win.zIndex = state.nextZ
-
-      win.minimized = false
-
     }
 
+    win.minimized = false
     state.activeId = id
-
   }
 
 
@@ -580,6 +576,7 @@ export function createWindowManagerState() {
 
 
 
+  /** Keep open order in DOM — reordering reloads iframe runtimes; stacking uses win.zIndex CSS. */
   const visibleWindows = computed(() => state.windows.filter((w) => !w.minimized))
 
 

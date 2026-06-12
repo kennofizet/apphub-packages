@@ -41,6 +41,7 @@ export function createAppHubApi(backendUrl, token, options = {}) {
   }
 
   return {
+    post: (path, data, config) => client.post(path, data, config),
     bootstrap: () => client.get('/bootstrap'),
     integrationDocs: () => client.get('/integration-docs'),
     integrationDocsInternal: () =>
@@ -58,10 +59,19 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     devApps: (params) => client.get('/dev/apps', { params }),
     devInspectBundle: (slug) =>
       client.get(`/dev/apps/${encodeURIComponent(slug)}/bundle-inspect`),
+    devReadBundleFile: (slug, path, options = {}) =>
+      client.get(`/dev/apps/${encodeURIComponent(slug)}/bundle-file`, {
+        params: {
+          path,
+          ...(options.compare ? { compare: 1 } : {}),
+        },
+      }),
     devDisableApp: (slug) =>
       client.post(`/dev/apps/${encodeURIComponent(slug)}/disable`),
     devSetAppStatus: (slug, status) =>
       client.post(`/dev/apps/${encodeURIComponent(slug)}/status`, { status }),
+    devRejectPendingVersion: (slug) =>
+      client.post(`/dev/apps/${encodeURIComponent(slug)}/reject-pending`),
     registerApp: (formData) =>
       client.post('/apps/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },

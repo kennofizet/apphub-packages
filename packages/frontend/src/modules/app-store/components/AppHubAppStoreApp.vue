@@ -178,12 +178,14 @@ function installedVersionFor(slug) {
 }
 
 async function onInstall(app) {
-  if (!appStore.installApp(app.slug)) return
-  await props.onInstalled?.(app)
+  const result = await props.onInstalled?.(app)
+  if (result === 'cancelled') return
+  appStore.installApp(app.slug)
 }
 
 async function onUpdate(app) {
-  await props.onUpdateApp?.(app)
+  const ok = await props.onUpdateApp?.(app)
+  if (ok === false) return
 }
 
 async function onUninstall(app) {

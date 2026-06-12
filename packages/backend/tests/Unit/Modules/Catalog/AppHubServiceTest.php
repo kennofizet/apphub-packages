@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Tests\Unit\Modules\Catalog;
 
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubService;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppPublishService;
 use PHPUnit\Framework\TestCase;
 
 final class AppHubServiceTest extends TestCase
@@ -23,7 +24,7 @@ final class AppHubServiceTest extends TestCase
         }
 
         app('config')->set('apphub.dev_user_ids', [1, 42]);
-        $service = new AppHubService();
+        $service = new AppHubService($this->createMock(AppPublishService::class));
 
         $this->assertTrue($service->isDevUser(1));
         $this->assertTrue($service->isDevUser(42));
