@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -30,8 +30,9 @@
           "Request the permissions you need, then call bridge methods."
         ],
         "runtime_context": {
-          "fields": ["app_slug", "session_id", "user_id", "scopes_granted", "launch_token"],
-          "launch_token": "Short-lived token for optional bridge HTTP calls from your app server."
+          "fields": ["app_slug", "session_id", "user_id", "scopes_granted", "launch_token", "display_user"],
+          "launch_token": "Short-lived token for optional bridge HTTP calls from your app server.",
+          "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use getUserInfo or verify-launch-token for authoritative identity."
         },
         "discovery": {
           "in_window": "window.AppHubBridge (provided by docs/sdk-stub.js in sandboxed iframe)",
@@ -42,7 +43,12 @@
             "channel": "apphub:bridge",
             "parent_to_child_ready": {
               "event": "apphub:bridge:ready",
-              "context": { "app_slug": "string", "session_id": "string|null", "scopes_granted": "string[]" }
+              "context": {
+                "app_slug": "string",
+                "session_id": "string|null",
+                "scopes_granted": "string[]",
+                "display_user": "{ id: number, name: string } optional — UI only from Hub bootstrap"
+              }
             },
             "child_to_parent_call": {
               "event": "apphub:bridge:call",
@@ -81,7 +87,25 @@
             "user_prompt": "Allow {app} to update its taskbar badge?"
           }
         ],
+        "data_tiers": {
+          "display_only": {
+            "source": "GET /bootstrap (Hub shell) → display_user on apphub:bridge:ready",
+            "fields": ["id", "name"],
+            "use_for": "Greetings, labels, UI copy inside the app iframe",
+            "do_not_use_for": "Authorization, audit, or calling your publisher API as this user"
+          },
+          "authoritative": {
+            "source": "GET bridge/user (launch token + user.read) or POST verify-launch-token on publisher server",
+            "use_for": "Server-side identity, permissions, compliance",
+            "requires": "user.read or user.profile scope on launch token"
+          }
+        },
         "javascript_api": {
+          "getDisplayUser": {
+            "signature": "getDisplayUser(): { id, name } | null",
+            "requires": [],
+            "description": "UI-only user snapshot from bridge:ready context (Hub bootstrap). No HTTP call. Not for auth."
+          },
           "requestPermission": {
             "signature": "requestPermission(scope: string): Promise<boolean>",
             "description": "Ask the user to allow a scope. Returns true if granted."
@@ -89,7 +113,7 @@
           "getUserInfo": {
             "signature": "getUserInfo(): Promise<{ id, name, locale?, avatar? }>",
             "requires": ["user.read"],
-            "description": "Basic user info after user.read is granted."
+            "description": "Authoritative basic user info from GET bridge/user after user.read is granted. Use for verified identity, not for simple UI greetings (prefer getDisplayUser)."
           },
           "getProfile": {
             "signature": "getProfile(): Promise<Record<string, unknown>>",
@@ -119,7 +143,7 @@
             "description": "Set or clear taskbar badge on your app button."
           }
         },
-        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nawait bridge.requestPermission('user.read')\nconst user = await bridge.getUserInfo()\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({\n  type: 'banner',\n  title: 'Hello',\n  body: `Welcome ${user.name}`,\n  duration_ms: 5000\n})",
+        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\nconst user = await bridge.getUserInfo() // authoritative — needs user.read\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${user.name}`, duration_ms: 5000 })",
         "http_companion": {
           "note": "Optional server-side calls with launch_token + app slug header.",
           "routes": [

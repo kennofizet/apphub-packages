@@ -230,6 +230,12 @@ const scopeConsentMessage = computed(() => {
   return template.replace(/\{app\}/g, props.slug)
 })
 
+function hubDisplayUser(moduleStore) {
+  const user = moduleStore?.zoneContext?.state?.user
+  if (!user || user.id == null) return null
+  return { id: user.id, name: user.name ?? String(user.id) }
+}
+
 const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   iframeRef,
   launchContext,
@@ -238,6 +244,7 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   appName: props.slug,
   isHosted: () => isHosted.value,
   entryUrl: () => props.entryUrl,
+  getDisplayUser: () => hubDisplayUser(moduleStore),
   api,
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onScopeGranted: onRuntimeScopeGranted,

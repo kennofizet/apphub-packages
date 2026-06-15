@@ -111,7 +111,12 @@ Packed automatically by `npm run pack` from `example/`. Manual zip root files:
 
 When the app runs inside App Hub, the runtime API requires `launch_token` on every file request (not only `index.html`). The HTML demo appends the token from the page URL when fetching `manifest.json` for the version badge.
 
-After the runner loads, click **Hello** to exercise the bridge (`user.read` → `getUserInfo`). See `docs/sdk-stub.js` for the full client stub.
+After the runner loads:
+
+- **Say hello (display_user)** — UI greeting from Hub bootstrap on `apphub:bridge:ready` (no API, no `user.read` dialog).
+- **Verify user (API)** — calls `getUserInfo` → `GET bridge/user` (needs `user.read`; install-time grant or runtime consent).
+
+See `docs/sdk-stub.js` for the full client stub (`getDisplayUser()` vs `getUserInfo()`).
 
 ---
 

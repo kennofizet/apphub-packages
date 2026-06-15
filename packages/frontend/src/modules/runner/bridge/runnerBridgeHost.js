@@ -35,6 +35,7 @@ function isBridgeMessage(data) {
  *   onNotify?: (payload: { title?: string, body?: string, icon?: string }) => void,
  *   onTaskbarBadge?: (count: number | null) => void,
  *   getEntryOrigin?: () => string,
+ *   getDisplayUser?: () => { id: number | string, name?: string | null } | null,
  * }} options
  */
 export function createRunnerBridgeHost(options) {
@@ -65,9 +66,19 @@ export function createRunnerBridgeHost(options) {
     })
   }
 
+  function resolveDisplayUser() {
+    const raw = options.getDisplayUser?.()
+    if (!raw || raw.id == null) return null
+    const id = Number(raw.id)
+    if (!Number.isFinite(id) || id < 1) return null
+    const name = typeof raw.name === 'string' ? raw.name.trim() : ''
+    return { id, name: name || String(id) }
+  }
+
   function sendReady() {
     syncGrantedFromContext()
     const ctx = options.getLaunchContext?.() ?? {}
+    const displayUser = resolveDisplayUser()
     postToFrame({
       channel: BRIDGE_CHANNEL,
       event: BRIDGE_EVENT_READY,
@@ -75,6 +86,7 @@ export function createRunnerBridgeHost(options) {
         app_slug: options.appSlug,
         session_id: ctx.session_id ?? null,
         scopes_granted: [...grantedScopes],
+        ...(displayUser ? { display_user: displayUser } : {}),
       },
     })
   }

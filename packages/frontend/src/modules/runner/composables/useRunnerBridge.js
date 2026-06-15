@@ -27,6 +27,7 @@ export function useRunnerBridge(options) {
         const url = options.launchUrl?.value ?? options.entryUrl?.() ?? ''
         return entryUrlOrigin(url)
       },
+      getDisplayUser: options.getDisplayUser,
     })
 
     host.start()
