@@ -203,6 +203,10 @@
       :refuse-label="labels.install_perm_refuse"
       :permission-scopes="installPermDialog.permissions"
       :permission-labels="installPermLabels"
+      :permission-section-title="installPermDialog.permissions.length ? labels.install_perm_permissions_title : ''"
+      :api-urls="installPermDialog.apiUrls"
+      :api-urls-section-title="installPermDialog.apiUrls.length ? labels.install_perm_api_urls_title : ''"
+      :api-urls-hint="installPermDialog.apiUrls.length ? labels.install_perm_api_urls_hint : ''"
       @accept="onInstallPermAccept"
       @refuse="onInstallPermRefuse"
     />
@@ -334,6 +338,7 @@ import {
 import { evaluateOriginSafety } from '../../../utils/originSafety.js'
 import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import {
   clearInstalledPermissions,
   saveInstalledPermissions,
@@ -471,6 +476,7 @@ const installPermDialog = reactive({
   app: null,
   action: 'install',
   permissions: [],
+  apiUrls: [],
 })
 let installPermResolve = null
 
@@ -517,6 +523,9 @@ const labels = computed(() => ({
   duplicate_app_keep: t('duplicate_app_keep', lang.value),
   duplicate_app_cancel: t('duplicate_app_cancel', lang.value),
   install_perm_hint: t('install_perm_hint', lang.value),
+  install_perm_permissions_title: t('install_perm_permissions_title', lang.value),
+  install_perm_api_urls_title: t('install_perm_api_urls_title', lang.value),
+  install_perm_api_urls_hint: t('install_perm_api_urls_hint', lang.value),
   install_perm_accept: t('install_perm_accept', lang.value),
   install_perm_refuse: t('install_perm_refuse', lang.value),
   install_perm_refused_install: t('install_perm_refused_install', lang.value),
@@ -717,15 +726,18 @@ const installPermLabels = computed(() => {
 
 function askInstallPermissions(app, action = 'install') {
   let permissions = resolveAppPermissions(app)
-  if (!permissions.length && app?.slug) {
+  let apiUrls = resolveAppApiUrls(app)
+  if (app?.slug) {
     const catalog = appStore.findCatalogItem(app.slug)
-    permissions = resolveAppPermissions(catalog)
+    if (!permissions.length) permissions = resolveAppPermissions(catalog)
+    if (!apiUrls.length) apiUrls = resolveAppApiUrls(catalog)
   }
-  if (!permissions.length) return Promise.resolve(true)
+  if (!permissions.length && !apiUrls.length) return Promise.resolve(true)
 
   installPermDialog.app = app
   installPermDialog.action = action
   installPermDialog.permissions = permissions
+  installPermDialog.apiUrls = apiUrls
 
   return new Promise((resolve) => {
     installPermResolve = resolve
@@ -744,6 +756,7 @@ function closeInstallPerm(accepted) {
   installPermResolve = null
   installPermDialog.app = null
   installPermDialog.permissions = []
+  installPermDialog.apiUrls = []
   installPermDialog.action = 'install'
 
   if (accepted && app?.slug) {

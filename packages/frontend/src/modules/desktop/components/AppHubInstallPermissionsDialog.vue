@@ -19,6 +19,10 @@
 
         <p class="apphub-install-perm-dialog__message">{{ message }}</p>
 
+        <p v-if="permissionSectionTitle" class="apphub-install-perm-dialog__section-title">
+          {{ permissionSectionTitle }}
+        </p>
+
         <ul v-if="permissionLabels.length" class="apphub-install-perm-dialog__list">
           <li
             v-for="(label, index) in permissionLabels"
@@ -32,6 +36,25 @@
             </div>
           </li>
         </ul>
+
+        <p v-if="apiUrls.length && apiUrlsSectionTitle" class="apphub-install-perm-dialog__section-title">
+          {{ apiUrlsSectionTitle }}
+        </p>
+
+        <ul v-if="apiUrls.length" class="apphub-install-perm-dialog__list apphub-install-perm-dialog__list--urls">
+          <li
+            v-for="url in apiUrls"
+            :key="url"
+            class="apphub-install-perm-dialog__item apphub-install-perm-dialog__item--url"
+          >
+            <span class="apphub-install-perm-dialog__item-dot" aria-hidden="true" />
+            <code class="apphub-install-perm-dialog__item-url">{{ url }}</code>
+          </li>
+        </ul>
+
+        <p v-if="apiUrls.length && apiUrlsHint" class="apphub-install-perm-dialog__hint apphub-install-perm-dialog__hint--urls">
+          {{ apiUrlsHint }}
+        </p>
 
         <p class="apphub-install-perm-dialog__hint">{{ hint }}</p>
 
@@ -69,6 +92,10 @@ const props = defineProps({
   refuseLabel: { type: String, default: '' },
   permissionScopes: { type: Array, default: () => [] },
   permissionLabels: { type: Array, default: () => [] },
+  permissionSectionTitle: { type: String, default: '' },
+  apiUrls: { type: Array, default: () => [] },
+  apiUrlsSectionTitle: { type: String, default: '' },
+  apiUrlsHint: { type: String, default: '' },
 })
 
 const emit = defineEmits(['accept', 'refuse'])

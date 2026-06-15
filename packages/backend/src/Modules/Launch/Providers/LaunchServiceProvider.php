@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Launch\Providers;
 
 use Kennofizet\AppHub\Core\Providers\ModuleServiceProvider;
 use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
+use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppUsageService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
@@ -21,6 +22,7 @@ class LaunchServiceProvider extends ModuleServiceProvider
         $this->app->singleton(LaunchService::class);
         $this->app->singleton(AppUsageService::class);
         $this->app->singleton(AppHealthcheckService::class);
+        $this->app->singleton(AppLaunchCallerUrlGuard::class);
     }
 
     public function boot(): void

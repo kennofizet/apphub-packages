@@ -450,6 +450,34 @@
   min-width: 72px;
 }
 
+.apphub-dev-tools__row--stack {
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.apphub-dev-tools__manifest {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.apphub-dev-tools__scope-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apphub-dev-tools__scope-item code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
 .apphub-dev-tools__mono {
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;

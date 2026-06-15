@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
+use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppUsageService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchDeniedException;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchService;
@@ -22,6 +23,7 @@ class LaunchController extends Controller
         private readonly AppUsageService $usage,
         private readonly AppCatalogService $catalog,
         private readonly AppHealthcheckService $healthcheck,
+        private readonly AppLaunchCallerUrlGuard $callerUrlGuard,
     ) {
     }
 
@@ -62,7 +64,31 @@ class LaunchController extends Controller
         $validated = $request->validate([
             'launch_token' => 'required|string|min:32|max:128',
             'app_slug' => 'nullable|string|regex:/^[a-z0-9][a-z0-9_-]{0,63}$/',
+            'caller_url' => 'nullable|string|max:2048',
         ]);
+
+        $record = $this->launchTokens->recordForGrant($validated['launch_token']);
+        if ($record === null || $record->app === null) {
+            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+        }
+
+        $appSlug = $validated['app_slug'] ?? null;
+        if ($appSlug !== null && $appSlug !== '' && $record->app->slug !== $appSlug) {
+            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+        }
+
+        $bundleVersion = $record->bundle_version !== null ? trim((string) $record->bundle_version) : null;
+        if ($bundleVersion === '') {
+            $bundleVersion = null;
+        }
+
+        $guard = $this->callerUrlGuard->validate($record->app, $bundleVersion, $request, [
+            'user_id' => (int) $record->user_id,
+            'app_slug' => $record->app->slug,
+        ]);
+        if ($guard['ok'] !== true) {
+            return response()->json(['success' => false, 'error' => $guard['error']], $guard['status']);
+        }
 
         $result = $this->launchTokens->verify(
             $validated['launch_token'],

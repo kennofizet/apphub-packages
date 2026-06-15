@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Services;
 
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 use Kennofizet\PackagesCore\Models\Zone;
 use RuntimeException;
@@ -50,6 +51,10 @@ final class AppHubService
             throw new RuntimeException('App not found');
         }
 
+        if ($status === AppStatus::ACTIVE) {
+            $this->assertActivatableManifest($app);
+        }
+
         if ($status === AppStatus::ACTIVE && $app->hasPendingVersion()) {
             $app = $this->publish->promotePendingVersion($app);
             $this->ensureDefaultZoneAccess($app);
@@ -93,5 +98,19 @@ final class AppHubService
             ],
             [],
         );
+    }
+
+    private function assertActivatableManifest(App $app): void
+    {
+        $review = $this->publish->resolveReviewBundle($app);
+        $manifest = is_array($review['manifest'] ?? null)
+            ? $review['manifest']
+            : (is_array($app->manifest) ? $app->manifest : null);
+
+        try {
+            AppManifestApiUrl::assertRequired($manifest);
+        } catch (\RuntimeException $e) {
+            throw new RuntimeException('Cannot approve: ' . $e->getMessage());
+        }
     }
 }

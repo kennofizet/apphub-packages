@@ -36,6 +36,8 @@
       </div>
     </header>
 
+    <AppHubDevManifestSummary :app="app" :labels="labels" />
+
     <div v-if="inspect?.has_baseline" class="apphub-dev-tools__code-review-summary">
       <span>{{ labels.diff_against }} v{{ inspect.baseline_version }}</span>
       <span v-if="changeCounts.modified" class="apphub-dev-tools__diff-stat apphub-dev-tools__diff-stat--modified">
@@ -108,6 +110,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import AppHubDevManifestSummary from './AppHubDevManifestSummary.vue'
 import AppHubDevToolsCodeDiff from './AppHubDevToolsCodeDiff.vue'
 
 const props = defineProps({

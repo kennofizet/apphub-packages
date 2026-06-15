@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppVersion;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppPermissionType;
@@ -183,6 +184,7 @@ final class AppCatalogService
             'bundle_entry' => $app->bundle_entry,
             'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,
             'permissions' => $this->resolvePermissionsForCatalog($app),
+            'api_urls' => $this->resolveApiUrlsForCatalog($app),
             'installed' => false,
         ];
     }
@@ -209,6 +211,45 @@ final class AppCatalogService
         }
 
         return [];
+    }
+
+    /** @return list<string> */
+    private function resolveApiUrlsForCatalog(App $app): array
+    {
+        $fromApp = AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+        if ($fromApp !== []) {
+            return $fromApp;
+        }
+
+        $liveVersion = trim((string) ($app->version ?? ''));
+        if ($liveVersion !== '') {
+            $fromLive = $this->apiUrlsFromVersion($app->id, $liveVersion);
+            if ($fromLive !== []) {
+                return $fromLive;
+            }
+        }
+
+        $pending = trim((string) ($app->pending_version ?? ''));
+        if ($pending !== '') {
+            return $this->apiUrlsFromVersion($app->id, $pending);
+        }
+
+        return [];
+    }
+
+    /** @return list<string> */
+    private function apiUrlsFromVersion(int $appId, string $version): array
+    {
+        $row = AppVersion::query()
+            ->where('app_id', $appId)
+            ->where('version', $version)
+            ->first();
+
+        if ($row === null || !is_array($row->manifest)) {
+            return [];
+        }
+
+        return AppManifestApiUrl::fromManifest($row->manifest);
     }
 
     /** @return list<string> */

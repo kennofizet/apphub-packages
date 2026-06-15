@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Catalog\Services;
 
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppVersion;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
@@ -89,6 +90,39 @@ final class AppVersionService
         }
 
         return $this->permissionsForVersion($app, $versionKey);
+    }
+
+    /** @return list<string> */
+    public function apiUrlsForLaunchBundle(App $app, ?string $version): array
+    {
+        $versionKey = $version !== null ? trim($version) : '';
+        if ($versionKey === '') {
+            return $this->apiUrlsForVersion($app, (string) $app->version);
+        }
+
+        return $this->apiUrlsForVersion($app, $versionKey);
+    }
+
+    /** @return list<string> */
+    private function apiUrlsForVersion(App $app, string $version): array
+    {
+        $version = trim($version);
+        if ($version !== '' && $version === (string) $app->version) {
+            $fromApp = AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+            if ($fromApp !== []) {
+                return $fromApp;
+            }
+        }
+
+        $row = $version !== '' ? $this->findVersionRow($app, $version) : null;
+        if ($row !== null && is_array($row->manifest)) {
+            $fromRow = AppManifestApiUrl::fromManifest($row->manifest);
+            if ($fromRow !== []) {
+                return $fromRow;
+            }
+        }
+
+        return AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);
     }
 
     /** @return list<string> */

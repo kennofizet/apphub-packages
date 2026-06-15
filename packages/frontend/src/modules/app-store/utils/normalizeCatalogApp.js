@@ -38,7 +38,22 @@ export function normalizeCatalogApp(row) {
       : null,
     installed: !!row.installed,
     permissions: normalizePermissions(row.permissions),
+    api_urls: normalizeApiUrls(row.api_urls, row.api_base_url),
   }
+}
+
+/** @param {unknown} raw */
+function normalizeApiUrls(raw, legacy) {
+  const urls = []
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const value = typeof item === 'string' ? item.trim() : ''
+      if (value && !urls.includes(value)) urls.push(value)
+    }
+  }
+  const base = typeof legacy === 'string' ? legacy.trim() : ''
+  if (base && !urls.includes(base)) urls.unshift(base)
+  return urls
 }
 
 /** @param {unknown} raw */

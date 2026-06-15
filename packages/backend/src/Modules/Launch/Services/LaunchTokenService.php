@@ -179,6 +179,9 @@ final class LaunchTokenService
             'app_slug' => $record->app->slug,
             'session_id' => $record->session_id,
             'scopes_granted' => is_array($record->scopes_granted) ? $record->scopes_granted : [],
+            'bundle_version' => $record->bundle_version !== null && trim((string) $record->bundle_version) !== ''
+                ? trim((string) $record->bundle_version)
+                : null,
         ];
     }
 
@@ -198,14 +201,17 @@ final class LaunchTokenService
             ->first();
     }
 
-    /** @return array{app_slug: string, session_id: string|null, user_id: int, scopes_granted: list<string>} */
+    /** @return array{app_slug: string, session_id: string|null, user_id: int, scopes_granted: list<string>, bundle_version: string|null} */
     private function toPayload(AppLaunchToken $record): array
     {
+        $bundleVersion = $record->bundle_version !== null ? trim((string) $record->bundle_version) : '';
+
         return [
             'app_slug' => (string) ($record->app?->slug ?? ''),
             'session_id' => $record->session_id,
             'user_id' => (int) $record->user_id,
             'scopes_granted' => is_array($record->scopes_granted) ? $record->scopes_granted : [],
+            'bundle_version' => $bundleVersion !== '' ? $bundleVersion : null,
         ];
     }
 

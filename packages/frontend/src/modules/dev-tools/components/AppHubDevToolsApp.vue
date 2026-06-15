@@ -147,6 +147,8 @@ import { getHostApiForApp } from '../../../composables/useAppHubHostApi.js'
 import { CATALOG_MAX_PER_PAGE } from '../../../utils/catalogPagination.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import AppHubDevToolsCodeReview from './AppHubDevToolsCodeReview.vue'
 import AppHubDevToolsReviewItem from './AppHubDevToolsReviewItem.vue'
 
@@ -206,6 +208,10 @@ const labels = computed(() => ({
   file_deleted: t('dev_tools_file_deleted', lang.value),
   file_unchanged: t('dev_tools_file_unchanged', lang.value),
   code_truncated_old: t('dev_tools_code_truncated_old', lang.value),
+  permissions: t('dev_review_permissions', lang.value),
+  api_urls: t('dev_review_api_urls', lang.value),
+  approve_confirm_title: t('dev_approve_confirm_title', lang.value),
+  approve_confirm_hint: t('dev_approve_confirm_hint', lang.value),
 }))
 
 const confirmDialog = useConfirmDialog()
@@ -335,6 +341,31 @@ async function selectFile(slug, path) {
 }
 
 async function approve(slug) {
+  const app = allApps.value.find((a) => a?.slug === slug)
+  if (!app) return
+
+  const permissions = resolveAppPermissions(app)
+  const apiUrls = resolveAppApiUrls(app)
+  const lines = []
+  if (permissions.length) {
+    lines.push(`${labels.value.permissions}: ${permissions.join(', ')}`)
+  }
+  if (apiUrls.length) {
+    lines.push(`${labels.value.api_urls}:`)
+    lines.push(...apiUrls.map((url) => `  • ${url}`))
+  }
+
+  const ok = await confirmDialog.confirm({
+    title: labels.value.approve_confirm_title,
+    message: lines.length
+      ? `${app.name} (${app.slug})\n\n${lines.join('\n')}`
+      : `${app.name} (${app.slug})`,
+    hint: labels.value.approve_confirm_hint,
+    confirmLabel: labels.value.approve,
+    cancelLabel: labels.value.confirm_cancel,
+  })
+  if (!ok) return
+
   const client = api()
   if (!client?.devSetAppStatus) return
   actingSlug.value = slug

@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -11,8 +12,10 @@ final class ValidateLaunchToken
 {
     private const SLUG_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
 
-    public function __construct(private readonly LaunchTokenService $launchTokens)
-    {
+    public function __construct(
+        private readonly LaunchTokenService $launchTokens,
+        private readonly AppLaunchCallerUrlGuard $callerUrlGuard,
+    ) {
     }
 
     public function handle(Request $request, Closure $next): Response
@@ -24,9 +27,24 @@ final class ValidateLaunchToken
             return response()->json(['success' => false, 'error' => 'Invalid app slug header'], 422);
         }
 
+        $record = $this->launchTokens->recordForGrant($token);
+        if ($record === null || $record->app === null || $record->app->slug !== $slug) {
+            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+        }
+
         $payload = $this->launchTokens->resolve($token, $slug);
         if ($payload === null) {
             return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+        }
+
+        $guard = $this->callerUrlGuard->validate(
+            $record->app,
+            $payload['bundle_version'] ?? null,
+            $request,
+            $payload,
+        );
+        if ($guard['ok'] !== true) {
+            return response()->json(['success' => false, 'error' => $guard['error']], $guard['status']);
         }
 
         $request->attributes->set('apphub_launch', $payload);

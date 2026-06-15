@@ -2841,6 +2841,26 @@
   color: var(--perm-text-body);
 }
 
+.apphub-install-perm-dialog__section-title {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.apphub-install-perm-dialog__item-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.apphub-install-perm-dialog__hint--urls {
+  margin-top: 0.35rem;
+}
+
 .apphub-install-perm-dialog__list {
   margin: 0 0 14px;
   padding: 0;

@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Support;
 
 use Illuminate\Http\UploadedFile;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use RuntimeException;
 use ZipArchive;
 
@@ -139,6 +140,13 @@ final class AppManifestParser
         if ($permissions !== []) {
             $document['permissions'] = $permissions;
         }
+
+        $apiUrls = AppManifestApiUrl::fromManifest($manifest);
+        if ($apiUrls !== []) {
+            $document['api_urls'] = $apiUrls;
+        }
+
+        AppManifestApiUrl::assertRequired($document);
 
         return [
             'slug' => $slug,

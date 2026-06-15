@@ -51,10 +51,13 @@
       <dd>{{ app.bundle_file_count }}</dd>
     </div>
   </dl>
+
+  <AppHubDevManifestSummary :app="app" :labels="labels" />
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import AppHubDevManifestSummary from './AppHubDevManifestSummary.vue'
 
 const props = defineProps({
   app: { type: Object, required: true },
