@@ -1,4 +1,5 @@
 export const ORIGIN_UNSAFE_SAME_ORIGIN_EMBED = 'same_origin_embed'
+export const ORIGIN_UNSAFE_DIRECT_PRODUCT_MOUNT = 'direct_product_mount'
 export const ORIGIN_UNSAFE_NOT_CONFIGURED = 'hub_origin_not_configured'
 export const ORIGIN_UNSAFE_WRONG_ORIGIN = 'hub_origin_mismatch'
 export const ORIGIN_UNSAFE_RUNTIME_NOT_CONFIGURED = 'runtime_public_url_not_configured'
@@ -177,6 +178,29 @@ function checkSameOriginEmbed(expectedHubOrigin, expectedRuntimeOrigin) {
   return null
 }
 
+/** Top-level mount inside a product SPA (not hub-host-starter). */
+function checkDirectProductMount(options, expectedHubOrigin, expectedRuntimeOrigin) {
+  if (options.dedicatedHubHost === true) {
+    return null
+  }
+  if (typeof window === 'undefined' || window.self !== window.top) {
+    return null
+  }
+
+  return unsafe(ORIGIN_UNSAFE_DIRECT_PRODUCT_MOUNT, {
+    parentOrigin: null,
+    expectedHubOrigin,
+    expectedRuntimeOrigin,
+  })
+}
+
+function runHostIsolationChecks(options, expectedHubOrigin, expectedRuntimeOrigin) {
+  const directBlock = checkDirectProductMount(options, expectedHubOrigin, expectedRuntimeOrigin)
+  if (directBlock) return directBlock
+
+  return checkSameOriginEmbed(expectedHubOrigin, expectedRuntimeOrigin)
+}
+
 /**
  * App Hub must run on a dedicated origin; hosted bundles on another public runtime origin.
  * Local dev relaxed mode — dev users only (APPHUB_DEV_USER_IDS). Non-dev gets strict checks.
@@ -196,6 +220,7 @@ function checkSameOriginEmbed(expectedHubOrigin, expectedRuntimeOrigin) {
  *   enforceIsolatedHostedRuntime?: boolean,
  *   enforceDevFriendlyOrigins?: boolean,
  *   isDevUser?: boolean,
+ *   dedicatedHubHost?: boolean,
  * }} [options]
  */
 export function evaluateOriginSafety(options = {}) {
@@ -220,8 +245,6 @@ export function evaluateOriginSafety(options = {}) {
   const serverResolved = options.serverOriginsResolved === true
 
   if (effective.devFriendly) {
-    const embedBlock = checkSameOriginEmbed(expectedHubOrigin, expectedRuntimeOrigin)
-    if (embedBlock) return embedBlock
     return safeResult({
       devFriendly: true,
       expectedHubOrigin,
@@ -229,8 +252,8 @@ export function evaluateOriginSafety(options = {}) {
     })
   }
 
-  const embedBlock = checkSameOriginEmbed(expectedHubOrigin, expectedRuntimeOrigin)
-  if (embedBlock) return embedBlock
+  const hostIsolationBlock = runHostIsolationChecks(options, expectedHubOrigin, expectedRuntimeOrigin)
+  if (hostIsolationBlock) return hostIsolationBlock
 
   if (enforceDedicated) {
     if (!expectedHubOrigin) {

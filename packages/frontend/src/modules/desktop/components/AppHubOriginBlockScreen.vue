@@ -43,6 +43,7 @@ import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { useDevOriginToggle } from '../../../composables/useDevOriginToggle.js'
 import {
+  ORIGIN_UNSAFE_DIRECT_PRODUCT_MOUNT,
   ORIGIN_UNSAFE_NOT_CONFIGURED,
   ORIGIN_UNSAFE_RUNTIME_NOT_CONFIGURED,
   ORIGIN_UNSAFE_RUNTIME_SAME_ORIGIN,
@@ -79,7 +80,7 @@ const message = computed(() => {
   if (props.reason === ORIGIN_UNSAFE_SAME_ORIGIN_EMBED) {
     return props.labels.same_origin_embed
   }
-  if (props.reason === ORIGIN_UNSAFE_NOT_CONFIGURED) {
+  if (props.reason === ORIGIN_UNSAFE_DIRECT_PRODUCT_MOUNT || props.reason === ORIGIN_UNSAFE_NOT_CONFIGURED) {
     return props.labels.not_configured
   }
   if (props.reason === ORIGIN_UNSAFE_WRONG_ORIGIN) {

@@ -5,7 +5,12 @@ import { isLocalDevHostPage } from '../utils/originSafety.js'
 
 function reconcileAfterToggle(vueApp, enabled) {
   import('../index.js').then(({ installAppHubModule }) => {
-    installAppHubModule(vueApp, { enforceDevFriendlyOrigins: enabled, isDevUser: true })
+    const store = getAppHubStore(vueApp)
+    installAppHubModule(vueApp, {
+      enforceDevFriendlyOrigins: enabled,
+      isDevUser: true,
+      dedicatedHubHost: store?.options?.dedicatedHubHost === true,
+    })
   })
 }
 
