@@ -10,6 +10,19 @@
       </p>
     </div>
 
+    <p v-else-if="!ready && waitingMode === 'standalone-loading'" class="hub-host__waiting">
+      Fetching dev session…
+    </p>
+
+    <div v-else-if="!ready && waitingMode === 'standalone-failed'" class="hub-host__waiting hub-host__waiting--help">
+      <p>Could not load a dev session for standalone Hub.</p>
+      <p>
+        Set <code>VITE_APPHUB_DEV_LOGIN_URL</code> in <code>.env</code>
+        (e.g. <code>http://127.0.0.1:8000/api/user/login?user_id=1</code>),
+        or open with <code>?token=…</code>.
+      </p>
+    </div>
+
     <p v-else-if="!ready" class="hub-host__waiting">Waiting for session from parent app…</p>
 
     <AppHubDesktop
@@ -30,7 +43,7 @@ import { useParentHostConfig } from './useParentHostConfig.js'
 
 const vueApp = getCurrentInstance()?.appContext?.app
 const initialOpenSlug = resolveInitialOpenSlug()
-const { config, ready, staticConfig } = useParentHostConfig(vueApp)
+const { config, ready, staticConfig, waitingMode } = useParentHostConfig(vueApp)
 </script>
 
 <style>
@@ -53,6 +66,10 @@ body,
   margin: 1rem;
   font-family: system-ui, sans-serif;
   color: #64748b;
+}
+
+.hub-host__waiting--help p {
+  margin: 0.35rem 0;
 }
 
 .hub-host__setup {

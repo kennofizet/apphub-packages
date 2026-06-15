@@ -123,6 +123,20 @@ window.addEventListener('message', (e) => {
 
 Open app by slug: `src="https://apphub.yourcompany.com?open=my-app-slug"` (token still via `postMessage`).
 
+## Local dev — open Hub host directly (no iframe)
+
+When running `npm run dev`, you can open the Hub URL directly (e.g. `http://localhost:5173`) without the product iframe. Vite dev mode enables this automatically.
+
+Add to `.env`:
+
+```env
+VITE_APPHUB_DEV_LOGIN_URL=http://127.0.0.1:8000/api/user/login?user_id=1
+```
+
+Or pass a token once: `http://localhost:5173/?token=YOUR_SESSION_TOKEN`
+
+Production builds do **not** auto-login — use the product iframe + `postMessage` flow.
+
 ## CORS (Laravel)
 
 Hub SPA and API are different origins. Add your Hub URL to Laravel `config/cors.php`:

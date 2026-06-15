@@ -1,6 +1,10 @@
-import { computed, onMounted, onUnmounted, reactive, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { installAppHubModule } from '@kennofizet/apphub-frontend'
 import { resolveAppHubStaticConfig } from './apphub-config.js'
+import {
+  isStandaloneDevSessionEnabled,
+  resolveStandaloneDevToken,
+} from './standaloneDevSession.js'
 
 /** @see README.md — parent product → Hub iframe */
 export const APPHUB_HOST_CHANNEL = 'apphub:host'
@@ -53,8 +57,19 @@ function applyHostMessage(config, data) {
 export function useParentHostConfig(vueApp) {
   const staticConfig = resolveAppHubStaticConfig()
   const config = reactive(readInitialHostConfig())
+  const standaloneDevActive = isStandaloneDevSessionEnabled()
+  const standaloneDevLoading = ref(false)
+  const standaloneDevFailed = ref(false)
 
   const ready = computed(() => Boolean(staticConfig.backendUrl && config.token))
+
+  const waitingMode = computed(() => {
+    if (ready.value) return null
+    if (standaloneDevLoading.value) return 'standalone-loading'
+    if (standaloneDevActive && standaloneDevFailed.value) return 'standalone-failed'
+    if (standaloneDevActive) return 'standalone-idle'
+    return 'parent'
+  })
 
   function syncModule() {
     if (!vueApp || !ready.value) return
@@ -66,7 +81,27 @@ export function useParentHostConfig(vueApp) {
       language: config.language,
       theme: config.theme,
       themeToggle: config.themeToggle,
+      dedicatedHubHost: true,
     })
+  }
+
+  async function loadStandaloneDevSession() {
+    if (!standaloneDevActive || config.token) return
+
+    standaloneDevLoading.value = true
+    standaloneDevFailed.value = false
+    try {
+      const token = await resolveStandaloneDevToken()
+      if (token) {
+        config.token = token
+      } else {
+        standaloneDevFailed.value = true
+      }
+    } catch {
+      standaloneDevFailed.value = true
+    } finally {
+      standaloneDevLoading.value = false
+    }
   }
 
   function onMessage(event) {
@@ -87,6 +122,8 @@ export function useParentHostConfig(vueApp) {
         { channel: APPHUB_HOST_CHANNEL, type: 'ready' },
         '*',
       )
+    } else {
+      void loadStandaloneDevSession()
     }
   })
 
@@ -94,5 +131,5 @@ export function useParentHostConfig(vueApp) {
     window.removeEventListener('message', onMessage)
   })
 
-  return { config, ready, staticConfig }
+  return { config, ready, staticConfig, waitingMode }
 }
