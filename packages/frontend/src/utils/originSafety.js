@@ -98,9 +98,9 @@ export function resolveEffectiveOrigins(options = {}) {
       runtimePublicUrl = resolveRuntimeApiBase({ backendUrl: options.backendUrl })
     }
     devFriendly = true
-  } else if (localDev && originsAuto && serverHub) {
-    // Strict localhost — non-dev, or dev with strict toggle: enforce APP_URL hub host.
-    hubOrigin = serverHub
+  } else if (localDev && originsAuto && (serverFrontend || serverHub)) {
+    // Strict localhost — non-dev, or dev with strict toggle: Hub SPA origin from bootstrap Origin header.
+    hubOrigin = clientHub || serverFrontend || serverHub
   } else if (!localDev && (serverFrontend || serverHub)) {
     hubOrigin = clientHub || serverFrontend || serverHub
   }
