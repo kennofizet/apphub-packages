@@ -1,5 +1,6 @@
 import { computed, reactive, watchEffect } from 'vue'
 import { resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { AppHubAppStoreApp } from '../../app-store/index.js'
 import { AppHubDraftStoreApp } from '../../app-store/index.js'
 import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps, getTaskbarBuiltinApps } from '../data/builtinApps.js'
@@ -219,6 +220,7 @@ export function createDesktopShell(options = {}) {
       runtime_type: typeof app.runtime_type === 'string' ? app.runtime_type : 'iframe',
       entry_url: typeof app.entry_url === 'string' ? app.entry_url : null,
       healthcheck_url: typeof app.healthcheck_url === 'string' ? app.healthcheck_url : null,
+      permissions: resolveAppPermissions(app),
       builtin: false,
       local: method === 'local' || app.local === true,
       installMethod: method === 'local' || method === 'appstore' || method === 'publish'
@@ -271,6 +273,8 @@ export function createDesktopShell(options = {}) {
       if (app.entry_url) existingBySlug.entry_url = app.entry_url
       if (app.healthcheck_url) existingBySlug.healthcheck_url = app.healthcheck_url
       if (app.description) existingBySlug.hint = app.description
+      const permissions = resolveAppPermissions(app)
+      if (permissions.length) existingBySlug.permissions = permissions
       syncPublisherVersionFields(existingBySlug, app, method)
       const nextVersion = method === 'publish'
         ? resolvePublisherTestVersion(app)
@@ -329,6 +333,9 @@ export function createDesktopShell(options = {}) {
       app.windowTitle = patch.name
     }
     if (patch.description) app.hint = patch.description
+    if (Array.isArray(patch.permissions)) {
+      app.permissions = resolveAppPermissions({ permissions: patch.permissions })
+    }
     if (patch.pending_version !== undefined) {
       const pending = typeof patch.pending_version === 'string' ? patch.pending_version.trim() : ''
       app.pending_version = pending || null

@@ -120,10 +120,10 @@ export function clearInstalledPermissions(slug) {
  * @returns {Promise<string[]>}
  */
 export async function applyInstallGrantedScopes({ slug, token, existingScopes, manifestPermissions, api }) {
-  reconcileInstalledPermissions(slug, manifestPermissions ?? [])
-
   const allowed = manifestScopeSet(manifestPermissions ?? [])
-  const installed = getInstalledPermissions(slug).filter((scope) => allowed.has(scope))
+  const installed = allowed.size > 0
+    ? getInstalledPermissions(slug).filter((scope) => allowed.has(scope))
+    : getInstalledPermissions(slug)
 
   if (!installed.length || !token || !api?.grantBridgeScope) {
     return [...new Set(Array.isArray(existingScopes) ? existingScopes : [])]

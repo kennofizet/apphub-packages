@@ -1,3 +1,5 @@
+import { isValidBridgeScope } from './appBridgeScopes.js'
+
 const SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const MAX_STRING = 200
 const MAX_HINT = 500
@@ -127,7 +129,19 @@ export function sanitizeUserApp(app) {
     rejected_version: typeof app.rejected_version === 'string'
       ? clampString(app.rejected_version, 64) || null
       : null,
+    permissions: sanitizePermissions(app.permissions),
   }
+}
+
+function sanitizePermissions(raw) {
+  if (!Array.isArray(raw)) return []
+  const out = []
+  for (const item of raw) {
+    const scope = typeof item === 'string' ? item.trim() : ''
+    if (!scope || !isValidBridgeScope(scope) || out.includes(scope)) continue
+    out.push(scope)
+  }
+  return out
 }
 
 function clampNumber(value, min, max, fallback) {

@@ -105,7 +105,7 @@
 <script setup>
 import { computed, inject, ref, watch } from 'vue'
 import { getAppHubStore } from '../../../moduleStore.js'
-import { useAppHubHostApi } from '../../../composables/useAppHubHostApi.js'
+import { useAppHubHostApi, useAppHubModuleStore } from '../../../composables/useAppHubHostApi.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
@@ -188,7 +188,14 @@ function translateBridgeKey(key) {
   return t(key, lang.value)
 }
 
-const manifestPermissions = computed(() => resolveAppPermissions({ permissions: props.permissions }))
+const moduleStore = useAppHubModuleStore()
+
+const manifestPermissions = computed(() => {
+  const fromProps = resolveAppPermissions({ permissions: props.permissions })
+  if (fromProps.length) return fromProps
+  const catalog = moduleStore?.appStore?.findCatalogItem?.(props.slug)
+  return resolveAppPermissions(catalog)
+})
 
 function onRuntimeScopeGranted(scope) {
   if (!scope) return
@@ -200,7 +207,11 @@ function onRuntimeScopeGranted(scope) {
 }
 
 const scopeConsent = useBridgeScopeConsent({
-  isPreGranted: (scope) => hasInstalledPermission(props.slug, scope, manifestPermissions.value),
+  isPreGranted: (scope) => hasInstalledPermission(
+    props.slug,
+    scope,
+    manifestPermissions.value.length ? manifestPermissions.value : null,
+  ),
   onAccepted: onRuntimeScopeGranted,
 })
 
