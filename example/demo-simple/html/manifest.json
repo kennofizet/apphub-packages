@@ -1,7 +1,7 @@
 {
   "slug": "demo-simple-html",
   "name": "demo-simple-html",
-  "version": "1.0.77",
+  "version": "1.0.78",
   "description": "Plain HTML, CSS, and JavaScript hosted bundle example.",
   "main": "index.html",
   "type": "module",
@@ -17,5 +17,8 @@
   "permissions": [
     "user.read",
     "desktop.notify"
+  ],
+  "api_urls": [
+    "https://tools.reg.local/apps/demo-simple-html"
   ]
 }

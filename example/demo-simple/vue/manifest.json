@@ -1,7 +1,7 @@
 {
   "slug": "demo-simple-vue",
   "name": "demo-simple-vue",
-  "version": "1.0.77",
+  "version": "1.0.78",
   "description": "Vue 3 + Vite build output hosted bundle example.",
   "main": "index.html",
   "type": "module",
@@ -18,5 +18,8 @@
   "permissions": [
     "user.read",
     "desktop.notify"
+  ],
+  "api_urls": [
+    "http://localhost:5173"
   ]
 }

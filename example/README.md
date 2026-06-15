@@ -46,7 +46,11 @@ Package-style fields (like `package.json`):
 | `license` | no | e.g. `MIT` |
 | `runtime_type` | yes | Must be `hosted` for zip publish |
 
-Optional: `api_base_url`, `healthcheck_url`.
+Required for zip publish: `permissions`, `api_urls` (or legacy `api_base_url`). Optional: `healthcheck_url`.
+
+`permissions` — bridge scopes users grant on install (`user.read`, `desktop.notify`, …).
+
+`api_urls` — tool backend URLs allowed to call App Hub (`verify-launch-token`, `bridge/user`). DEV reviews these in Dev Tools before approving the zip. Server rejects undeclared callers when the list is non-empty.
 
 ### Version rules (automatic)
 
