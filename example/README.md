@@ -46,11 +46,11 @@ Package-style fields (like `package.json`):
 | `license` | no | e.g. `MIT` |
 | `runtime_type` | yes | Must be `hosted` for zip publish |
 
-Required for zip publish: `permissions`, `api_urls` (or legacy `api_base_url`). Optional: `healthcheck_url`.
+Required for zip publish: `permissions`. Optional: `api_urls` (only if your tool backend calls `bridge/user` or `verify-launch-token`), `healthcheck_url`.
 
 `permissions` — bridge scopes users grant on install (`user.read`, `desktop.notify`, …).
 
-`api_urls` — tool backend URLs allowed to call App Hub (`verify-launch-token`, `bridge/user`). DEV reviews these in Dev Tools before approving the zip. Server rejects undeclared callers when the list is non-empty.
+`api_urls` — **optional**. Only needed when a **publisher tool backend** calls App Hub (`verify-launch-token`, `bridge/user`). Apps that only use `display_user` and postMessage bridge can omit it. When set, DEV reviews these in Dev Tools; App Hub checks caller TCP IP against the declared host.
 
 ### Version rules (automatic)
 
@@ -118,9 +118,20 @@ When the app runs inside App Hub, the runtime API requires `launch_token` on eve
 After the runner loads:
 
 - **Say hello (display_user)** — UI greeting from Hub bootstrap on `apphub:bridge:ready` (no API, no `user.read` dialog).
-- **Verify user (API)** — calls `getUserInfo` → `GET bridge/user` (needs `user.read`; install-time grant or runtime consent).
+- **Verify user (API)** — `requestPermission('user.read')` via bridge, then **fetch your publisher backend** at `manifest.api_urls[0]/bridge/user` (not App Hub directly). For local dev, run `example/local-bridge-proxy` on that port; the proxy forwards to App Hub and App Hub checks the proxy IP.
 
 See `docs/sdk-stub.js` for the full client stub (`getDisplayUser()` vs `getUserInfo()`).
+
+### Local publisher backend proxy
+
+```bash
+cd example/local-bridge-proxy
+set APPHUB_BACKEND_URL=http://localhost/your-test-host/api/knf/apphub
+set PORT=51732
+node server.mjs
+```
+
+Keep `PORT` in sync with `api_urls` in `demo-simple/html/manifest.json` (default `http://localhost:51732`).
 
 ---
 
