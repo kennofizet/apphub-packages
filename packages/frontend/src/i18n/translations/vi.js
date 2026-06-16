@@ -255,7 +255,7 @@ export default {
   install_perm_hint: 'Chấp nhận để tiếp tục, hoặc từ chối để hủy.',
   install_perm_permissions_title: 'Quyền bridge',
   install_perm_api_urls_title: 'URL backend (gọi API App Hub)',
-  install_perm_api_urls_hint: 'Các URL này có thể gọi verify-launch-token và bridge HTTP cho app. DEV đã duyệt trong manifest.',
+  install_perm_api_urls_hint: 'Các backend này có thể gọi API App Hub. Server kiểm tra IP thực của request với host trong danh sách — không tin header từ trình duyệt.',
   install_perm_accept: 'Chấp nhận',
   install_perm_refuse: 'Từ chối',
   install_perm_refused_install: 'Đã hủy cài đặt — bạn từ chối các quyền được yêu cầu.',

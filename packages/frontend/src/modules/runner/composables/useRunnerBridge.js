@@ -23,11 +23,16 @@ export function useRunnerBridge(options) {
       onNotify: options.onNotify,
       onTaskbarBadge: options.onTaskbarBadge,
       getEntryOrigin: () => {
-        if (options.isHosted?.()) return ''
         const url = options.launchUrl?.value ?? options.entryUrl?.() ?? ''
         return entryUrlOrigin(url)
       },
       getDisplayUser: options.getDisplayUser,
+      getBridgeApiBase: options.getBridgeApiBase,
+      getPublisherApiBase: options.getPublisherApiBase,
+      isOpaqueHostedSandbox: () => {
+        if (options.isHosted?.() !== true) return false
+        return options.hostedSandboxSameOrigin?.() !== true
+      },
     })
 
     host.start()

@@ -1,6 +1,7 @@
 import { computed, reactive, watchEffect } from 'vue'
 import { resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import { AppHubAppStoreApp } from '../../app-store/index.js'
 import { AppHubDraftStoreApp } from '../../app-store/index.js'
 import { BUILTIN_APP_STORE_ID, getBuiltinDesktopApps, getTaskbarBuiltinApps } from '../data/builtinApps.js'
@@ -96,6 +97,7 @@ export function createDesktopShell(options = {}) {
         status: app.status ?? 'active',
         installedVersion: app.installedVersion ?? app.version ?? null,
         permissions: Array.isArray(app.permissions) ? app.permissions : [],
+        apiUrls: resolveAppApiUrls(app),
         entryUrl: app.entry_url ?? null,
         healthcheckUrl: app.healthcheck_url ?? null,
         icon: app.icon ?? '📦',

@@ -107,19 +107,13 @@ final class AppVersionService
     private function apiUrlsForVersion(App $app, string $version): array
     {
         $version = trim($version);
-        if ($version !== '' && $version === (string) $app->version) {
-            $fromApp = AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);
-            if ($fromApp !== []) {
-                return $fromApp;
+        if ($version !== '') {
+            $row = $this->findVersionRow($app, $version);
+            if ($row !== null) {
+                return AppManifestApiUrl::fromManifest(is_array($row->manifest) ? $row->manifest : null);
             }
-        }
 
-        $row = $version !== '' ? $this->findVersionRow($app, $version) : null;
-        if ($row !== null && is_array($row->manifest)) {
-            $fromRow = AppManifestApiUrl::fromManifest($row->manifest);
-            if ($fromRow !== []) {
-                return $fromRow;
-            }
+            return [];
         }
 
         return AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);

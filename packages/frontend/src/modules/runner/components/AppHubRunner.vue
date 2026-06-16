@@ -124,6 +124,7 @@ import {
   hasInstalledPermission,
 } from '../../../utils/installedAppPermissions.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import { useBridgeScopeConsent } from '../composables/useBridgeScopeConsent.js'
 import { injectRuntimeDocumentScrollbarsIntoIframe } from '../../../utils/runtimeDocumentScrollbars.js'
 import { useRunnerBridge } from '../composables/useRunnerBridge.js'
@@ -132,6 +133,7 @@ const props = defineProps({
   slug: { type: String, required: true },
   installedVersion: { type: String, default: null },
   permissions: { type: Array, default: () => [] },
+  apiUrls: { type: Array, default: () => [] },
   status: { type: String, default: 'active' },
   runtimeType: { type: String, default: 'iframe' },
   entryUrl: { type: String, default: null },
@@ -243,8 +245,11 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   slug: props.slug,
   appName: props.slug,
   isHosted: () => isHosted.value,
+  hostedSandboxSameOrigin: () => moduleOptions?.hostedSandboxSameOrigin === true,
   entryUrl: () => props.entryUrl,
   getDisplayUser: () => hubDisplayUser(moduleStore),
+  getBridgeApiBase: () => backendUrl.value || null,
+  getPublisherApiBase: () => resolveAppApiUrls({ api_urls: props.apiUrls })[0] ?? null,
   api,
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onScopeGranted: onRuntimeScopeGranted,

@@ -146,8 +146,6 @@ final class AppManifestParser
             $document['api_urls'] = $apiUrls;
         }
 
-        AppManifestApiUrl::assertRequired($document);
-
         return [
             'slug' => $slug,
             'name' => $document['name'],

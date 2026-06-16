@@ -40,11 +40,67 @@ final class AppManifestApiUrlTest extends TestCase
         $this->assertNull(AppManifestApiUrl::normalizeSingle('https://user:pass@api.example.com'));
     }
 
-    public function test_assert_required_throws_when_missing(): void
+    public function test_has_api_urls_when_declared(): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('api_urls is required');
+        $this->assertTrue(AppManifestApiUrl::hasApiUrls([
+            'api_urls' => ['http://localhost:51732'],
+        ]));
+        $this->assertFalse(AppManifestApiUrl::hasApiUrls(['slug' => 'demo']));
+        $this->assertFalse(AppManifestApiUrl::hasApiUrls(['api_urls' => []]));
+    }
 
-        AppManifestApiUrl::assertRequired(['slug' => 'demo']);
+    public function test_client_ip_matches_literal_host_ip(): void
+    {
+        $this->assertTrue(AppManifestApiUrl::clientMatchesAllowedHosts(
+            '10.0.0.5',
+            ['https://10.0.0.5/apps/demo'],
+        ));
+    }
+
+    public function test_client_ip_matches_localhost_via_dns(): void
+    {
+        $this->assertTrue(AppManifestApiUrl::clientMatchesAllowedHosts(
+            '127.0.0.1',
+            ['http://localhost:3000'],
+        ));
+    }
+
+    public function test_client_ip_rejects_unknown_source(): void
+    {
+        $this->assertFalse(AppManifestApiUrl::clientMatchesAllowedHosts(
+            '203.0.113.9',
+            ['https://10.0.0.5/apps/demo'],
+        ));
+    }
+
+    public function test_request_uses_ip_only_and_ignores_spoofed_origin(): void
+    {
+        $request = \Illuminate\Http\Request::create(
+            'http://example.test/bridge/user',
+            'GET',
+            [],
+            [],
+            [],
+            [
+                'HTTP_ORIGIN' => 'http://localhost:51732',
+                'REMOTE_ADDR' => '203.0.113.9',
+            ],
+        );
+
+        $this->assertFalse(AppManifestApiUrl::requestMatchesAllowed(
+            $request,
+            ['http://localhost:51732'],
+        ));
+    }
+
+    public function test_connect_src_origins_from_api_urls(): void
+    {
+        $this->assertEqualsCanonicalizing(
+            ['http://localhost:51732', 'http://127.0.0.1:51732', 'https://tools.reg.local'],
+            AppManifestApiUrl::connectSrcOrigins([
+                'http://localhost:51732',
+                'https://tools.reg.local/apps/demo',
+            ]),
+        );
     }
 }

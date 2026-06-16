@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Services;
 
 use Illuminate\Http\Request;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppRuntimeType;
 use Kennofizet\AppHub\Modules\Launch\Models\AppLaunchToken;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
@@ -77,6 +78,7 @@ final class AppRuntimeServeService
         }
 
         $plainToken = (string) $request->query('launch_token', '');
+        $connectOrigins = $this->resolveRuntimeConnectOrigins($app, $token, $bundle);
 
         if ($this->isHtml($absolute)) {
             $content = (string) file_get_contents($absolute);
@@ -87,7 +89,7 @@ final class AppRuntimeServeService
 
             $response = new Response($content);
             $response->headers->set('Content-Type', $this->mimeType($absolute));
-            $this->applyRuntimeSecurityHeaders($response);
+            $this->applyRuntimeSecurityHeaders($response, $connectOrigins);
 
             if ($plainToken !== '') {
                 $response->headers->setCookie($this->runtimeAuthCookie($app->slug, $plainToken, $request));
@@ -96,7 +98,7 @@ final class AppRuntimeServeService
             $response = new BinaryFileResponse($absolute);
             $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($absolute));
             $response->headers->set('Content-Type', $this->mimeType($absolute));
-            $this->applyRuntimeSecurityHeaders($response);
+            $this->applyRuntimeSecurityHeaders($response, $connectOrigins);
         }
 
         $this->applyRuntimeCors($response);
@@ -132,13 +134,46 @@ final class AppRuntimeServeService
         $response->headers->set('Access-Control-Allow-Origin', '*');
     }
 
-    private function applyRuntimeSecurityHeaders(Response $response): void
+    /**
+     * @param list<string> $connectOrigins
+     */
+    private function applyRuntimeSecurityHeaders(Response $response, array $connectOrigins): void
     {
         $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $connectSrc = $connectOrigins !== []
+            ? "connect-src 'self' " . implode(' ', $connectOrigins)
+            : "connect-src 'self'";
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *",
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; {$connectSrc}; frame-ancestors *",
         );
+    }
+
+    /**
+     * @param array{path: string, entry: string} $bundle
+     * @return list<string>
+     */
+    private function resolveRuntimeConnectOrigins(App $app, AppLaunchToken $token, array $bundle): array
+    {
+        $bundleVersion = $token->bundle_version !== null ? trim((string) $token->bundle_version) : null;
+        if ($bundleVersion === '') {
+            $bundleVersion = null;
+        }
+
+        $apiUrls = $this->versions->apiUrlsForLaunchBundle($app, $bundleVersion);
+        if ($apiUrls === []) {
+            try {
+                $manifestPath = $this->bundles->absolutePath($bundle['path'], 'manifest.json');
+                if (is_file($manifestPath)) {
+                    $decoded = json_decode((string) file_get_contents($manifestPath), true);
+                    $apiUrls = AppManifestApiUrl::fromManifest(is_array($decoded) ? $decoded : null);
+                }
+            } catch (RuntimeException) {
+                // ignore unreadable bundle manifest
+            }
+        }
+
+        return AppManifestApiUrl::connectSrcOrigins($apiUrls);
     }
 
     /** @return \Symfony\Component\HttpFoundation\Cookie */

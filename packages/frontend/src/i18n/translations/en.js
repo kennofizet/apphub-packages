@@ -255,7 +255,7 @@ export default {
   install_perm_hint: 'Accept to continue, or refuse to cancel.',
   install_perm_permissions_title: 'Bridge permissions',
   install_perm_api_urls_title: 'Backend URLs (App Hub API callers)',
-  install_perm_api_urls_hint: 'These URLs may call verify-launch-token and bridge HTTP routes for this app. DEV approved them in the manifest.',
+  install_perm_api_urls_hint: 'These backends may call App Hub APIs. The server checks the real request IP against these hosts — not headers from the browser.',
   install_perm_accept: 'Accept',
   install_perm_refuse: 'Refuse',
   install_perm_refused_install: 'Install cancelled — you refused the requested permissions.',

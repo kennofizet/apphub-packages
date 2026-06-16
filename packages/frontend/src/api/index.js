@@ -33,7 +33,6 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     return {
       'X-AppHub-Launch-Token': launchToken,
       'X-AppHub-App-Slug': appSlug,
-      'X-AppHub-Internal': '1',
     }
   }
 

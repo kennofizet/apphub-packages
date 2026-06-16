@@ -64,7 +64,6 @@ class LaunchController extends Controller
         $validated = $request->validate([
             'launch_token' => 'required|string|min:32|max:128',
             'app_slug' => 'nullable|string|regex:/^[a-z0-9][a-z0-9_-]{0,63}$/',
-            'caller_url' => 'nullable|string|max:2048',
         ]);
 
         $record = $this->launchTokens->recordForGrant($validated['launch_token']);

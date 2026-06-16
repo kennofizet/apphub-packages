@@ -1,6 +1,7 @@
 import {
   BRIDGE_CHANNEL,
   BRIDGE_EVENT_CALL,
+  BRIDGE_EVENT_PING,
   BRIDGE_EVENT_READY,
   BRIDGE_EVENT_RESULT,
   BRIDGE_METHODS,
@@ -36,6 +37,9 @@ function isBridgeMessage(data) {
  *   onTaskbarBadge?: (count: number | null) => void,
  *   getEntryOrigin?: () => string,
  *   getDisplayUser?: () => { id: number | string, name?: string | null } | null,
+ *   getBridgeApiBase?: () => string | null,
+ *   getPublisherApiBase?: () => string | null,
+ *   isOpaqueHostedSandbox?: () => boolean,
  * }} options
  */
 export function createRunnerBridgeHost(options) {
@@ -47,12 +51,20 @@ export function createRunnerBridgeHost(options) {
     grantedScopes = new Set(Array.isArray(ctx?.scopes_granted) ? ctx.scopes_granted : [])
   }
 
+  function postMessageTargetOrigin() {
+    if (options.isOpaqueHostedSandbox?.()) {
+      return '*'
+    }
+
+    const origin = options.getEntryOrigin?.() || '*'
+    return origin === '' ? '*' : origin
+  }
+
   function postToFrame(message) {
     const frame = options.getIframe?.()
     const target = frame?.contentWindow
     if (!target) return
-    const origin = options.getEntryOrigin?.() || '*'
-    target.postMessage(message, origin === '' ? '*' : origin)
+    target.postMessage(message, postMessageTargetOrigin())
   }
 
   function reply(id, ok, result, error) {
@@ -82,10 +94,14 @@ export function createRunnerBridgeHost(options) {
     postToFrame({
       channel: BRIDGE_CHANNEL,
       event: BRIDGE_EVENT_READY,
-      context: {
+        context: {
         app_slug: options.appSlug,
         session_id: ctx.session_id ?? null,
         scopes_granted: [...grantedScopes],
+        launch_token: ctx.launch_token ?? null,
+        bridge_api_base: options.getBridgeApiBase?.() ?? null,
+        publisher_api_base: options.getPublisherApiBase?.() ?? null,
+        caller_origin: options.getEntryOrigin?.() ?? null,
         ...(displayUser ? { display_user: displayUser } : {}),
       },
     })
@@ -229,6 +245,10 @@ export function createRunnerBridgeHost(options) {
     if (!isTrustedSource(event)) return
 
     const { event: bridgeEvent, id, method, args } = event.data
+    if (bridgeEvent === BRIDGE_EVENT_PING) {
+      sendReady()
+      return
+    }
     if (bridgeEvent === BRIDGE_EVENT_CALL && id && BRIDGE_METHODS.has(method)) {
       void handleCall(id, method, args)
     }

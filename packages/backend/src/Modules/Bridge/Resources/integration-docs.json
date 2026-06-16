@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.6.1",
+  "schema_version": "1.6.4",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -89,7 +89,7 @@
         ],
         "manifest": {
           "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; server enforces on bridge/scopes grant.",
-          "api_urls": "string[] required — https/http URLs for your tool backend that call App Hub (verify-launch-token, bridge/user). DEV must approve; external calls require X-AppHub-Caller-Url or caller_url matching this list.",
+          "api_urls": "string[] optional — publisher tool backend URL(s) allowed to call bridge HTTP (bridge/user, verify-launch-token). Omit when the app only uses display_user and postMessage bridge. When set, server checks TCP client IP against DNS of declared host(s).",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
         },
         "data_tiers": {
@@ -150,7 +150,7 @@
         },
         "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\nconst user = await bridge.getUserInfo() // authoritative — needs user.read\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${user.name}`, duration_ms: 5000 })",
         "http_companion": {
-          "note": "Server-side calls with launch_token + app slug header. External callers must send X-AppHub-Caller-Url (or caller_url on verify) matching manifest api_urls. Hub shell may use X-AppHub-Internal: 1 with the user X-Knf-Token.",
+          "note": "Call GET bridge/user from your publisher tool backend (server-side) or via a dev proxy on api_urls. App Hub matches the caller TCP IP to manifest api_urls (DNS). Browser apps should fetch your backend, not App Hub directly. Hub postMessage is for permissions/UI only.",
           "routes": [
             "GET bridge/user — scoped user snapshot",
             "POST bridge/desktop/message — same as sendDesktopMessage"
@@ -227,7 +227,7 @@
         "path": "verify-launch-token",
         "auth": "none",
         "audience": ["publisher"],
-        "description": "Tool backend verifies launch_token once. Body: { launch_token, app_slug?, caller_url } — caller_url required and must match manifest api_urls. Returns user_id + scopes."
+        "description": "Tool backend verifies launch_token once. Body: { launch_token, app_slug? }. Caller IP must match manifest api_urls host. Returns user_id + scopes."
       },
       {
         "method": "POST",
