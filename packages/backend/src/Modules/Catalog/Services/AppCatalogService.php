@@ -43,7 +43,7 @@ final class AppCatalogService
             ->exists();
     }
 
-    public function userCanLaunch(App $app, int $userId, ?int $currentZoneId): bool
+    public function userCanLaunch(App $app, int $userId, array $userZoneIds): bool
     {
         if ($app->isDisabled()) {
             return false;
@@ -54,7 +54,12 @@ final class AppCatalogService
         }
 
         if ($app->isActive()) {
-            return $currentZoneId !== null && $this->appAllowedInZone($app->id, $currentZoneId);
+            $zoneIds = self::normalizeUserZoneIds($userZoneIds);
+            if ($zoneIds === []) {
+                return false;
+            }
+
+            return $this->appAllowedInAnyZone($app->id, $zoneIds);
         }
 
         return false;
@@ -420,15 +425,40 @@ final class AppCatalogService
             ->exists();
     }
 
-    private function appAllowedInZone(int $appId, int $zoneId): bool
+    /**
+     * @param list<int> $zoneIds
+     */
+    private function appAllowedInAnyZone(int $appId, array $zoneIds): bool
     {
+        $zoneIds = self::normalizeUserZoneIds($zoneIds);
+        if ($zoneIds === []) {
+            return false;
+        }
+
         return App::query()
             ->where('id', $appId)
             ->where('status', AppStatus::ACTIVE)
-            ->whereHas('zoneAccess', static function ($zoneQuery) use ($zoneId): void {
-                $zoneQuery->where('zone_id', $zoneId);
+            ->whereHas('zoneAccess', static function ($zoneQuery) use ($zoneIds): void {
+                $zoneQuery->whereIn('zone_id', $zoneIds);
             })
             ->exists();
+    }
+
+    /**
+     * @param array<int|string|null> $raw
+     * @return list<int>
+     */
+    public static function normalizeUserZoneIds(array $raw): array
+    {
+        $ids = [];
+        foreach ($raw as $zoneId) {
+            $id = (int) $zoneId;
+            if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     /** @param LengthAwarePaginator<int, App> $paginator */

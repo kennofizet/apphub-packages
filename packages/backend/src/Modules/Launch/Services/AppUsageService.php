@@ -36,7 +36,7 @@ final class AppUsageService
         int $userId,
         string $slug,
         string $action,
-        ?int $currentZoneId,
+        array $userZoneIds,
         ?array $metadata = null,
     ): void {
         $app = $this->catalog->findBySlug($slug);
@@ -44,7 +44,7 @@ final class AppUsageService
             throw new LaunchDeniedException('App not found', 404);
         }
 
-        if (!$this->catalog->userCanLaunch($app, $userId, $currentZoneId)) {
+        if (!$this->catalog->userCanLaunch($app, $userId, $userZoneIds)) {
             throw new LaunchDeniedException('You do not have permission to log usage for this app', 403);
         }
 

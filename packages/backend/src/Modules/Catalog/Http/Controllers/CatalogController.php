@@ -41,7 +41,13 @@ class CatalogController extends Controller
         $cursor = $request->query('cursor');
         $cursor = is_string($cursor) && $cursor !== '' ? $cursor : null;
 
-        $result = $this->catalog->cursorPaginateForUser($userId, self::currentZoneId(), $mode, $cursor, $perPage);
+        $result = $this->catalog->cursorPaginateForUser(
+            $userId,
+            self::currentZoneId(),
+            $mode,
+            $cursor,
+            $perPage,
+        );
 
         return $this->apiSuccessWithMeta($result['items'], $result['meta']);
     }

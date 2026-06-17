@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Http\Controllers;
 
 use Kennofizet\AppHub\Core\Model\BaseModelResponse;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\PackagesCore\Core\Model\BaseModelActions;
 use Kennofizet\PackagesCore\Traits\GlobalDataTrait;
 use Illuminate\Http\JsonResponse;
@@ -74,5 +75,15 @@ abstract class Controller
         }
 
         return (int) $zoneId;
+    }
+
+    /**
+     * All zone IDs the authenticated user belongs to (packages-core request context).
+     *
+     * @return list<int>
+     */
+    protected static function currentUserZoneIdList(): array
+    {
+        return AppCatalogService::normalizeUserZoneIds(self::currentUserZoneIds());
     }
 }

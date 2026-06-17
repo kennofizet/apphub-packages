@@ -39,7 +39,7 @@ final class LaunchService
     public function launch(
         string $slug,
         int $userId,
-        ?int $currentZoneId,
+        array $userZoneIds,
         ?string $ip = null,
         ?string $userAgent = null,
         ?string $bundleVersion = null,
@@ -57,7 +57,7 @@ final class LaunchService
             throw new LaunchDeniedException('App is not available for launch', 403);
         }
 
-        if (!$this->catalog->userCanLaunch($app, $userId, $currentZoneId)) {
+        if (!$this->catalog->userCanLaunch($app, $userId, $userZoneIds)) {
             throw new LaunchDeniedException('You do not have permission to launch this app', 403);
         }
 

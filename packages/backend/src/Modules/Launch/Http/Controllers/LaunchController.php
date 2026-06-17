@@ -43,7 +43,7 @@ class LaunchController extends Controller
             $data = $this->launch->launch(
                 $slug,
                 (int) self::currentUserId(),
-                self::currentZoneId(),
+                self::currentUserZoneIdList(),
                 $request->ip(),
                 (string) $request->userAgent(),
                 $validated['version'] ?? null,
@@ -114,7 +114,7 @@ class LaunchController extends Controller
             return $this->apiErrorResponse('App not found', 404);
         }
 
-        if (!$this->catalog->userCanLaunch($app, $userId, self::currentZoneId())) {
+        if (!$this->catalog->userCanLaunch($app, $userId, self::currentUserZoneIdList())) {
             return $this->apiErrorResponse('You do not have permission to test this app', 403);
         }
 
@@ -141,7 +141,7 @@ class LaunchController extends Controller
                 (int) self::currentUserId(),
                 $slug,
                 $validated['action'],
-                self::currentZoneId(),
+                self::currentUserZoneIdList(),
                 $validated['metadata'] ?? null,
             );
         } catch (LaunchDeniedException $e) {
