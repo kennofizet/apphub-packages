@@ -477,6 +477,8 @@ const installPermDialog = reactive({
   action: 'install',
   permissions: [],
   apiUrls: [],
+  intentToken: null,
+  saving: false,
 })
 let installPermResolve = null
 
@@ -724,7 +726,19 @@ const installPermLabels = computed(() => {
   )
 })
 
-function askInstallPermissions(app, action = 'install') {
+function resolveInstallVersion(app) {
+  return app?.installedVersion ?? app?.pending_version ?? app?.version ?? null
+}
+
+function needsServerInstallConsent(app, permissions, apiUrls) {
+  if (!app?.slug) return false
+  if (!isBackendReadyForApp(rootApp)) return false
+  const api = getHostApiForApp(rootApp)
+  if (!api?.recordBridgeConsent || !api?.createInstallIntent) return false
+  return permissions.length > 0 || apiUrls.length > 0
+}
+
+async function askInstallPermissions(app, action = 'install') {
   let permissions = resolveAppPermissions(app)
   let apiUrls = resolveAppApiUrls(app)
   if (app?.slug) {
@@ -732,12 +746,34 @@ function askInstallPermissions(app, action = 'install') {
     if (!permissions.length) permissions = resolveAppPermissions(catalog)
     if (!apiUrls.length) apiUrls = resolveAppApiUrls(catalog)
   }
-  if (!permissions.length && !apiUrls.length) return Promise.resolve(true)
+  if (!permissions.length && !apiUrls.length) return true
+
+  let intentToken = null
+  if (needsServerInstallConsent(app, permissions, apiUrls)) {
+    const api = getHostApiForApp(rootApp)
+    const version = resolveInstallVersion(app)
+    try {
+      const res = await api.createInstallIntent(app.slug, version ? { version } : {})
+      intentToken = res?.data?.data?.intent_token ?? res?.data?.intent_token ?? null
+      if (!intentToken) {
+        throw new Error('Missing install intent token')
+      }
+    } catch (err) {
+      desktopNotifications.push({
+        type: 'error',
+        title: app?.name || app?.slug || labels.value.notif_error_title,
+        message: labels.value.install_perm_consent_failed,
+      })
+      return false
+    }
+  }
 
   installPermDialog.app = app
   installPermDialog.action = action
   installPermDialog.permissions = permissions
   installPermDialog.apiUrls = apiUrls
+  installPermDialog.intentToken = intentToken
+  installPermDialog.saving = false
 
   return new Promise((resolve) => {
     installPermResolve = resolve
@@ -747,26 +783,19 @@ function askInstallPermissions(app, action = 'install') {
   })
 }
 
-function closeInstallPerm(accepted) {
-  const app = installPermDialog.app
-  const action = installPermDialog.action
-  const permissions = [...installPermDialog.permissions]
+function finishInstallPerm(accepted) {
   installPermDialog.open = false
+  installPermDialog.saving = false
   installPermResolve?.(accepted)
   installPermResolve = null
   installPermDialog.app = null
   installPermDialog.permissions = []
   installPermDialog.apiUrls = []
+  installPermDialog.intentToken = null
   installPermDialog.action = 'install'
+}
 
-  if (accepted && app?.slug) {
-    if (permissions.length) {
-      saveInstalledPermissions(app.slug, permissions)
-    } else {
-      clearInstalledPermissions(app.slug)
-    }
-  }
-
+function closeInstallPerm(accepted, app, action) {
   if (!accepted && app) {
     desktopNotifications.push({
       type: 'warning',
@@ -776,14 +805,63 @@ function closeInstallPerm(accepted) {
         : labels.value.install_perm_refused_install,
     })
   }
+  finishInstallPerm(accepted)
 }
 
-function onInstallPermAccept() {
-  closeInstallPerm(true)
+async function onInstallPermAccept() {
+  const app = installPermDialog.app
+  const action = installPermDialog.action
+  const permissions = [...installPermDialog.permissions]
+  const intentToken = installPermDialog.intentToken
+  if (!app?.slug) {
+    closeInstallPerm(false, app, action)
+    return
+  }
+
+  installPermDialog.saving = true
+  const saved = await persistBridgeConsent(app, intentToken, permissions, installPermDialog.apiUrls)
+  installPermDialog.saving = false
+  if (!saved) {
+    desktopNotifications.push({
+      type: 'error',
+      title: app.name || app.slug || labels.value.notif_error_title,
+      message: labels.value.install_perm_consent_failed,
+    })
+    return
+  }
+
+  if (permissions.length) {
+    saveInstalledPermissions(app.slug, permissions)
+  } else {
+    clearInstalledPermissions(app.slug)
+  }
+  closeInstallPerm(true, app, action)
 }
 
 function onInstallPermRefuse() {
-  closeInstallPerm(false)
+  const app = installPermDialog.app
+  const action = installPermDialog.action
+  closeInstallPerm(false, app, action)
+}
+
+async function persistBridgeConsent(app, intentToken, permissions = [], apiUrls = []) {
+  if (!app?.slug) return true
+  if (!needsServerInstallConsent(app, permissions, apiUrls)) return true
+
+  const api = getHostApiForApp(rootApp)
+  const version = resolveInstallVersion(app)
+  const payload = {
+    ...(version ? { version } : {}),
+    intent_token: intentToken,
+  }
+  if (!payload.intent_token) return false
+
+  try {
+    const res = await api.recordBridgeConsent(app.slug, payload)
+    return res?.data?.success === true
+  } catch {
+    return false
+  }
 }
 
 async function handleInstallUserApp(app, position, method = 'local') {
@@ -800,6 +878,30 @@ async function handleInstallUserApp(app, position, method = 'local') {
   }
   assignDefaultIconPositions()
   schedulePersist()
+  if (result && result !== 'cancelled' && method === 'publish') {
+    const permissions = resolveAppPermissions(app)
+    const apiUrls = resolveAppApiUrls(app)
+    if (needsServerInstallConsent(app, permissions, apiUrls)) {
+      const api = getHostApiForApp(rootApp)
+      const version = resolveInstallVersion(app)
+      let intentToken = null
+      try {
+        const res = await api.createInstallIntent(app.slug, version ? { version } : {})
+        intentToken = res?.data?.data?.intent_token ?? res?.data?.intent_token ?? null
+      } catch {
+        return 'cancelled'
+      }
+      const saved = await persistBridgeConsent(app, intentToken, permissions, apiUrls)
+      if (!saved) {
+        desktopNotifications.push({
+          type: 'error',
+          title: app?.name || app?.slug || labels.value.notif_error_title,
+          message: labels.value.install_perm_consent_failed,
+        })
+        return 'cancelled'
+      }
+    }
+  }
   return result
 }
 

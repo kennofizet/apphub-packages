@@ -17,9 +17,11 @@
 
 Publisher documentation explains **how to use** App Hub from an app:
 
-- Launch flow (`POST /apps/{slug}/launch`)
-- `AppHubBridge` handshake
-- `requestPermission`, `getUserInfo`, `sendDesktopMessage`, etc.
+- Launch flow (`POST /apps/{slug}/launch` — server mints `scopes_granted` from install consent DB)
+- `POST /apps/{slug}/install-intent` when permission dialog opens
+- `POST /apps/{slug}/bridge-consents` with `intent_token` after user Accept
+- `AppHubBridge` handshake — `getDisplayUser()` for UI; publisher backend `GET bridge/user` for verified identity
+- `requestPermission`, `sendDesktopMessage`, `notify`, `setTaskbarBadge` for desktop features
 
 Publisher docs **do not** mention:
 
@@ -38,7 +40,8 @@ Host backend must:
 
 - Enforce scopes on every `bridge/*` call
 - Validate `launch_token` per app slug + session; `user_id` from `knf_core_user_id` (not client headers)
-- `POST bridge/scopes` only when launch session belongs to the authenticated user
+- `POST /apps/{slug}/bridge-consents` records manifest permissions server-side after install accept
+- `POST /apps/{slug}/launch` mints token scopes from server consent DB only
 - `GET integration-docs/internal` only with `X-AppHub-Host-Access` matching `APPHUB_HOST_ACCESS_SECRET` (host integrator — **not** packages-core zone/server manager users)
 - Return only zone-safe user fields packages-core allows
 

@@ -5,7 +5,7 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Kennofizet\PackagesCore\Models\User;
 
@@ -14,16 +14,20 @@ class BridgeController extends Controller
     private const ALLOWED_MESSAGE_TYPES = ['toast', 'banner', 'host-hint'];
 
     public function __construct(
+        private readonly AppCatalogService $catalog,
         private readonly LaunchTokenService $launchTokens,
-        private readonly AppVersionService $versions,
     ) {
     }
 
     public function user(Request $request): JsonResponse
     {
         $launch = $request->attributes->get('apphub_launch', []);
-        if (!$this->launchTokens->hasScope($launch, 'user.read')
-            && !$this->launchTokens->hasScope($launch, 'user.profile')) {
+        $app = $this->catalog->findBySlug((string) ($launch['app_slug'] ?? ''));
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
+        if (!$this->launchTokens->hasUserReadAccess($launch)) {
             return response()->json(['success' => false, 'error' => 'Scope not granted'], 403);
         }
 
@@ -43,6 +47,11 @@ class BridgeController extends Controller
     public function desktopMessage(Request $request): JsonResponse
     {
         $launch = $request->attributes->get('apphub_launch', []);
+        $app = $this->catalog->findBySlug((string) ($launch['app_slug'] ?? ''));
+        if ($app === null) {
+            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+        }
+
         if (!$this->launchTokens->hasScope($launch, 'desktop.message')) {
             return response()->json(['success' => false, 'error' => 'Scope not granted'], 403);
         }
@@ -63,40 +72,6 @@ class BridgeController extends Controller
                 'message' => $validated,
             ],
         ]);
-    }
-
-    /** Hub shell records user consent for a launch session (host token auth). */
-    public function grantScope(Request $request): JsonResponse
-    {
-        $userId = $request->attributes->get('knf_core_user_id');
-        if (empty($userId)) {
-            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
-        }
-
-        $validated = $request->validate([
-            'launch_token' => 'required|string|min:32|max:128',
-            'scope' => 'required|string|in:user.read,user.profile,desktop.notify,desktop.message,desktop.badge',
-        ]);
-
-        $record = $this->launchTokens->recordForGrant($validated['launch_token']);
-        if ($record === null) {
-            return response()->json(['success' => false, 'error' => 'Invalid launch token'], 404);
-        }
-
-        if ((string) $record->user_id !== (string) $userId) {
-            return response()->json(['success' => false, 'error' => 'Launch session does not belong to this user'], 403);
-        }
-
-        $allowed = $this->versions->permissionsForLaunchBundle($record->app, $record->bundle_version);
-        if (!in_array($validated['scope'], $allowed, true)) {
-            return response()->json(['success' => false, 'error' => 'Scope not declared in app manifest'], 403);
-        }
-
-        if (!$this->launchTokens->grantScope($validated['launch_token'], $validated['scope'], (string) $userId)) {
-            return response()->json(['success' => false, 'error' => 'Could not grant scope'], 500);
-        }
-
-        return response()->json(['success' => true, 'data' => ['scope' => $validated['scope']]]);
     }
 
     /** @param array<string, mixed> $launch */

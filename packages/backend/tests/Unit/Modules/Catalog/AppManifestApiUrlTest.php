@@ -103,4 +103,39 @@ final class AppManifestApiUrlTest extends TestCase
             ]),
         );
     }
+
+    public function test_assert_production_safe_rejects_localhost_when_disabled(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('localhost or loopback');
+
+        AppManifestApiUrl::assertProductionSafe([
+            'api_urls' => ['http://localhost:51732'],
+        ], false);
+    }
+
+    public function test_client_matches_pinned_ips_when_enabled(): void
+    {
+        $this->assertTrue(AppManifestApiUrl::clientMatchesAllowedHosts(
+            '10.0.0.5',
+            ['https://tools.example.com'],
+            ['10.0.0.5', '10.0.0.6'],
+            true,
+        ));
+        $this->assertFalse(AppManifestApiUrl::clientMatchesAllowedHosts(
+            '203.0.113.9',
+            ['https://tools.example.com'],
+            ['10.0.0.5'],
+            true,
+        ));
+    }
+
+    public function test_assert_production_safe_allows_localhost_when_enabled(): void
+    {
+        AppManifestApiUrl::assertProductionSafe([
+            'api_urls' => ['http://localhost:51732'],
+        ], true);
+
+        $this->addToAssertionCount(1);
+    }
 }

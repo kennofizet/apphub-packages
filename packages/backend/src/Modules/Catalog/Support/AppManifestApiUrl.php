@@ -136,7 +136,7 @@ final class AppManifestApiUrl
      *
      * @param list<string> $allowed
      */
-    public static function requestMatchesAllowed(\Illuminate\Http\Request $request, array $allowed): bool
+    public static function requestMatchesAllowed(\Illuminate\Http\Request $request, array $allowed, ?array $pinnedIps = null): bool
     {
         if ($allowed === []) {
             return false;
@@ -144,17 +144,28 @@ final class AppManifestApiUrl
 
         $clientIp = trim((string) $request->ip());
 
-        return $clientIp !== '' && self::clientMatchesAllowedHosts($clientIp, $allowed);
+        return $clientIp !== '' && self::clientMatchesAllowedHosts($clientIp, $allowed, $pinnedIps);
     }
 
     /**
      * @param list<string> $allowed
      */
-    public static function clientMatchesAllowedHosts(string $clientIp, array $allowed): bool
-    {
+    public static function clientMatchesAllowedHosts(
+        string $clientIp,
+        array $allowed,
+        ?array $pinnedIps = null,
+        ?bool $useIpPins = null,
+    ): bool {
         $clientIp = trim($clientIp);
         if ($clientIp === '' || $allowed === []) {
             return false;
+        }
+
+        if ($pinnedIps !== null && $pinnedIps !== []) {
+            $pinMode = $useIpPins ?? self::useApiUrlIpPinsFromConfig();
+            if ($pinMode) {
+                return in_array($clientIp, $pinnedIps, true);
+            }
         }
 
         foreach ($allowed as $url) {
@@ -225,6 +236,136 @@ final class AppManifestApiUrl
     public static function hasApiUrls(?array $manifest): bool
     {
         return self::fromManifest($manifest) !== [];
+    }
+
+    /**
+     * Reject loopback hosts in api_urls when not in local dev (publish / register).
+     *
+     * @param array<string, mixed>|null $manifest
+     * @param bool|null $allowLocalhost override config (for tests)
+     */
+    public static function assertProductionSafe(?array $manifest, ?bool $allowLocalhost = null): void
+    {
+        if ($allowLocalhost ?? self::allowsLocalhostApiUrls()) {
+            return;
+        }
+
+        foreach (self::fromManifest($manifest) as $url) {
+            $host = self::hostOf($url);
+            if ($host !== null && self::isLoopbackHost($host)) {
+                throw new \RuntimeException(
+                    'manifest.json: api_urls must not use localhost or loopback addresses in production',
+                );
+            }
+        }
+    }
+
+    public static function allowsLocalhostApiUrls(): bool
+    {
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        return filter_var(config('apphub.allow_localhost_api_urls'), FILTER_VALIDATE_BOOL);
+    }
+
+    private static function useApiUrlIpPinsFromConfig(): bool
+    {
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        return filter_var(config('apphub.use_api_url_ip_pins'), FILTER_VALIDATE_BOOL);
+    }
+
+    public static function isLoopbackHost(string $host): bool
+    {
+        $host = strtolower(trim($host));
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return true;
+        }
+
+        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+            && str_starts_with($host, '127.');
+    }
+
+    /**
+     * DNS-resolve api_urls hosts at publish time; stored on manifest as api_url_pinned_ips.
+     *
+     * @param list<string> $urls
+     * @return list<string>
+     */
+    public static function resolvePinnedClientIps(array $urls): array
+    {
+        $ips = [];
+        foreach ($urls as $url) {
+            $host = self::hostOf($url);
+            if ($host === null) {
+                continue;
+            }
+
+            if (filter_var($host, FILTER_VALIDATE_IP)) {
+                if (!in_array($host, $ips, true)) {
+                    $ips[] = $host;
+                }
+                continue;
+            }
+
+            if ($host === 'localhost') {
+                foreach (['127.0.0.1', '::1'] as $loopback) {
+                    if (!in_array($loopback, $ips, true)) {
+                        $ips[] = $loopback;
+                    }
+                }
+                continue;
+            }
+
+            $records = @dns_get_record($host, DNS_A + DNS_AAAA);
+            if (is_array($records)) {
+                foreach ($records as $record) {
+                    $recordIp = $record['ip'] ?? $record['ipv6'] ?? null;
+                    if (is_string($recordIp) && $recordIp !== '' && !in_array($recordIp, $ips, true)) {
+                        $ips[] = $recordIp;
+                    }
+                }
+            }
+
+            $resolved = @gethostbyname($host);
+            if ($resolved !== $host && $resolved !== '' && !in_array($resolved, $ips, true)) {
+                $ips[] = $resolved;
+            }
+        }
+
+        return $ips;
+    }
+
+    /**
+     * @param array<string, mixed>|null $manifest
+     * @return list<string>
+     */
+    public static function pinnedIpsFromManifest(?array $manifest): array
+    {
+        if ($manifest === null || !isset($manifest['api_url_pinned_ips'])) {
+            return [];
+        }
+
+        $raw = $manifest['api_url_pinned_ips'];
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $ips = [];
+        foreach ($raw as $ip) {
+            if (!is_string($ip)) {
+                continue;
+            }
+            $ip = trim($ip);
+            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) && !in_array($ip, $ips, true)) {
+                $ips[] = $ip;
+            }
+        }
+
+        return $ips;
     }
 
     /**

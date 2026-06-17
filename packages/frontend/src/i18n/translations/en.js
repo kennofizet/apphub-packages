@@ -260,6 +260,7 @@ export default {
   install_perm_refuse: 'Refuse',
   install_perm_refused_install: 'Install cancelled — you refused the requested permissions.',
   install_perm_refused_update: 'Update cancelled — you refused the requested permissions.',
+  install_perm_consent_failed: 'Could not save permissions on the server. Install was not completed — try again.',
   desktop_icon_move_hint: 'Drag to move',
   desktop_icon_hold_hint: 'Hold to drag group · tap to open folder',
   group_label: 'Group',
@@ -343,7 +344,7 @@ export default {
   guide_dev_bridge_title: 'Getting started',
   guide_dev_bridge_1: 'When a user opens your app, Hub calls POST /apps/{slug}/launch and opens your runtime in a window.',
   guide_dev_bridge_2: 'Hub attaches window.AppHubBridge (or postMessage channel apphub:bridge) for permissions and desktop APIs.',
-  guide_dev_bridge_3: 'Wait for apphub:bridge:ready, request scopes, then call bridge methods.',
+  guide_dev_bridge_3: 'Wait for apphub:bridge:ready. Use getDisplayUser() for UI; call your backend GET bridge/user for verified identity.',
   guide_dev_permissions_title: 'Permissions',
   guide_dev_permissions_1: 'user.read — minimal id and display name.',
   guide_dev_permissions_2: 'user.profile — extended profile (avatar, locale, etc.) when the user agrees.',
@@ -351,18 +352,17 @@ export default {
   guide_dev_permissions_4: 'desktop.badge — update your app button on the taskbar.',
   guide_dev_bridge_code_title: 'Example',
   guide_dev_bridge_code: `const bridge = window.AppHubBridge
-await bridge.requestPermission('user.read')
-const user = await bridge.getUserInfo()
+const display = bridge.getDisplayUser() // UI greeting
 await bridge.requestPermission('desktop.message')
 await bridge.sendDesktopMessage({
   type: 'banner',
   title: 'Hello',
-  body: 'Welcome ' + user.name,
+  body: 'Welcome ' + (display?.name ?? ''),
   duration_ms: 5000
 })`,
   guide_dev_user_title: 'Get user info',
-  guide_dev_user_1: 'Call requestPermission("user.read") then getUserInfo().',
-  guide_dev_user_2: 'For more fields use user.profile and getProfile() after consent.',
+  guide_dev_user_1: 'Use getDisplayUser() inside the app for greetings (no API).',
+  guide_dev_user_2: 'For verified identity call GET bridge/user from your publisher backend (needs user.read on launch token).',
   guide_dev_user_3: 'Never assume access — handle denied permissions in your UI.',
   guide_dev_desktop_title: 'Messages to desktop',
   guide_dev_desktop_1: 'sendDesktopMessage sends banners or hints on the Hub desktop work area.',

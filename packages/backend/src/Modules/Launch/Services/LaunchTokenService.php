@@ -14,6 +14,7 @@ final class LaunchTokenService
         ?string $ip = null,
         ?string $userAgent = null,
         ?string $bundleVersion = null,
+        array $initialScopes = [],
     ): array {
         $plainToken = Str::random(64);
         $sessionId = (string) Str::uuid();
@@ -22,13 +23,15 @@ final class LaunchTokenService
             $bundleVersion = null;
         }
 
+        $scopesGranted = $this->normalizeScopes($initialScopes);
+
         AppLaunchToken::query()->create([
             'app_id' => $app->id,
             'user_id' => $userId,
             'token_hash' => $this->hashToken($plainToken),
             'session_id' => $sessionId,
             'bundle_version' => $bundleVersion,
-            'scopes_granted' => [],
+            'scopes_granted' => $scopesGranted,
             'expires_at' => now()->addSeconds($this->ttlSeconds()),
             'ip' => $ip,
             'user_agent' => $userAgent,
@@ -37,7 +40,7 @@ final class LaunchTokenService
         return [
             'launch_token' => $plainToken,
             'session_id' => $sessionId,
-            'scopes_granted' => [],
+            'scopes_granted' => $scopesGranted,
         ];
     }
 
@@ -121,33 +124,18 @@ final class LaunchTokenService
         return $record->app !== null ? $record : null;
     }
 
-    public function grantScope(string $token, string $scope, string $userId): bool
-    {
-        $record = $this->findByPlainToken($token);
-        if ($record === null || $record->isExpired()) {
-            return false;
-        }
-
-        if ((string) $record->user_id !== $userId) {
-            return false;
-        }
-
-        $scopes = is_array($record->scopes_granted) ? $record->scopes_granted : [];
-        if (!in_array($scope, $scopes, true)) {
-            $scopes[] = $scope;
-        }
-
-        $record->scopes_granted = $scopes;
-        $record->save();
-
-        return true;
-    }
-
     public function hasScope(array $payload, string $scope): bool
     {
         $scopes = $payload['scopes_granted'] ?? [];
 
         return is_array($scopes) && in_array($scope, $scopes, true);
+    }
+
+    /** @param array<string, mixed> $payload */
+    public function hasUserReadAccess(array $payload): bool
+    {
+        return $this->hasScope($payload, 'user.read')
+            || $this->hasScope($payload, 'user.profile');
     }
 
     /** Tool backend: one-time verify; marks used_at. */
@@ -222,5 +210,26 @@ final class LaunchTokenService
         $configured = (int) config('apphub.launch_token_ttl', 180);
 
         return max($min, min($max, $configured));
+    }
+
+    /**
+     * @param list<string> $scopes
+     * @return list<string>
+     */
+    private function normalizeScopes(array $scopes): array
+    {
+        $out = [];
+        foreach ($scopes as $scope) {
+            if (!is_string($scope)) {
+                continue;
+            }
+            $scope = trim($scope);
+            if ($scope === '' || in_array($scope, $out, true)) {
+                continue;
+            }
+            $out[] = $scope;
+        }
+
+        return $out;
     }
 }

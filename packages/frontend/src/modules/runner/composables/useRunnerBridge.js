@@ -16,9 +16,9 @@ export function useRunnerBridge(options) {
       getLaunchContext: () => options.launchContext?.value ?? null,
       appSlug: options.slug,
       appName: options.appName,
-      api: options.api,
+      bridgeDesktopMessage: options.bridgeDesktopMessage,
       requestScopeConsent: options.requestScopeConsent,
-      onScopeGranted: options.onScopeGranted,
+      onSessionScopeGranted: options.onSessionScopeGranted,
       onDesktopMessage: options.onDesktopMessage,
       onNotify: options.onNotify,
       onTaskbarBadge: options.onTaskbarBadge,
@@ -29,10 +29,8 @@ export function useRunnerBridge(options) {
       getDisplayUser: options.getDisplayUser,
       getBridgeApiBase: options.getBridgeApiBase,
       getPublisherApiBase: options.getPublisherApiBase,
-      isOpaqueHostedSandbox: () => {
-        if (options.isHosted?.() !== true) return false
-        return options.hostedSandboxSameOrigin?.() !== true
-      },
+      getManifestPermissions: options.getManifestPermissions,
+      isOpaqueHostedSandbox: () => options.isHosted?.() === true,
     })
 
     host.start()

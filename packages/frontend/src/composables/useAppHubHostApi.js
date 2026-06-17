@@ -24,7 +24,7 @@ export function isBackendReadyForApp(app) {
 
 /**
  * Host-only API — use in Hub shell components. Not provided via inject
- * so publisher app code cannot access grantBridgeScope or internal docs.
+ * Host-only API surface is not injected into publisher apps.
  */
 export function useAppHubHostApi() {
   return useAppHubModuleStore()?.facade ?? null

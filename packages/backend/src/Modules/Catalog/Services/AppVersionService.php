@@ -104,6 +104,33 @@ final class AppVersionService
     }
 
     /** @return list<string> */
+    public function pinnedIpsForLaunchBundle(App $app, ?string $version): array
+    {
+        $versionKey = $version !== null ? trim($version) : '';
+        if ($versionKey === '') {
+            return $this->pinnedIpsForVersion($app, (string) $app->version);
+        }
+
+        return $this->pinnedIpsForVersion($app, $versionKey);
+    }
+
+    /** @return list<string> */
+    private function pinnedIpsForVersion(App $app, string $version): array
+    {
+        $version = trim($version);
+        if ($version !== '') {
+            $row = $this->findVersionRow($app, $version);
+            if ($row !== null) {
+                return AppManifestApiUrl::pinnedIpsFromManifest(is_array($row->manifest) ? $row->manifest : null);
+            }
+
+            return [];
+        }
+
+        return AppManifestApiUrl::pinnedIpsFromManifest(is_array($app->manifest) ? $app->manifest : null);
+    }
+
+    /** @return list<string> */
     private function apiUrlsForVersion(App $app, string $version): array
     {
         $version = trim($version);

@@ -143,7 +143,12 @@ final class AppManifestParser
 
         $apiUrls = AppManifestApiUrl::fromManifest($manifest);
         if ($apiUrls !== []) {
+            AppManifestApiUrl::assertProductionSafe($manifest);
             $document['api_urls'] = $apiUrls;
+            $pinned = AppManifestApiUrl::resolvePinnedClientIps($apiUrls);
+            if ($pinned !== []) {
+                $document['api_url_pinned_ips'] = $pinned;
+            }
         }
 
         return [

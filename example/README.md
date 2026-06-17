@@ -118,9 +118,9 @@ When the app runs inside App Hub, the runtime API requires `launch_token` on eve
 After the runner loads:
 
 - **Say hello (display_user)** — UI greeting from Hub bootstrap on `apphub:bridge:ready` (no API, no `user.read` dialog).
-- **Verify user (API)** — `requestPermission('user.read')` via bridge, then **fetch your publisher backend** at `manifest.api_urls[0]/bridge/user` (not App Hub directly). For local dev, run `example/local-bridge-proxy` on that port; the proxy forwards to App Hub and App Hub checks the proxy IP.
+- **Verify user (API)** — requires `user.read` on the launch token (accept at install, reopen app). Then **fetch your publisher backend** at `manifest.api_urls[0]/bridge/user` (not App Hub directly). For local dev, run `example/local-bridge-proxy` on that port; the proxy forwards to App Hub and App Hub checks the proxy IP.
 
-See `docs/sdk-stub.js` for the full client stub (`getDisplayUser()` vs `getUserInfo()`).
+See `docs/sdk-stub.js` for the bridge client stub (`getDisplayUser()` for UI; publisher backend for verified identity).
 
 ### Local publisher backend proxy
 

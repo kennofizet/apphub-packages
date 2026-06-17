@@ -208,7 +208,6 @@ function runHostIsolationChecks(options, expectedHubOrigin, expectedRuntimeOrigi
  * @param {{
  *   allowSameOriginEmbed?: boolean,
  *   allowUnsafeOrigin?: boolean,
- *   allowSameOriginHostedRuntime?: boolean,
  *   hubOrigin?: string,
  *   runtimePublicUrl?: string,
  *   backendUrl?: string,
@@ -227,7 +226,6 @@ export function evaluateOriginSafety(options = {}) {
   if (
     options.allowUnsafeOrigin === true
     || options.allowSameOriginEmbed === true
-    || options.allowSameOriginHostedRuntime === true
   ) {
     return safeResult()
   }

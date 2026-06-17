@@ -108,37 +108,3 @@ export function clearInstalledPermissions(slug) {
   delete store[slug]
   writeStore(store)
 }
-
-/**
- * Grant install-time accepted scopes on the launch token (server-side).
- * @param {object} options
- * @param {string} options.slug
- * @param {string} options.token
- * @param {string[]} options.existingScopes
- * @param {string[]} [options.manifestPermissions]
- * @param {{ grantBridgeScope?: (token: string, scope: string) => Promise<unknown> } | null} options.api
- * @returns {Promise<string[]>}
- */
-export async function applyInstallGrantedScopes({ slug, token, existingScopes, manifestPermissions, api }) {
-  const allowed = manifestScopeSet(manifestPermissions ?? [])
-  const installed = allowed.size > 0
-    ? getInstalledPermissions(slug).filter((scope) => allowed.has(scope))
-    : getInstalledPermissions(slug)
-
-  if (!installed.length || !token || !api?.grantBridgeScope) {
-    return [...new Set(Array.isArray(existingScopes) ? existingScopes : [])]
-  }
-
-  const granted = new Set(Array.isArray(existingScopes) ? existingScopes : [])
-  for (const scope of installed) {
-    if (granted.has(scope)) continue
-    try {
-      await api.grantBridgeScope(token, scope)
-      granted.add(scope)
-    } catch {
-      // runtime requestPermission may retry grant with UI
-    }
-  }
-
-  return [...granted]
-}

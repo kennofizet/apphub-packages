@@ -8,8 +8,6 @@ export const BRIDGE_EVENT_PING = 'apphub:bridge:ping'
 
 export const BRIDGE_METHODS = new Set([
   'requestPermission',
-  'getUserInfo',
-  'getProfile',
   'sendDesktopMessage',
   'notify',
   'setTaskbarBadge',

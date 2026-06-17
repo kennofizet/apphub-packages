@@ -49,18 +49,18 @@ export function isAllowedLaunchUrl(url, allowedOrigins = [], options = {}) {
 
   if (parsed.protocol !== 'https:') return false
 
-  if (allowedOrigins.length > 0) {
-    const origin = parsed.origin
-    return allowedOrigins.some((entry) => {
-      try {
-        return new URL(entry).origin === origin
-      } catch {
-        return false
-      }
-    })
+  if (allowedOrigins.length === 0) {
+    return false
   }
 
-  return true
+  const origin = parsed.origin
+  return allowedOrigins.some((entry) => {
+    try {
+      return new URL(entry).origin === origin
+    } catch {
+      return false
+    }
+  })
 }
 
 /** @param {string} entryUrl */
@@ -96,15 +96,11 @@ export function resolveLaunchUrl(responseData) {
 }
 
 /**
- * Hosted apps use opaque iframe origin (no allow-same-origin) so publisher JS cannot read Hub localStorage.
+ * Hosted apps always use opaque iframe origin (no allow-same-origin) so publisher JS cannot read Hub storage.
  * @param {string} runtimeType
- * @param {{ hostedSandboxSameOrigin?: boolean }} [options]
  */
-export function iframeSandboxAttrs(runtimeType, options = {}) {
+export function iframeSandboxAttrs(runtimeType) {
   if (runtimeType === RUNTIME_HOSTED) {
-    if (options.hostedSandboxSameOrigin === true) {
-      return 'allow-scripts allow-forms allow-popups allow-same-origin'
-    }
     return 'allow-scripts allow-forms allow-popups'
   }
   return 'allow-scripts allow-forms allow-popups'

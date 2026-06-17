@@ -119,7 +119,6 @@ import {
   resolveLaunchUrl,
 } from '../../../utils/launchUrl.js'
 import {
-  applyInstallGrantedScopes,
   addInstalledPermission,
   hasInstalledPermission,
 } from '../../../utils/installedAppPermissions.js'
@@ -202,10 +201,6 @@ const manifestPermissions = computed(() => {
 function onRuntimeScopeGranted(scope) {
   if (!scope) return
   addInstalledPermission(props.slug, scope, manifestPermissions.value)
-  const ctx = launchContext.value
-  if (!ctx || !Array.isArray(ctx.scopes_granted)) return
-  if (ctx.scopes_granted.includes(scope)) return
-  ctx.scopes_granted = [...ctx.scopes_granted, scope]
 }
 
 const scopeConsent = useBridgeScopeConsent({
@@ -245,14 +240,14 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   slug: props.slug,
   appName: props.slug,
   isHosted: () => isHosted.value,
-  hostedSandboxSameOrigin: () => moduleOptions?.hostedSandboxSameOrigin === true,
   entryUrl: () => props.entryUrl,
   getDisplayUser: () => hubDisplayUser(moduleStore),
   getBridgeApiBase: () => backendUrl.value || null,
   getPublisherApiBase: () => resolveAppApiUrls({ api_urls: props.apiUrls })[0] ?? null,
-  api,
+  getManifestPermissions: () => manifestPermissions.value,
+  bridgeDesktopMessage: (token, slug, payload) => api?.bridgeDesktopMessage?.(token, slug, payload),
   requestScopeConsent: scopeConsent.requestScopeConsent,
-  onScopeGranted: onRuntimeScopeGranted,
+  onSessionScopeGranted: onRuntimeScopeGranted,
   onDesktopMessage(payload) {
     const title = String(payload?.title ?? '').trim()
     const body = String(payload?.body ?? '').trim()
@@ -279,9 +274,7 @@ const isDraft = computed(() => props.status === 'draft')
 const showPreflight = computed(() => isDraft.value && !launched.value)
 
 const iframeSandbox = computed(() =>
-  iframeSandboxAttrs(isHosted.value ? RUNTIME_HOSTED : props.runtimeType, {
-    hostedSandboxSameOrigin: moduleOptions?.hostedSandboxSameOrigin === true,
-  }),
+  iframeSandboxAttrs(isHosted.value ? RUNTIME_HOSTED : props.runtimeType),
 )
 
 const loading = ref(false)
@@ -383,14 +376,7 @@ async function doLaunch() {
     }
     launchUrl.value = candidate
     const launchToken = data.launch_token ?? null
-    const initialScopes = Array.isArray(data.scopes_granted) ? [...data.scopes_granted] : []
-    const scopesGranted = await applyInstallGrantedScopes({
-      slug: props.slug,
-      token: launchToken,
-      existingScopes: initialScopes,
-      manifestPermissions: manifestPermissions.value,
-      api,
-    })
+    const scopesGranted = Array.isArray(data.scopes_granted) ? [...data.scopes_granted] : []
     launchContext.value = {
       launch_token: launchToken,
       session_id: data.session_id ?? null,

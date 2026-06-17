@@ -23,4 +23,13 @@ final class LaunchTokenServiceTest extends TestCase
         $this->assertTrue($service->hasScope(['scopes_granted' => ['user.read']], 'user.read'));
         $this->assertFalse($service->hasScope(['scopes_granted' => []], 'user.read'));
     }
+
+    public function test_has_user_read_access_accepts_read_or_profile(): void
+    {
+        $service = new LaunchTokenService();
+
+        $this->assertTrue($service->hasUserReadAccess(['scopes_granted' => ['user.read']]));
+        $this->assertTrue($service->hasUserReadAccess(['scopes_granted' => ['user.profile']]));
+        $this->assertFalse($service->hasUserReadAccess(['scopes_granted' => ['desktop.notify']]));
+    }
 }

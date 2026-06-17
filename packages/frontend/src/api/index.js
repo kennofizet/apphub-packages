@@ -48,6 +48,10 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       client.get('/integration-docs/internal', { headers: hostHeaders() }),
     apps: (params) => client.get('/apps', { params }),
     launch: (slug, payload) => client.post(`/apps/${encodeURIComponent(slug)}/launch`, payload ?? {}),
+    recordBridgeConsent: (slug, payload) =>
+      client.post(`/apps/${encodeURIComponent(slug)}/bridge-consents`, payload ?? {}),
+    createInstallIntent: (slug, payload) =>
+      client.post(`/apps/${encodeURIComponent(slug)}/install-intent`, payload ?? {}),
     ping: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/ping`),
     verifyLaunchToken: (launchToken, appSlug) =>
       client.post('/verify-launch-token', {
@@ -78,8 +82,6 @@ export function createAppHubApi(backendUrl, token, options = {}) {
         timeout: 120_000,
       }),
     appVersions: (slug) => client.get(`/apps/${encodeURIComponent(slug)}/versions`),
-    grantBridgeScope: (launchToken, scope) =>
-      client.post('/bridge/scopes', { launch_token: launchToken, scope }),
     bridgeUser: (launchToken, appSlug) =>
       client.get('/bridge/user', { headers: bridgeHeaders(launchToken, appSlug) }),
     bridgeDesktopMessage: (launchToken, appSlug, payload) =>

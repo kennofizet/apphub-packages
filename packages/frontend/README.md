@@ -49,7 +49,7 @@ const hostApi = installAppHubModule(app, {
 
 Set `APP_URL` to your Laravel API host. Hub SPA can be on a different origin (e.g. Vite `:3000` in dev, `apphub.` subdomain in prod) — bootstrap learns it from the request. Optional overrides: `hubOrigin`, `runtimePublicUrl`. Embed the Hub URL in your product iframe — do not mount Hub inside the product Vue app.
 
-`hostApi.grantBridgeScope`, `integrationDocsInternal` — host app only, not `inject()`.
+`hostApi.integrationDocsInternal` — host app only, not `inject()`.
 
 Hub shell components use `useAppHubHostApi()` from the package. The host token and `hostAccessSecret` stay in private module credentials — not in `inject('apphubOptions')` and not via `provide('apphubApi')`.
 

@@ -23,6 +23,7 @@ class LaunchServiceProvider extends ModuleServiceProvider
         $this->app->singleton(AppUsageService::class);
         $this->app->singleton(AppHealthcheckService::class);
         $this->app->singleton(AppLaunchCallerUrlGuard::class);
+        $this->app->singleton(AppEntryUrlGuard::class);
     }
 
     public function boot(): void

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.6.4",
+  "schema_version": "1.7.0",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -25,14 +25,14 @@
         "overview": "When a user opens your app from the desktop, App Hub loads your runtime in a window and provides AppHubBridge for permissions and desktop features.",
         "connection_flow": [
           "User opens your app (desktop icon or App Store).",
-          "App Hub resolves launch: POST /apps/{slug}/launch → entry_url + launch_token.",
+          "App Hub resolves launch: POST /apps/{slug}/launch → entry_url + launch_token + scopes_granted (from server consent).",
           "Your app loads in a Hub window; AppHubBridge becomes available (or postMessage channel apphub:bridge).",
-          "Request the permissions you need, then call bridge methods."
+          "Use display_user from bridge:ready for UI; call publisher backend GET bridge/user for authoritative identity."
         ],
         "runtime_context": {
-          "fields": ["app_slug", "session_id", "user_id", "scopes_granted", "launch_token", "display_user"],
-          "launch_token": "Short-lived token for optional bridge HTTP calls from your app server.",
-          "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use getUserInfo or verify-launch-token for authoritative identity."
+          "fields": ["app_slug", "session_id", "scopes_granted", "permissions", "launch_token", "display_user"],
+          "launch_token": "Short-lived secret minted at launch. Treat like a password — never log, expose in UI, or send to third parties. Publisher backend passes it to GET bridge/user. scopes_granted on token mirror server install consent only.",
+          "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use GET bridge/user from your publisher backend for authoritative identity."
         },
         "discovery": {
           "in_window": "window.AppHubBridge (provided by docs/sdk-stub.js in sandboxed iframe)",
@@ -46,13 +46,15 @@
               "context": {
                 "app_slug": "string",
                 "session_id": "string|null",
-                "scopes_granted": "string[]",
+                "scopes_granted": "string[] — server minted at launch (install consent)",
+                "session_granted": "string[] optional — Hub session desktop consents only (not authoritative)",
+                "permissions": "string[] — manifest permissions for Hub UI",
                 "display_user": "{ id: number, name: string } optional — UI only from Hub bootstrap"
               }
             },
             "child_to_parent_call": {
               "event": "apphub:bridge:call",
-              "fields": { "id": "string", "method": "requestPermission|getUserInfo|...", "args": "array" }
+              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|notify|setTaskbarBadge", "args": "array" }
             },
             "parent_to_child_result": {
               "event": "apphub:bridge:result",
@@ -88,8 +90,8 @@
           }
         ],
         "manifest": {
-          "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; server enforces on bridge/scopes grant.",
-          "api_urls": "string[] optional — publisher tool backend URL(s) allowed to call bridge HTTP (bridge/user, verify-launch-token). Omit when the app only uses display_user and postMessage bridge. When set, server checks TCP client IP against DNS of declared host(s).",
+          "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
+          "api_urls": "string[] optional — publisher tool backend URL(s) allowed to call bridge HTTP. TCP client IP must match DNS-pinned IPs stored at publish (production) or resolve live DNS (local dev). localhost/loopback rejected on publish in production.",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
         },
         "data_tiers": {
@@ -113,17 +115,7 @@
           },
           "requestPermission": {
             "signature": "requestPermission(scope: string): Promise<boolean>",
-            "description": "Ask the user to allow a scope. Returns true if granted."
-          },
-          "getUserInfo": {
-            "signature": "getUserInfo(): Promise<{ id, name, locale?, avatar? }>",
-            "requires": ["user.read"],
-            "description": "Authoritative basic user info from GET bridge/user after user.read is granted. Use for verified identity, not for simple UI greetings (prefer getDisplayUser)."
-          },
-          "getProfile": {
-            "signature": "getProfile(): Promise<Record<string, unknown>>",
-            "requires": ["user.profile"],
-            "description": "Extended profile after user.profile is granted."
+            "description": "Hub UI consent for desktop scopes during the session (notify, message, badge). user.* scopes are granted at launch from install permissions — not via runtime bridge calls."
           },
           "sendDesktopMessage": {
             "signature": "sendDesktopMessage(payload: DesktopMessage): Promise<void>",
@@ -148,7 +140,7 @@
             "description": "Set or clear taskbar badge on your app button."
           }
         },
-        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\nconst user = await bridge.getUserInfo() // authoritative — needs user.read\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${user.name}`, duration_ms: 5000 })",
+        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Authoritative user: GET bridge/user from your publisher backend (see http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${display?.name}`, duration_ms: 5000 })",
         "http_companion": {
           "note": "Call GET bridge/user from your publisher tool backend (server-side) or via a dev proxy on api_urls. App Hub matches the caller TCP IP to manifest api_urls (DNS). Browser apps should fetch your backend, not App Hub directly. Hub postMessage is for permissions/UI only.",
           "routes": [
@@ -165,8 +157,8 @@
       "steps": [
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
         "Listen for apphub:bridge:ready in your app.",
-        "Call requestPermission for each scope you need.",
-        "Use getUserInfo, sendDesktopMessage, notify, setTaskbarBadge as granted.",
+        "Call requestPermission for desktop scopes as needed.",
+        "Use sendDesktopMessage, notify, setTaskbarBadge when granted.",
         "Handle denied permissions gracefully in your UI."
       ]
     },
@@ -196,7 +188,9 @@
         "publisher_isolation": "Apps run in Hub windows. Only bridge routes and scoped launch_token. No host DB, env, or admin APIs.",
         "endpoint_rules": [
           "GET integration-docs/internal requires X-AppHub-Host-Access matching APPHUB_HOST_ACCESS_SECRET (not packages-core zone/server manager).",
-          "POST bridge/scopes requires launch_token user_id to match knf_core_user_id from X-Knf-Token.",
+          "POST /apps/{slug}/install-intent mints short-lived token when permission dialog opens.",
+          "POST /apps/{slug}/bridge-consents records manifest permissions after Accept (requires intent_token).",
+          "POST /apps/{slug}/launch mints launch_token with scopes_granted from server consent records only.",
           "Validate launch_token per app slug and session; user_id from auth, not client headers.",
           "Filter bridge/user fields by granted scopes and packages-core zones.",
           "Reject bridge calls without matching scope consent record."
@@ -220,7 +214,7 @@
         "path": "apps/{slug}/launch",
         "auth": "token",
         "audience": ["publisher", "end_user"],
-        "description": "Mint short-lived launch token and return entry_url for the app window."
+        "description": "Mint short-lived launch token and return entry_url. Body optional: { version? }. scopes_granted on token come from server install consent — never from client."
       },
       {
         "method": "POST",
@@ -273,10 +267,17 @@
       },
       {
         "method": "POST",
-        "path": "bridge/scopes",
+        "path": "apps/{slug}/install-intent",
         "auth": "token",
-        "audience": ["host_dev"],
-        "description": "Hub shell records user consent: { launch_token, scope }."
+        "audience": ["host_dev", "end_user"],
+        "description": "Mint short-lived install intent when permission dialog opens. Body optional: { version? }."
+      },
+      {
+        "method": "POST",
+        "path": "apps/{slug}/bridge-consents",
+        "auth": "token",
+        "audience": ["host_dev", "end_user"],
+        "description": "Record install consent after Accept. Body: { intent_token, version? }. Server writes manifest permissions — client must not send scope list."
       },
       {
         "method": "GET",

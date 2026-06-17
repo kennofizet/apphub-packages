@@ -89,7 +89,7 @@ final class AppRuntimeServeService
 
             $response = new Response($content);
             $response->headers->set('Content-Type', $this->mimeType($absolute));
-            $this->applyRuntimeSecurityHeaders($response, $connectOrigins);
+            $this->applyRuntimeSecurityHeaders($response, $connectOrigins, $request);
 
             if ($plainToken !== '') {
                 $response->headers->setCookie($this->runtimeAuthCookie($app->slug, $plainToken, $request));
@@ -98,7 +98,7 @@ final class AppRuntimeServeService
             $response = new BinaryFileResponse($absolute);
             $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($absolute));
             $response->headers->set('Content-Type', $this->mimeType($absolute));
-            $this->applyRuntimeSecurityHeaders($response, $connectOrigins);
+            $this->applyRuntimeSecurityHeaders($response, $connectOrigins, $request);
         }
 
         $this->applyRuntimeCors($response);
@@ -137,18 +137,106 @@ final class AppRuntimeServeService
     /**
      * @param list<string> $connectOrigins
      */
-    private function applyRuntimeSecurityHeaders(Response $response, array $connectOrigins): void
+    private function applyRuntimeSecurityHeaders(Response $response, array $connectOrigins, Request $request): void
     {
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $connectSrc = $connectOrigins !== []
             ? "connect-src 'self' " . implode(' ', $connectOrigins)
             : "connect-src 'self'";
+        $frameAncestors = $this->frameAncestorsDirective($request);
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; {$connectSrc}; frame-ancestors *",
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+            . "img-src 'self' data: blob:; font-src 'self' data:; {$connectSrc}; frame-ancestors {$frameAncestors}",
         );
     }
 
+    private function frameAncestorsDirective(Request $request): string
+    {
+        $list = ["'self'"];
+
+        foreach (config('apphub.allowed_hub_origins', []) as $origin) {
+            $this->appendFrameAncestor($list, is_string($origin) ? $origin : '');
+        }
+
+        $refererOrigin = $this->refererOrigin($request);
+        if ($refererOrigin !== null && $this->mayFrameFromOrigin($refererOrigin)) {
+            $this->appendFrameAncestor($list, $refererOrigin);
+        }
+
+        return implode(' ', $list);
+    }
+
+    private function mayFrameFromOrigin(string $origin): bool
+    {
+        $allowed = config('apphub.allowed_hub_origins', []);
+        if (is_array($allowed)) {
+            foreach ($allowed as $entry) {
+                if (is_string($entry) && rtrim(trim($entry), '/') === rtrim($origin, '/')) {
+                    return true;
+                }
+            }
+        }
+
+        return AppManifestApiUrl::allowsLocalhostApiUrls() && $this->isLoopbackOrigin($origin);
+    }
+
+    private function isLoopbackOrigin(string $origin): bool
+    {
+        $parts = parse_url($origin);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '') {
+            return false;
+        }
+
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return true;
+        }
+
+        return str_starts_with($host, '127.');
+    }
+
+    private function refererOrigin(Request $request): ?string
+    {
+        $referer = trim((string) $request->headers->get('Referer', ''));
+        if ($referer === '') {
+            return null;
+        }
+
+        $parts = parse_url($referer);
+        if (!is_array($parts)) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = (string) ($parts['host'] ?? '');
+        if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? (int) $parts['port'] : null;
+        $origin = $scheme . '://' . $host;
+        if ($port !== null && !(($scheme === 'http' && $port === 80) || ($scheme === 'https' && $port === 443))) {
+            $origin .= ':' . $port;
+        }
+
+        return $origin;
+    }
+
+    /** @param list<string> $list */
+    private function appendFrameAncestor(array &$list, string $origin): void
+    {
+        $origin = rtrim(trim($origin), '/');
+        if ($origin === '' || in_array($origin, $list, true)) {
+            return;
+        }
+
+        $list[] = $origin;
+    }
     /**
      * @param array{path: string, entry: string} $bundle
      * @return list<string>

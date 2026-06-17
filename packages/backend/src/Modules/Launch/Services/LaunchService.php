@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Launch\Services;
 
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppRuntimeServeService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
@@ -18,6 +19,8 @@ final class LaunchService
         private readonly AppUsageService $usage,
         private readonly AppRuntimeServeService $runtimeServe,
         private readonly AppVersionService $versions,
+        private readonly AppBridgeConsentService $bridgeConsents,
+        private readonly AppEntryUrlGuard $entryUrlGuard,
     ) {
     }
 
@@ -63,8 +66,17 @@ final class LaunchService
             throw new LaunchDeniedException('Requested app version is not available', 404);
         }
 
-        $minted = $this->launchTokens->mint($app, $userId, $ip, $userAgent, $pinnedVersion);
+        $minted = $this->launchTokens->mint(
+            $app,
+            $userId,
+            $ip,
+            $userAgent,
+            $pinnedVersion,
+            $this->bridgeConsents->scopesForLaunch($app, $userId, $pinnedVersion),
+        );
         $this->usage->log($userId, $app, AppUsageService::ACTION_APP_OPEN);
+
+        $this->entryUrlGuard->assertLaunchable($app);
 
         $entryUrl = $this->resolveEntryUrl($app, $pinnedVersion, $userId);
 

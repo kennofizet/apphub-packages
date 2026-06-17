@@ -50,8 +50,6 @@ function buildPublicOptions(options = {}) {
     runtimePublicUrl: typeof options.runtimePublicUrl === 'string' ? options.runtimePublicUrl.trim() : '',
     enforceDedicatedHubOrigin: options.enforceDedicatedHubOrigin !== false,
     enforceIsolatedHostedRuntime: options.enforceIsolatedHostedRuntime !== false,
-    allowSameOriginHostedRuntime: options.allowSameOriginHostedRuntime === true,
-    hostedSandboxSameOrigin: options.hostedSandboxSameOrigin === true,
     enforceDevFriendlyOrigins: typeof options.enforceDevFriendlyOrigins === 'boolean'
       ? options.enforceDevFriendlyOrigins
       : true,
@@ -252,6 +250,8 @@ function createApiFacade() {
     bootstrap: (...args) => impl?.bootstrap?.(...args),
     apps: (...args) => impl?.apps?.(...args),
     launch: (...args) => impl?.launch?.(...args),
+    recordBridgeConsent: (...args) => impl?.recordBridgeConsent?.(...args),
+    createInstallIntent: (...args) => impl?.createInstallIntent?.(...args),
     ping: (...args) => impl?.ping?.(...args),
     verifyLaunchToken: (...args) => impl?.verifyLaunchToken?.(...args),
     usage: (...args) => impl?.usage?.(...args),
@@ -266,7 +266,6 @@ function createApiFacade() {
     appVersions: (...args) => impl?.appVersions?.(...args),
     integrationDocs: (...args) => impl?.integrationDocs?.(...args),
     integrationDocsInternal: (...args) => impl?.integrationDocsInternal?.(...args),
-    grantBridgeScope: (...args) => impl?.grantBridgeScope?.(...args),
     bridgeUser: (...args) => impl?.bridgeUser?.(...args),
     bridgeDesktopMessage: (...args) => impl?.bridgeDesktopMessage?.(...args),
   }
@@ -302,8 +301,6 @@ function applyModuleOptions(store, options = {}) {
     runtimePublicUrl: nextPublic.runtimePublicUrl,
     enforceDedicatedHubOrigin: nextPublic.enforceDedicatedHubOrigin,
     enforceIsolatedHostedRuntime: nextPublic.enforceIsolatedHostedRuntime,
-    allowSameOriginHostedRuntime: nextPublic.allowSameOriginHostedRuntime,
-    hostedSandboxSameOrigin: nextPublic.hostedSandboxSameOrigin,
     enforceDevFriendlyOrigins: nextPublic.enforceDevFriendlyOrigins,
   })
   applyOriginSafety(store.options, options)

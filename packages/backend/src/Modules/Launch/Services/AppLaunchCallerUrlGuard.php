@@ -34,8 +34,9 @@ final class AppLaunchCallerUrlGuard
             ];
         }
 
+        $pinnedIps = $this->versions->pinnedIpsForLaunchBundle($app, $bundleVersion);
         $clientIp = trim((string) $request->ip());
-        if (!AppManifestApiUrl::clientMatchesAllowedHosts($clientIp, $allowed)) {
+        if (!AppManifestApiUrl::clientMatchesAllowedHosts($clientIp, $allowed, $pinnedIps !== [] ? $pinnedIps : null)) {
             return [
                 'ok' => false,
                 'error' => 'Request source IP is not allowed — caller must run on a host listed in manifest api_urls',

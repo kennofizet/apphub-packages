@@ -8,6 +8,8 @@ import {
 } from './constants.js'
 import { scopeToRequestForMethod, isMethodScopeGranted } from './scopeRequirements.js'
 
+const USER_SCOPES = new Set(['user.read', 'user.profile'])
+
 function isBridgeMessage(data) {
   return data && typeof data === 'object' && data.channel === BRIDGE_CHANNEL
 }
@@ -25,13 +27,9 @@ function isBridgeMessage(data) {
  *   } | null,
  *   appSlug: string,
  *   appName: string,
- *   api: {
- *     grantBridgeScope?: (token: string, scope: string) => Promise<unknown>,
- *     bridgeUser?: (token: string, slug: string) => Promise<unknown>,
- *     bridgeDesktopMessage?: (token: string, slug: string, payload: object) => Promise<unknown>,
- *   } | null,
+ *   bridgeDesktopMessage?: (token: string, slug: string, payload: object) => Promise<unknown>,
  *   requestScopeConsent: (scope: string) => Promise<boolean>,
- *   onScopeGranted?: (scope: string) => void,
+ *   onSessionScopeGranted?: (scope: string) => void,
  *   onDesktopMessage?: (payload: object) => void,
  *   onNotify?: (payload: { title?: string, body?: string, icon?: string }) => void,
  *   onTaskbarBadge?: (count: number | null) => void,
@@ -39,16 +37,29 @@ function isBridgeMessage(data) {
  *   getDisplayUser?: () => { id: number | string, name?: string | null } | null,
  *   getBridgeApiBase?: () => string | null,
  *   getPublisherApiBase?: () => string | null,
+ *   getManifestPermissions?: () => string[],
  *   isOpaqueHostedSandbox?: () => boolean,
  * }} options
  */
 export function createRunnerBridgeHost(options) {
-  let grantedScopes = new Set()
+  /** Server minted scopes on launch token — never mutated here. */
+  let tokenScopes = new Set()
+  /** Hub session desktop consents (notify, message, badge) — UI only. */
+  let sessionGranted = new Set()
   let stopped = false
 
-  function syncGrantedFromContext() {
+  function syncTokenScopesFromContext() {
     const ctx = options.getLaunchContext?.()
-    grantedScopes = new Set(Array.isArray(ctx?.scopes_granted) ? ctx.scopes_granted : [])
+    tokenScopes = new Set(Array.isArray(ctx?.scopes_granted) ? ctx.scopes_granted : [])
+  }
+
+  function manifestPermissions() {
+    const raw = options.getManifestPermissions?.() ?? []
+    return Array.isArray(raw) ? raw : []
+  }
+
+  function isScopeDeclared(scope) {
+    return manifestPermissions().includes(scope)
   }
 
   function postMessageTargetOrigin() {
@@ -88,16 +99,19 @@ export function createRunnerBridgeHost(options) {
   }
 
   function sendReady() {
-    syncGrantedFromContext()
+    syncTokenScopesFromContext()
     const ctx = options.getLaunchContext?.() ?? {}
     const displayUser = resolveDisplayUser()
+    const permissions = manifestPermissions()
     postToFrame({
       channel: BRIDGE_CHANNEL,
       event: BRIDGE_EVENT_READY,
-        context: {
+      context: {
         app_slug: options.appSlug,
         session_id: ctx.session_id ?? null,
-        scopes_granted: [...grantedScopes],
+        scopes_granted: [...tokenScopes],
+        session_granted: [...sessionGranted],
+        permissions,
         launch_token: ctx.launch_token ?? null,
         bridge_api_base: options.getBridgeApiBase?.() ?? null,
         publisher_api_base: options.getPublisherApiBase?.() ?? null,
@@ -123,29 +137,30 @@ export function createRunnerBridgeHost(options) {
     }
   }
 
-  async function ensureScopeGranted(token, scope) {
+  async function ensureSessionScopeGranted(scope) {
     const normalized = String(scope ?? '').trim()
     if (!normalized) return false
-    if (grantedScopes.has(normalized)) return true
+    if (!isScopeDeclared(normalized)) return false
+    if (USER_SCOPES.has(normalized)) {
+      return tokenScopes.has(normalized)
+    }
+    if (sessionGranted.has(normalized)) return true
 
     const ok = await options.requestScopeConsent(normalized)
     if (!ok) return false
 
-    if (!options.api?.grantBridgeScope) {
-      throw new Error('Bridge API unavailable')
-    }
-
-    await options.api.grantBridgeScope(token, normalized)
-    grantedScopes.add(normalized)
-    options.onScopeGranted?.(normalized)
+    sessionGranted.add(normalized)
+    options.onSessionScopeGranted?.(normalized)
     return true
   }
 
-  async function ensureMethodScopeGranted(token, method) {
-    if (isMethodScopeGranted(method, grantedScopes)) return true
+  async function ensureMethodScopeGranted(method) {
+    if (isMethodScopeGranted(method, sessionGranted) || isMethodScopeGranted(method, tokenScopes)) {
+      return true
+    }
     const scope = scopeToRequestForMethod(method)
     if (!scope) return false
-    return ensureScopeGranted(token, scope)
+    return ensureSessionScopeGranted(scope)
   }
 
   async function handleCall(id, method, args) {
@@ -165,55 +180,33 @@ export function createRunnerBridgeHost(options) {
           reply(id, false, null, 'Scope required')
           return
         }
-        if (grantedScopes.has(scope)) {
-          reply(id, true, true)
+        if (!isScopeDeclared(scope)) {
+          reply(id, true, false)
           return
         }
-        try {
-          const granted = await ensureScopeGranted(token, scope)
-          reply(id, true, granted)
-        } catch (err) {
-          reply(id, false, null, err?.message || 'Bridge API unavailable')
-        }
-        return
-      }
-
-      if (method === 'getUserInfo') {
-        if (!await ensureMethodScopeGranted(token, method)) {
-          reply(id, false, null, 'Scope not granted')
+        if (USER_SCOPES.has(scope)) {
+          reply(id, true, tokenScopes.has(scope))
           return
         }
-        const res = await options.api?.bridgeUser?.(token, slug)
-        const data = res?.data?.data ?? res?.data ?? {}
-        reply(id, true, data)
-        return
-      }
-
-      if (method === 'getProfile') {
-        if (!await ensureMethodScopeGranted(token, method)) {
-          reply(id, false, null, 'Scope not granted')
-          return
-        }
-        const res = await options.api?.bridgeUser?.(token, slug)
-        const data = res?.data?.data ?? res?.data ?? {}
-        reply(id, true, data)
+        const granted = await ensureSessionScopeGranted(scope)
+        reply(id, true, granted)
         return
       }
 
       if (method === 'sendDesktopMessage') {
-        if (!await ensureMethodScopeGranted(token, method)) {
+        if (!await ensureMethodScopeGranted(method)) {
           reply(id, false, null, 'Scope not granted')
           return
         }
         const payload = args?.[0] ?? {}
-        await options.api?.bridgeDesktopMessage?.(token, slug, payload)
+        await options.bridgeDesktopMessage?.(token, slug, payload)
         options.onDesktopMessage?.(payload)
         reply(id, true, undefined)
         return
       }
 
       if (method === 'notify') {
-        if (!await ensureMethodScopeGranted(token, method)) {
+        if (!await ensureMethodScopeGranted(method)) {
           reply(id, false, null, 'Scope not granted')
           return
         }
@@ -224,7 +217,7 @@ export function createRunnerBridgeHost(options) {
       }
 
       if (method === 'setTaskbarBadge') {
-        if (!await ensureMethodScopeGranted(token, method)) {
+        if (!await ensureMethodScopeGranted(method)) {
           reply(id, false, null, 'Scope not granted')
           return
         }

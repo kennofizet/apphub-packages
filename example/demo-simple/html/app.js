@@ -155,9 +155,9 @@ btnVerify?.addEventListener('click', async () => {
     return
   }
   try {
-    const granted = await callBridge('requestPermission', ['user.read'])
-    if (!granted) {
-      hello.textContent = 'user.read denied — accept install permissions or allow in dialog'
+    const scopes = Array.isArray(bridgeContext?.scopes_granted) ? bridgeContext.scopes_granted : []
+    if (!scopes.includes('user.read') && !scopes.includes('user.profile')) {
+      hello.textContent = 'user.read not on launch token — accept install permissions (server consent), then reopen app from Hub'
       return
     }
     const user = await fetchBridgeUserViaPublisherBackend()

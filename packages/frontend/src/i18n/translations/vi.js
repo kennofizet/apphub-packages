@@ -260,6 +260,7 @@ export default {
   install_perm_refuse: 'Từ chối',
   install_perm_refused_install: 'Đã hủy cài đặt — bạn từ chối các quyền được yêu cầu.',
   install_perm_refused_update: 'Đã hủy cập nhật — bạn từ chối các quyền được yêu cầu.',
+  install_perm_consent_failed: 'Không lưu được quyền trên server. Cài đặt chưa hoàn tất — thử lại.',
   desktop_icon_move_hint: 'Kéo để di chuyển',
   desktop_icon_hold_hint: 'Giữ để kéo nhóm · chạm để mở thư mục',
   group_label: 'Nhóm',
@@ -342,7 +343,7 @@ export default {
   guide_dev_bridge_title: 'Bắt đầu',
   guide_dev_bridge_1: 'Khi user mở app, Hub gọi POST /apps/{slug}/launch và mở runtime trong cửa sổ.',
   guide_dev_bridge_2: 'Hub gắn window.AppHubBridge (hoặc postMessage kênh apphub:bridge) cho quyền và API desktop.',
-  guide_dev_bridge_3: 'Chờ apphub:bridge:ready, xin scope, rồi gọi method bridge.',
+  guide_dev_bridge_3: 'Chờ apphub:bridge:ready. Dùng getDisplayUser() cho UI; gọi backend GET bridge/user để xác minh danh tính.',
   guide_dev_permissions_title: 'Quyền (permissions)',
   guide_dev_permissions_1: 'user.read — id và tên hiển thị tối thiểu.',
   guide_dev_permissions_2: 'user.profile — hồ sơ mở rộng (avatar, locale, v.v.) khi user đồng ý.',
@@ -350,18 +351,17 @@ export default {
   guide_dev_permissions_4: 'desktop.badge — cập nhật nút app trên taskbar.',
   guide_dev_bridge_code_title: 'Ví dụ',
   guide_dev_bridge_code: `const bridge = window.AppHubBridge
-await bridge.requestPermission('user.read')
-const user = await bridge.getUserInfo()
+const display = bridge.getDisplayUser() // UI greeting
 await bridge.requestPermission('desktop.message')
 await bridge.sendDesktopMessage({
   type: 'banner',
   title: 'Xin chào',
-  body: 'Chào ' + user.name,
+  body: 'Chào ' + (display?.name ?? ''),
   duration_ms: 5000
 })`,
   guide_dev_user_title: 'Lấy thông tin user',
-  guide_dev_user_1: 'Gọi requestPermission("user.read") rồi getUserInfo().',
-  guide_dev_user_2: 'Cần thêm trường: user.profile và getProfile() sau khi user đồng ý.',
+  guide_dev_user_1: 'Dùng getDisplayUser() trong app cho lời chào (không gọi API).',
+  guide_dev_user_2: 'Để xác minh danh tính gọi GET bridge/user từ backend publisher (cần user.read trên launch token).',
   guide_dev_user_3: 'Không giả định đã có quyền — xử lý khi user từ chối.',
   guide_dev_desktop_title: 'Gửi tin lên desktop',
   guide_dev_desktop_1: 'sendDesktopMessage gửi banner hoặc gợi ý lên vùng desktop Hub.',

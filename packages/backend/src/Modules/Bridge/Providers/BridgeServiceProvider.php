@@ -10,4 +10,9 @@ class BridgeServiceProvider extends ModuleServiceProvider
     {
         return 'bridge';
     }
+
+    public function boot(): void
+    {
+        $this->loadModuleMigrations();
+    }
 }
