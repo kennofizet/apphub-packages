@@ -4,7 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppPublishService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
@@ -22,9 +22,9 @@ class CatalogPublishController extends Controller
 
     public function register(Request $request): JsonResponse
     {
-        $userId = (int) $request->attributes->get('knf_core_user_id');
-        if ($userId <= 0) {
-            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        $userId = self::currentUserId();
+        if ($userId === null) {
+            return $this->apiErrorResponse('Authentication required', 401);
         }
 
         $request->validate([
@@ -33,7 +33,7 @@ class CatalogPublishController extends Controller
 
         $zip = $request->file('bundle');
         if ($zip === null) {
-            return response()->json(['success' => false, 'error' => 'Bundle zip is required'], 422);
+            return $this->apiErrorResponse('Bundle zip is required', 422);
         }
 
         $meta = null;
@@ -41,20 +41,20 @@ class CatalogPublishController extends Controller
             $meta = $this->manifests->fromZip($zip);
             $app = $this->publish->registerHosted($userId, $meta, $zip);
         } catch (RuntimeException $e) {
-            $payload = ['success' => false, 'error' => $e->getMessage()];
+            $extra = [];
             if (is_array($meta) && isset($meta['slug'])) {
-                $payload['slug'] = $meta['slug'];
+                $extra['slug'] = $meta['slug'];
             }
             if (is_array($meta) && isset($meta['version'])) {
-                $payload['version'] = $meta['version'];
+                $extra['version'] = $meta['version'];
             }
 
-            return response()->json($payload, 422);
+            return response()->json($this->apiErrorPayload($e->getMessage(), $extra), 422);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->catalog->toCatalogItem($app, $userId, AppCatalogMode::PUBLISHER),
-        ], 201);
+        return $this->apiResponseWithContext(
+            $this->catalog->toCatalogItem($app, $userId, AppCatalogMode::PUBLISHER),
+            201,
+        );
     }
 }

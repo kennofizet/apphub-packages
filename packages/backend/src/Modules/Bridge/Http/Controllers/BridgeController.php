@@ -4,7 +4,7 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Kennofizet\PackagesCore\Models\User;
@@ -24,11 +24,11 @@ class BridgeController extends Controller
         $launch = $request->attributes->get('apphub_launch', []);
         $app = $this->catalog->findBySlug((string) ($launch['app_slug'] ?? ''));
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
         if (!$this->launchTokens->hasUserReadAccess($launch)) {
-            return response()->json(['success' => false, 'error' => 'Scope not granted'], 403);
+            return $this->apiErrorResponse('Scope not granted', 403);
         }
 
         $data = $this->resolveBridgeUser($launch);
@@ -38,10 +38,7 @@ class BridgeController extends Controller
             $data['avatar'] = null;
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $data,
-        ]);
+        return $this->apiResponseWithContext($data);
     }
 
     public function desktopMessage(Request $request): JsonResponse
@@ -49,11 +46,11 @@ class BridgeController extends Controller
         $launch = $request->attributes->get('apphub_launch', []);
         $app = $this->catalog->findBySlug((string) ($launch['app_slug'] ?? ''));
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
         if (!$this->launchTokens->hasScope($launch, 'desktop.message')) {
-            return response()->json(['success' => false, 'error' => 'Scope not granted'], 403);
+            return $this->apiErrorResponse('Scope not granted', 403);
         }
 
         $validated = $request->validate([
@@ -64,13 +61,10 @@ class BridgeController extends Controller
             'priority' => 'nullable|string|in:normal,high',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'accepted' => true,
-                'app_slug' => $launch['app_slug'] ?? null,
-                'message' => $validated,
-            ],
+        return $this->apiResponseWithContext([
+            'accepted' => true,
+            'app_slug' => $launch['app_slug'] ?? null,
+            'message' => $validated,
         ]);
     }
 

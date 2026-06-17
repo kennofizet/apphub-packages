@@ -4,7 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppBundleStorageService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
@@ -32,19 +32,15 @@ class CatalogDevController extends Controller
         $perPage = min(50, max(1, (int) $request->query('per_page', config('apphub.catalog_per_page', 24))));
         $result = $this->catalog->paginateForDev($page, $perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $result['items'],
-            'meta' => $result['meta'],
-        ]);
+        return $this->apiSuccessWithMeta($result['items'], $result['meta']);
     }
 
     public function updateStatus(Request $request, string $slug): JsonResponse
     {
         $userId = $this->guardDevUser($request);
 
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -56,36 +52,33 @@ class CatalogDevController extends Controller
         } catch (\RuntimeException $e) {
             $status = $e->getMessage() === 'App not found' ? 404 : 422;
 
-            return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
+            return $this->apiErrorResponse($e->getMessage(), $status);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
-        ]);
+        return $this->apiResponseWithContext($this->catalog->toCatalogItem($app, $userId, 'dev'));
     }
 
     public function readBundleFile(Request $request, string $slug): JsonResponse
     {
         $this->guardDevUser($request);
 
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
         $path = (string) $request->query('path', '');
         if ($path === '' || str_contains($path, '..')) {
-            return response()->json(['success' => false, 'error' => 'Invalid file path'], 422);
+            return $this->apiErrorResponse('Invalid file path', 422);
         }
 
         $app = App::query()->where('slug', $slug)->first();
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
         $reviewBundle = $this->publish->resolveReviewBundle($app);
         if ($app->runtime_type !== AppRuntimeType::HOSTED || $reviewBundle === null) {
-            return response()->json(['success' => false, 'error' => 'App has no hosted bundle'], 422);
+            return $this->apiErrorResponse('App has no hosted bundle', 422);
         }
 
         $compare = $request->boolean('compare');
@@ -99,25 +92,22 @@ class CatalogDevController extends Controller
                 try {
                     $oldRead = $this->bundles->readBundleTextFile($baseline['path'], $path);
 
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'slug' => $app->slug,
-                            'path' => $path,
-                            'content' => '',
-                            'old_content' => $oldRead['content'],
-                            'change_status' => 'deleted',
-                            'truncated' => false,
-                            'old_truncated' => $oldRead['truncated'],
-                            'size' => 0,
-                        ],
+                    return $this->apiResponseWithContext([
+                        'slug' => $app->slug,
+                        'path' => $path,
+                        'content' => '',
+                        'old_content' => $oldRead['content'],
+                        'change_status' => 'deleted',
+                        'truncated' => false,
+                        'old_truncated' => $oldRead['truncated'],
+                        'size' => 0,
                     ]);
                 } catch (\RuntimeException) {
-                    return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+                    return $this->apiErrorResponse($e->getMessage(), 422);
                 }
             }
 
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+            return $this->apiErrorResponse($e->getMessage(), 422);
         }
 
         $oldContent = null;
@@ -133,19 +123,16 @@ class CatalogDevController extends Controller
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'slug' => $app->slug,
-                'path' => $path,
-                'content' => $read['content'],
-                'old_content' => $oldContent,
-                'change_status' => $changeStatus,
-                'truncated' => $read['truncated'],
-                'old_truncated' => $oldTruncated,
-                'size' => $read['size'],
-                'baseline_version' => $baseline['version'] ?? null,
-            ],
+        return $this->apiResponseWithContext([
+            'slug' => $app->slug,
+            'path' => $path,
+            'content' => $read['content'],
+            'old_content' => $oldContent,
+            'change_status' => $changeStatus,
+            'truncated' => $read['truncated'],
+            'old_truncated' => $oldTruncated,
+            'size' => $read['size'],
+            'baseline_version' => $baseline['version'] ?? null,
         ]);
     }
 
@@ -153,18 +140,18 @@ class CatalogDevController extends Controller
     {
         $this->guardDevUser($request);
 
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
         $app = App::query()->where('slug', $slug)->first();
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
         $reviewBundle = $this->publish->resolveReviewBundle($app);
         if ($app->runtime_type !== AppRuntimeType::HOSTED || $reviewBundle === null) {
-            return response()->json(['success' => false, 'error' => 'App has no hosted bundle'], 422);
+            return $this->apiErrorResponse('App has no hosted bundle', 422);
         }
 
         $baseline = $this->publish->resolveBaselineBundle($app);
@@ -176,25 +163,22 @@ class CatalogDevController extends Controller
         $truncated = count($fileEntries) > $maxFiles;
         $fileEntries = array_slice($fileEntries, 0, $maxFiles);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'slug' => $app->slug,
-                'name' => $app->name,
-                'status' => $app->status,
-                'runtime_type' => $app->runtime_type,
-                'version' => $reviewBundle['version'],
-                'live_version' => $app->version,
-                'baseline_version' => $baseline['version'] ?? null,
-                'pending_version' => $app->pending_version,
-                'bundle_hash' => $reviewBundle['hash'],
-                'bundle_entry' => $reviewBundle['entry'],
-                'file_count' => count($fileEntries),
-                'file_entries' => $fileEntries,
-                'files' => array_column($fileEntries, 'path'),
-                'files_truncated' => $truncated,
-                'has_baseline' => $baseline !== null,
-            ],
+        return $this->apiResponseWithContext([
+            'slug' => $app->slug,
+            'name' => $app->name,
+            'status' => $app->status,
+            'runtime_type' => $app->runtime_type,
+            'version' => $reviewBundle['version'],
+            'live_version' => $app->version,
+            'baseline_version' => $baseline['version'] ?? null,
+            'pending_version' => $app->pending_version,
+            'bundle_hash' => $reviewBundle['hash'],
+            'bundle_entry' => $reviewBundle['entry'],
+            'file_count' => count($fileEntries),
+            'file_entries' => $fileEntries,
+            'files' => array_column($fileEntries, 'path'),
+            'files_truncated' => $truncated,
+            'has_baseline' => $baseline !== null,
         ]);
     }
 
@@ -202,33 +186,30 @@ class CatalogDevController extends Controller
     {
         $userId = $this->guardDevUser($request);
 
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
         $app = App::query()->where('slug', $slug)->first();
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
         try {
             $app = $this->publish->rejectPendingVersion($app);
         } catch (\RuntimeException $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+            return $this->apiErrorResponse($e->getMessage(), 422);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
-        ]);
+        return $this->apiResponseWithContext($this->catalog->toCatalogItem($app, $userId, 'dev'));
     }
 
     public function disable(Request $request, string $slug): JsonResponse
     {
         $userId = $this->guardDevUser($request);
 
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
         try {
@@ -236,19 +217,16 @@ class CatalogDevController extends Controller
         } catch (\RuntimeException $e) {
             $status = $e->getMessage() === 'App not found' ? 404 : 403;
 
-            return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
+            return $this->apiErrorResponse($e->getMessage(), $status);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->catalog->toCatalogItem($app, $userId, 'dev'),
-        ]);
+        return $this->apiResponseWithContext($this->catalog->toCatalogItem($app, $userId, 'dev'));
     }
 
     private function guardDevUser(Request $request): int
     {
-        $userId = (int) $request->attributes->get('knf_core_user_id');
-        if ($userId <= 0) {
+        $userId = self::currentUserId();
+        if ($userId === null) {
             throw new HttpException(401, 'Authentication required');
         }
 

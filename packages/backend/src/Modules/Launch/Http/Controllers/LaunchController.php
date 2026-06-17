@@ -4,7 +4,7 @@ namespace Kennofizet\AppHub\Modules\Launch\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
 use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
@@ -15,8 +15,6 @@ use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 
 class LaunchController extends Controller
 {
-    private const SLUG_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
-
     public function __construct(
         private readonly LaunchService $launch,
         private readonly LaunchTokenService $launchTokens,
@@ -29,13 +27,12 @@ class LaunchController extends Controller
 
     public function launch(Request $request, string $slug): JsonResponse
     {
-        if (!preg_match(self::SLUG_PATTERN, $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
-        $userId = $request->attributes->get('knf_core_user_id');
-        if (empty($userId)) {
-            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -45,17 +42,17 @@ class LaunchController extends Controller
         try {
             $data = $this->launch->launch(
                 $slug,
-                (int) $userId,
-                $this->currentZoneId($request),
+                (int) self::currentUserId(),
+                self::currentZoneId(),
                 $request->ip(),
                 (string) $request->userAgent(),
                 $validated['version'] ?? null,
             );
         } catch (LaunchDeniedException $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()], $e->httpStatus());
+            return $this->apiErrorResponse($e->getMessage(), $e->httpStatus());
         }
 
-        return response()->json(['success' => true, 'data' => $data]);
+        return $this->apiResponseWithContext($data);
     }
 
     /** Tool backend verifies launch token (no user session token required). */
@@ -68,12 +65,12 @@ class LaunchController extends Controller
 
         $record = $this->launchTokens->recordForGrant($validated['launch_token']);
         if ($record === null || $record->app === null) {
-            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+            return $this->apiErrorResponse('Invalid or expired launch token', 401);
         }
 
         $appSlug = $validated['app_slug'] ?? null;
         if ($appSlug !== null && $appSlug !== '' && $record->app->slug !== $appSlug) {
-            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+            return $this->apiErrorResponse('Invalid or expired launch token', 401);
         }
 
         $bundleVersion = $record->bundle_version !== null ? trim((string) $record->bundle_version) : null;
@@ -86,7 +83,7 @@ class LaunchController extends Controller
             'app_slug' => $record->app->slug,
         ]);
         if ($guard['ok'] !== true) {
-            return response()->json(['success' => false, 'error' => $guard['error']], $guard['status']);
+            return $this->apiErrorResponse($guard['error'], $guard['status']);
         }
 
         $result = $this->launchTokens->verify(
@@ -95,47 +92,43 @@ class LaunchController extends Controller
         );
 
         if ($result === null) {
-            return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
+            return $this->apiErrorResponse('Invalid or expired launch token', 401);
         }
 
-        return response()->json(['success' => true, 'data' => $result]);
+        return $this->apiResponseWithContext($result);
     }
 
     public function ping(Request $request, string $slug): JsonResponse
     {
-        if (!preg_match(self::SLUG_PATTERN, $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
-        $userId = $request->attributes->get('knf_core_user_id');
-        if (empty($userId)) {
-            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
         }
 
+        $userId = (int) self::currentUserId();
         $app = $this->catalog->findBySlug($slug);
         if ($app === null) {
-            return response()->json(['success' => false, 'error' => 'App not found'], 404);
+            return $this->apiErrorResponse('App not found', 404);
         }
 
-        if (!$this->catalog->userCanLaunch($app, (int) $userId, $this->currentZoneId($request))) {
-            return response()->json(['success' => false, 'error' => 'You do not have permission to test this app'], 403);
+        if (!$this->catalog->userCanLaunch($app, $userId, self::currentZoneId())) {
+            return $this->apiErrorResponse('You do not have permission to test this app', 403);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->healthcheck->ping($app),
-        ]);
+        return $this->apiResponseWithContext($this->healthcheck->ping($app));
     }
 
     public function usage(Request $request, string $slug): JsonResponse
     {
-        if (!preg_match(self::SLUG_PATTERN, $slug)) {
-            return response()->json(['success' => false, 'error' => 'Invalid app slug'], 422);
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
         }
 
-        $userId = $request->attributes->get('knf_core_user_id');
-        if (empty($userId)) {
-            return response()->json(['success' => false, 'error' => 'Authentication required'], 401);
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -145,23 +138,16 @@ class LaunchController extends Controller
 
         try {
             $this->usage->logBySlug(
-                (int) $userId,
+                (int) self::currentUserId(),
                 $slug,
                 $validated['action'],
-                $this->currentZoneId($request),
+                self::currentZoneId(),
                 $validated['metadata'] ?? null,
             );
         } catch (LaunchDeniedException $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()], $e->httpStatus());
+            return $this->apiErrorResponse($e->getMessage(), $e->httpStatus());
         }
 
-        return response()->json(['success' => true, 'data' => ['logged' => true]]);
-    }
-
-    private function currentZoneId(Request $request): ?int
-    {
-        $zoneId = $request->attributes->get('knf_core_user_zone_id_current');
-
-        return $zoneId !== null && $zoneId !== '' ? (int) $zoneId : null;
+        return $this->apiResponseWithContext(['logged' => true]);
     }
 }

@@ -3,7 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Bridge\Support\IntegrationDocs;
 
 class IntegrationDocsController extends Controller
@@ -15,9 +15,9 @@ class IntegrationDocsController extends Controller
 
             return response()->json(IntegrationDocs::forPublisher($doc));
         } catch (\JsonException) {
-            return response()->json(['success' => false, 'error' => 'Integration documentation unavailable'], 500);
+            return $this->apiErrorResponse('Integration documentation unavailable', 500);
         } catch (\RuntimeException) {
-            return response()->json(['success' => false, 'error' => 'Integration documentation unavailable'], 404);
+            return $this->apiErrorResponse('Integration documentation unavailable', 404);
         }
     }
 
@@ -27,9 +27,9 @@ class IntegrationDocsController extends Controller
         try {
             return response()->json(IntegrationDocs::read());
         } catch (\JsonException) {
-            return response()->json(['success' => false, 'error' => 'Integration documentation unavailable'], 500);
+            return $this->apiErrorResponse('Integration documentation unavailable', 500);
         } catch (\RuntimeException) {
-            return response()->json(['success' => false, 'error' => 'Integration documentation unavailable'], 404);
+            return $this->apiErrorResponse('Integration documentation unavailable', 404);
         }
     }
 }

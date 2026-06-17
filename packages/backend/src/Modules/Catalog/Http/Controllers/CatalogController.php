@@ -4,7 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppHubPublicUrlService;
@@ -22,36 +22,28 @@ class CatalogController extends Controller
 
     public function bootstrap(Request $request): JsonResponse
     {
-        $userId = (int) $request->attributes->get('knf_core_user_id');
-        $zoneId = $this->currentZoneId($request);
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'user' => $this->resolveSessionUser($request),
-                'installed' => [],
-                'is_dev_user' => $this->appHub->isDevUser($userId),
-                'zone_id' => $zoneId,
-                'origins' => $this->bootstrapOrigins($request),
-            ],
+        $userId = (int) (self::currentUserId() ?? 0);
+
+        return $this->apiResponseWithContext([
+            'user' => $this->resolveSessionUser(),
+            'installed' => [],
+            'is_dev_user' => $this->appHub->isDevUser($userId),
+            'zone_id' => self::currentZoneId(),
+            'origins' => $this->bootstrapOrigins($request),
         ]);
     }
 
     public function apps(Request $request): JsonResponse
     {
-        $userId = (int) $request->attributes->get('knf_core_user_id');
-        $zoneId = $this->currentZoneId($request);
+        $userId = (int) (self::currentUserId() ?? 0);
         $mode = AppCatalogMode::normalize($request->query('mode'));
         $perPage = min(50, max(1, (int) $request->query('per_page', config('apphub.catalog_per_page', 24))));
         $cursor = $request->query('cursor');
         $cursor = is_string($cursor) && $cursor !== '' ? $cursor : null;
 
-        $result = $this->catalog->cursorPaginateForUser($userId, $zoneId, $mode, $cursor, $perPage);
+        $result = $this->catalog->cursorPaginateForUser($userId, self::currentZoneId(), $mode, $cursor, $perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $result['items'],
-            'meta' => $result['meta'],
-        ]);
+        return $this->apiSuccessWithMeta($result['items'], $result['meta']);
     }
 
     /** @return array{hub_public_url: string, frontend_origin: string, runtime_public_url: string, auto_derived: true} */
@@ -65,24 +57,17 @@ class CatalogController extends Controller
         ];
     }
 
-    private function currentZoneId(Request $request): ?int
-    {
-        $zoneId = $request->attributes->get('knf_core_user_zone_id_current');
-
-        return $zoneId !== null && $zoneId !== '' ? (int) $zoneId : null;
-    }
-
     /** @return array{id: int, name: string}|null */
-    private function resolveSessionUser(Request $request): ?array
+    private function resolveSessionUser(): ?array
     {
-        $userId = $request->attributes->get('knf_core_user_id');
-        if (empty($userId)) {
+        $userId = self::currentUserId();
+        if ($userId === null) {
             return null;
         }
 
-        $user = User::byId((int) $userId)->first();
+        $user = User::byId($userId)->first();
         if ($user === null) {
-            return ['id' => (int) $userId, 'name' => (string) $userId];
+            return ['id' => $userId, 'name' => (string) $userId];
         }
 
         $nameCol = $user->getNameColumn();

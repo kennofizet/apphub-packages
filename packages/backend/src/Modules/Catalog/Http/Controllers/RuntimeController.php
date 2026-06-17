@@ -3,7 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Catalog\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppRuntimeServeService;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,7 +18,7 @@ class RuntimeController extends Controller
 
     public function serve(Request $request, string $slug, string $path = ''): Response
     {
-        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
+        if (!preg_match(self::SLUG_PATTERN, $slug)) {
             return new Response('Invalid slug', 422);
         }
 
