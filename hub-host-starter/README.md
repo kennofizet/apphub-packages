@@ -72,6 +72,8 @@ iframe.contentWindow.postMessage(
     language: 'vi',
     theme: 'dark',
     themeToggle: false,
+    // Required when product embeds Hub in an iframe — hosted apps need this for CSP frame-ancestors
+    productOrigin: window.location.origin,
   },
   'https://apphub.yourcompany.com',
 )
@@ -92,6 +94,7 @@ function pushHubConfig() {
       language: settings.locale,
       theme: settings.isDark ? 'dark' : 'light',
       themeToggle: false,
+      productOrigin: window.location.origin,
     },
     hubOrigin,
   )
@@ -149,6 +152,34 @@ Hub SPA and API are different origins. Add your Hub URL to Laravel `config/cors.
 ```
 
 Set `APP_URL` on Laravel to your API host; bootstrap derives Hub/runtime origins.
+
+## Hosted apps — nested iframe (`frame-ancestors`)
+
+When users open a **hosted** app (`runtime_type: hosted`), the bundle is served from the API and shown in a **third** iframe:
+
+```text
+Product (app.yourcompany.com)
+  └── Hub iframe (apphub.yourcompany.com)
+        └── Hosted app iframe (api…/apphub/apps/{slug}/runtime/…)
+```
+
+Browsers enforce CSP **`frame-ancestors`** on the hosted bundle. **Every ancestor origin** in that chain must be allowed, or the app window stays blank (launch succeeds; no CSS/JS loads).
+
+| Laravel `.env` | Who | Example |
+|----------------|-----|---------|
+| `APPHUB_ALLOWED_HUB_ORIGINS` | Hub SPA origin | `https://apphub.yourcompany.com` |
+| `APPHUB_ALLOWED_PRODUCT_ORIGINS` | Product that embeds Hub | `https://app.yourcompany.com` |
+
+**Parent must send `productOrigin`** in the `postMessage` config (see above). Hub forwards it on the runtime launch URL as `product_origin` (and `hub_origin` for the Hub page).
+
+**Local dev defaults** (`APP_ENV=local`): Hub `http://localhost:5173`, product `http://localhost:3000`. If Hub runs on another Vite port (e.g. `5174` because `5173` is taken), add it to `APPHUB_ALLOWED_HUB_ORIGINS`.
+
+```env
+APPHUB_ALLOWED_HUB_ORIGINS=https://apphub.yourcompany.com
+APPHUB_ALLOWED_PRODUCT_ORIGINS=https://app.yourcompany.com
+```
+
+Loopback origins are also accepted automatically when `APPHUB_ALLOW_LOCALHOST_API_URLS` is true (default in local/testing).
 
 ## Package upgrade
 

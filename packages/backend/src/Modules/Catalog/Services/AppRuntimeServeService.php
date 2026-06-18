@@ -159,9 +159,20 @@ final class AppRuntimeServeService
             $this->appendFrameAncestor($list, is_string($origin) ? $origin : '');
         }
 
+        foreach (config('apphub.allowed_product_origins', []) as $origin) {
+            $this->appendFrameAncestor($list, is_string($origin) ? $origin : '');
+        }
+
         $refererOrigin = $this->refererOrigin($request);
         if ($refererOrigin !== null && $this->mayFrameFromOrigin($refererOrigin)) {
             $this->appendFrameAncestor($list, $refererOrigin);
+        }
+
+        foreach (['hub_origin', 'product_origin'] as $param) {
+            $origin = trim((string) $request->query($param, ''));
+            if ($origin !== '' && $this->mayFrameFromOrigin($origin)) {
+                $this->appendFrameAncestor($list, $origin);
+            }
         }
 
         return implode(' ', $list);
@@ -169,8 +180,11 @@ final class AppRuntimeServeService
 
     private function mayFrameFromOrigin(string $origin): bool
     {
-        $allowed = config('apphub.allowed_hub_origins', []);
-        if (is_array($allowed)) {
+        foreach (['allowed_hub_origins', 'allowed_product_origins'] as $key) {
+            $allowed = config('apphub.' . $key, []);
+            if (!is_array($allowed)) {
+                continue;
+            }
             foreach ($allowed as $entry) {
                 if (is_string($entry) && rtrim(trim($entry), '/') === rtrim($origin, '/')) {
                     return true;

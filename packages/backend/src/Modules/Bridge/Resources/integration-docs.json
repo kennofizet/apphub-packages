@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.7.0",
+  "schema_version": "1.8.0",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -203,6 +203,18 @@
           "ManagesHubAppAsDev",
           "HasHubAppCatalog"
         ]
+      },
+      "hosted_runtime_framing": {
+        "summary": "Hosted bundles are served from the API and embedded in a Hub runner iframe. When Hub itself is in a product iframe, the browser checks frame-ancestors for every ancestor origin.",
+        "nested_chain": "product_origin → hub_origin → GET …/apps/{slug}/runtime/…",
+        "laravel_env": {
+          "APPHUB_ALLOWED_HUB_ORIGINS": "Hub SPA origin(s), comma-separated",
+          "APPHUB_ALLOWED_PRODUCT_ORIGINS": "Product shell origin(s) that embed Hub in an iframe"
+        },
+        "parent_post_message": "Include productOrigin: window.location.origin in apphub:host config message",
+        "launch_url_query": "Hub adds hub_origin and product_origin on hosted runtime URL after POST …/launch",
+        "local_dev_defaults": "Hub http://localhost:5173, product http://localhost:3000 when APP_ENV=local",
+        "misconfiguration_symptom": "launch OK, runtime/index.html OK, blank app window, no CSS/JS requests"
       }
     }
   },
@@ -333,7 +345,7 @@
         "path": "apps/{slug}/runtime/{path}",
         "auth": "launch_token",
         "audience": ["publisher", "end_user"],
-        "description": "Serve hosted bundle files. launch_token query on index; HttpOnly cookie for assets."
+        "description": "Serve hosted bundle files. launch_token query on index; HttpOnly cookie for assets. CSP frame-ancestors allows APPHUB_ALLOWED_HUB_ORIGINS + APPHUB_ALLOWED_PRODUCT_ORIGINS (+ hub_origin/product_origin query from Hub). Required for nested iframe: product → hub → app."
       },
       {
         "method": "GET",

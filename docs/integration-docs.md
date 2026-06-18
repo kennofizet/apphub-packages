@@ -47,6 +47,17 @@ Host backend must:
 
 Publishers only see granted bridge responses — not how enforcement works.
 
+### Hosted runtime framing (host_dev)
+
+When the product embeds Hub in an iframe and users open **hosted** apps, the browser enforces CSP **`frame-ancestors`** on `GET …/apps/{slug}/runtime/{path}`. **Both** origins must be allowed:
+
+| Laravel env | Role |
+|-------------|------|
+| `APPHUB_ALLOWED_HUB_ORIGINS` | Hub SPA (e.g. `https://apphub.yourcompany.com`) |
+| `APPHUB_ALLOWED_PRODUCT_ORIGINS` | Product shell that embeds Hub (e.g. `https://app.yourcompany.com`) |
+
+Parent `postMessage` must include `productOrigin: window.location.origin`. Hub forwards `hub_origin` and `product_origin` on the hosted launch URL. Details: [hub-host-starter/README.md](../hub-host-starter/README.md), [PLAN-HOSTED-WEB.md](./PLAN-HOSTED-WEB.md) H.2.1.
+
 ---
 
 ## Delivery

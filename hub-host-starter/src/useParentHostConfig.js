@@ -21,6 +21,7 @@ function readInitialHostConfig() {
     language: 'vi',
     theme: 'auto',
     themeToggle: false,
+    productOrigin: '',
   }
 }
 
@@ -47,6 +48,9 @@ function applyHostMessage(config, data) {
   const themeToggle = parseThemeToggle(data.themeToggle)
   if (themeToggle !== undefined) {
     config.themeToggle = themeToggle
+  }
+  if (typeof data.productOrigin === 'string' && data.productOrigin.trim()) {
+    config.productOrigin = data.productOrigin.trim()
   }
 }
 
@@ -82,6 +86,8 @@ export function useParentHostConfig(vueApp) {
       theme: config.theme,
       themeToggle: config.themeToggle,
       dedicatedHubHost: true,
+      hubOrigin: typeof window !== 'undefined' ? window.location.origin : '',
+      productOrigin: config.productOrigin || undefined,
     })
   }
 
@@ -110,7 +116,7 @@ export function useParentHostConfig(vueApp) {
   }
 
   watch(
-    () => [config.token, config.language, config.theme, config.themeToggle],
+    () => [config.token, config.language, config.theme, config.themeToggle, config.productOrigin],
     () => syncModule(),
     { immediate: true },
   )

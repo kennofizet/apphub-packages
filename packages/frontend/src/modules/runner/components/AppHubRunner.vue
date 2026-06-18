@@ -127,6 +127,7 @@ import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import { useBridgeScopeConsent } from '../composables/useBridgeScopeConsent.js'
 import { injectRuntimeDocumentScrollbarsIntoIframe } from '../../../utils/runtimeDocumentScrollbars.js'
 import { useRunnerBridge } from '../composables/useRunnerBridge.js'
+import { appendHostedFrameAncestorParams } from '../../../utils/hostedLaunchUrl.js'
 
 const props = defineProps({
   slug: { type: String, required: true },
@@ -374,7 +375,12 @@ async function doLaunch() {
       error.value = labels.value.safe_fail
       return
     }
-    launchUrl.value = candidate
+    launchUrl.value = hostedRuntime
+      ? appendHostedFrameAncestorParams(candidate, {
+        hubOrigin: typeof window !== 'undefined' ? window.location.origin : '',
+        productOrigin: moduleOptions?.productOrigin ?? '',
+      })
+      : candidate
     const launchToken = data.launch_token ?? null
     const scopesGranted = Array.isArray(data.scopes_granted) ? [...data.scopes_granted] : []
     launchContext.value = {

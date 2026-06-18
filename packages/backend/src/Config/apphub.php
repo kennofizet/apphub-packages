@@ -34,6 +34,17 @@ return [
         )),
     ))),
 
+    /** Product shell origins when Hub is embedded (nested iframe: product → hub → app). See hub-host-starter README. */
+    'allowed_product_origins' => array_values(array_filter(array_map(
+        static fn (string $v): string => trim($v),
+        explode(',', (string) env(
+            'APPHUB_ALLOWED_PRODUCT_ORIGINS',
+            in_array(env('APP_ENV', 'production'), ['local', 'testing'], true)
+                ? 'http://localhost:3000,http://127.0.0.1:3000'
+                : '',
+        )),
+    ))),
+
     /** Seconds before install intent expires (shown in permission dialog). */
     'install_intent_ttl_seconds' => max(30, (int) env('APPHUB_INSTALL_INTENT_TTL_SECONDS', 120)),
 
