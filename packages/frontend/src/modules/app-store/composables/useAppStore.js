@@ -114,7 +114,18 @@ export function createAppStoreState(options = {}) {
     if (idx === -1) {
       bucket.items.unshift(item)
     } else {
-      bucket.items[idx] = { ...bucket.items[idx], ...item }
+      const prev = bucket.items[idx]
+      bucket.items[idx] = {
+        ...prev,
+        ...item,
+        rejected_version: item.rejected_version ?? prev.rejected_version ?? null,
+        awaiting_dev_review: typeof item.awaiting_dev_review === 'boolean'
+          ? item.awaiting_dev_review
+          : (prev.awaiting_dev_review ?? null),
+        current_version_review_status: item.current_version_review_status
+          ?? prev.current_version_review_status
+          ?? null,
+      }
     }
     syncInstalledFlags()
     bucket.loaded = true

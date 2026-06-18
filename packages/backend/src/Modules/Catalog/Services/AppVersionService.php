@@ -236,6 +236,10 @@ final class AppVersionService
         }
 
         if ($app->isDraft() && $version === (string) $app->version) {
+            if ($stored === AppVersionReviewStatus::REJECTED) {
+                return AppVersionReviewStatus::REJECTED;
+            }
+
             return AppVersionReviewStatus::PENDING;
         }
 

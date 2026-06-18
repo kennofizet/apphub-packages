@@ -103,7 +103,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { isRunningRejectedVersion, resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
+import { isRejectedDraftSubmission, isRunningRejectedVersion, resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
 import { isSemverGreaterThan } from '../../../utils/semver.js'
 import AppHubAppVersionHistory from './AppHubAppVersionHistory.vue'
 
@@ -123,7 +123,7 @@ const historyOpen = ref(false)
 const runningRejected = computed(() => isRunningRejectedVersion({
   ...props.app,
   installedVersion: props.installedVersion,
-}))
+}) || isRejectedDraftSubmission(props.app))
 
 const statusLabel = computed(() => {
   if (props.app?.pending_version) return props.labels.publisher_pending_version_badge

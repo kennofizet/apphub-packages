@@ -89,7 +89,7 @@
             <span
               v-else-if="iconShowsRejectedTest(item.app)"
               class="apphub-desktop__icon-flag apphub-desktop__icon-flag--rejected"
-              :title="labels.desktop_icon_rejected_hint"
+              :title="iconRejectedHint(item.app)"
             >
               {{ labels.publisher_rejected_icon_badge }}
             </span>
@@ -331,6 +331,7 @@ import AppHubDesktopDevOriginBar from './AppHubDesktopDevOriginBar.vue'
 import { createDesktopDropInstall } from '../composables/useDesktopDropInstall.js'
 import { clampPerPage } from '../../../utils/catalogPagination.js'
 import {
+  isRejectedDraftSubmission,
   isRunningRejectedVersion,
   isTestingPendingVersion,
   resolvePublisherTestVersion,
@@ -507,6 +508,7 @@ const labels = computed(() => ({
   desktop_icon_pending_hint: t('desktop_icon_pending_hint', lang.value),
   publisher_rejected_icon_badge: t('publisher_rejected_icon_badge', lang.value),
   desktop_icon_rejected_hint: t('desktop_icon_rejected_hint', lang.value),
+  desktop_icon_rejected_draft_hint: t('desktop_icon_rejected_draft_hint', lang.value),
   drop_hint: t('drop_hint', lang.value),
   drop_installing: t('drop_installing', lang.value),
   drop_error: t('drop_error', lang.value),
@@ -930,9 +932,20 @@ function handleUninstallUserApp(appOrSlug) {
 
 function iconShowsDraftStatus(app) {
   if (!app || app.builtin) return false
-  if (app.status === 'draft') return true
   const catalog = appStore.findCatalogItem(app.slug)
+  const merged = catalog ? { ...catalog, ...app } : app
+  if (isRejectedDraftSubmission(merged)) return false
+  if (app.status === 'draft') return true
   return catalog?.status === 'draft'
+}
+
+function iconRejectedHint(app) {
+  const catalog = appStore.findCatalogItem(app?.slug)
+  const merged = catalog ? { ...catalog, ...app } : app
+  if (isRejectedDraftSubmission(merged)) {
+    return labels.value.desktop_icon_rejected_draft_hint
+  }
+  return labels.value.desktop_icon_rejected_hint
 }
 
 function syncUserAppPublisherFields(catalogApp) {
@@ -1029,17 +1042,21 @@ async function refreshPublisherCatalogIfReady() {
 
 async function handleCatalogAppChanged(catalogApp) {
   if (!catalogApp?.slug) return
-  syncUserAppPublisherFields(catalogApp)
+
   const api = getHostApiForApp(rootApp)
   if (api?.apps && isBackendReadyForApp(rootApp)) {
     await appStore.loadCatalog(api, { backendReady: true, mode: CATALOG_MODE_STORE, perPage: clampPerPage(48) })
     await refreshPublisherCatalog()
   }
-  if (typeof appStore.upsertCatalogItem === 'function') {
+
+  const ownedInPublisher = appStore.catalogs.draft.items.some((a) => a.slug === catalogApp.slug)
+  if (ownedInPublisher && typeof appStore.upsertCatalogItem === 'function') {
     appStore.upsertCatalogItem(CATALOG_MODE_PUBLISHER, catalogApp)
+    if (shell.findUserAppBySlug(catalogApp.slug)) {
+      syncUserAppPublisherFields(catalogApp)
+      schedulePersist()
+    }
   }
-  syncUserAppPublisherFields(catalogApp)
-  schedulePersist()
 }
 
 const shell = createDesktopShell({

@@ -11,6 +11,7 @@ use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppCatalogMode;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppPermissionType;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 
 final class AppCatalogService
@@ -168,6 +169,61 @@ final class AppCatalogService
         ];
     }
 
+    public function appAwaitingDevReview(App $app): bool
+    {
+        if ($app->hasPendingVersion()) {
+            return true;
+        }
+
+        if (!$app->isDraft()) {
+            return false;
+        }
+
+        $version = AppSemver::normalize(trim((string) ($app->version ?? '')));
+        if ($version === '') {
+            return false;
+        }
+
+        $stored = $this->storedVersionReviewStatus($app, $version);
+
+        if ($stored === AppVersionReviewStatus::REJECTED) {
+            return false;
+        }
+
+        return $stored === AppVersionReviewStatus::PENDING || $stored === null;
+    }
+
+    private function storedVersionReviewStatus(App $app, string $version): ?string
+    {
+        $normalized = AppSemver::normalize($version);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $row = AppVersion::query()
+            ->where('app_id', $app->id)
+            ->where('version', $normalized)
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $stored = trim((string) ($row->review_status ?? ''));
+
+        return $stored !== '' ? $stored : null;
+    }
+
+    private function currentVersionReviewStatus(App $app): ?string
+    {
+        $version = AppSemver::normalize(trim((string) ($app->version ?? '')));
+        if ($version === '') {
+            return null;
+        }
+
+        return $this->storedVersionReviewStatus($app, $version);
+    }
+
     /** @return array<string, mixed> */
     public function toCatalogItem(App $app, ?int $viewerUserId = null, ?string $catalogMode = null): array
     {
@@ -178,6 +234,8 @@ final class AppCatalogService
             'version' => $app->version,
             'pending_version' => $showReviewFields ? $app->pending_version : null,
             'rejected_version' => $showReviewFields ? $this->publisherRejectedVersion($app) : null,
+            'awaiting_dev_review' => $showReviewFields ? $this->appAwaitingDevReview($app) : null,
+            'current_version_review_status' => $showReviewFields ? $this->currentVersionReviewStatus($app) : null,
             'name' => $app->name,
             'description' => $app->short_description,
             'icon' => $app->icon,
@@ -300,12 +358,20 @@ final class AppCatalogService
 
     private function publisherRejectedVersion(App $app): ?string
     {
+        $live = trim((string) ($app->version ?? ''));
+        $pending = trim((string) ($app->pending_version ?? ''));
+
+        if ($app->isDraft() && $live !== '') {
+            $stored = $this->storedVersionReviewStatus($app, $live);
+
+            return $stored === AppVersionReviewStatus::REJECTED
+                ? AppSemver::normalize($live)
+                : null;
+        }
+
         if (!$app->isActive()) {
             return null;
         }
-
-        $live = trim((string) ($app->version ?? ''));
-        $pending = trim((string) ($app->pending_version ?? ''));
 
         $query = AppVersion::query()
             ->where('app_id', $app->id)

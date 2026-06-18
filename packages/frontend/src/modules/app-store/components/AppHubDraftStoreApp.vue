@@ -30,7 +30,7 @@
       </p>
 
       <div
-        v-else-if="!catalog.loading && !pendingApps.length && !publishedApps.length"
+        v-else-if="!catalog.loading && !pendingApps.length && !rejectedDraftApps.length && !publishedApps.length"
         class="apphub-draft-store__empty"
       >
         <span class="apphub-draft-store__empty-icon" aria-hidden="true">📭</span>
@@ -43,6 +43,29 @@
           <p class="apphub-draft-store__section-hint">{{ labels.publisher_pending_hint }}</p>
           <ul class="apphub-draft-store__list">
             <li v-for="app in pendingApps" :key="app.slug">
+              <AppHubDraftStoreCard
+                :app="app"
+                :labels="labels"
+                :root-app="rootApp"
+                :installed="appStore.isInstalled(app.slug)"
+                :installed-version="installedVersionFor(app.slug)"
+                :can-install="appStore.canInstall(app)"
+                :pinging="pingingSlug === app.slug"
+                :ping-result="pingResults[app.slug] ?? null"
+                @install="onInstall"
+                @update="onUpdate"
+                @uninstall="onUninstall"
+                @ping="onPing"
+              />
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="rejectedDraftApps.length" class="apphub-draft-store__section">
+          <h3 class="apphub-draft-store__section-title">{{ labels.publisher_rejected_title }}</h3>
+          <p class="apphub-draft-store__section-hint">{{ labels.publisher_rejected_hint }}</p>
+          <ul class="apphub-draft-store__list">
+            <li v-for="app in rejectedDraftApps" :key="app.slug">
               <AppHubDraftStoreCard
                 :app="app"
                 :labels="labels"
@@ -104,6 +127,7 @@ import { resolveLang } from '../../../i18n/resolveLang.js'
 import { CATALOG_MODE_PUBLISHER } from '../constants/catalogModes.js'
 import { useCatalogInfiniteScroll } from '../composables/useCatalogInfiniteScroll.js'
 import { useAppStore } from '../composables/useAppStore.js'
+import { isAwaitingDevReview, isRejectedDraftSubmission } from '../../../utils/publisherTestVersion.js'
 import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
 
 const props = defineProps({
@@ -163,10 +187,16 @@ const labels = computed(() => ({
   publisher_published_hint: t('publisher_published_hint', lang.value),
   publisher_pending_version_badge: t('publisher_pending_version_badge', lang.value),
   publisher_rejected_version_badge: t('publisher_rejected_version_badge', lang.value),
+  publisher_rejected_title: t('publisher_rejected_title', lang.value),
+  publisher_rejected_hint: t('publisher_rejected_hint', lang.value),
 }))
 
 const pendingApps = computed(() =>
-  appStore.filteredTestingApps.filter((a) => a?.status === 'draft' || a?.pending_version),
+  appStore.filteredTestingApps.filter((a) => isAwaitingDevReview(a)),
+)
+
+const rejectedDraftApps = computed(() =>
+  appStore.filteredTestingApps.filter((a) => isRejectedDraftSubmission(a)),
 )
 
 const publishedApps = computed(() =>
@@ -229,7 +259,7 @@ async function onPing(app) {
 }
 
 onMounted(() => {
-  if (!catalog.loaded) reloadCatalog()
+  reloadCatalog()
 })
 
 watch(

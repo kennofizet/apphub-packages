@@ -196,7 +196,7 @@ class CatalogDevController extends Controller
         }
 
         try {
-            $app = $this->publish->rejectPendingVersion($app);
+            $app = $this->publish->rejectDevReview($app);
         } catch (\RuntimeException $e) {
             return $this->apiErrorResponse($e->getMessage(), 422);
         }

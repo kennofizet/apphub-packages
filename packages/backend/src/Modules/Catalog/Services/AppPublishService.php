@@ -133,6 +133,22 @@ final class AppPublishService
     }
 
     /**
+     * DEV review reject — pending upgrade on active app, or initial/resubmitted draft submission.
+     */
+    public function rejectDevReview(App $app): App
+    {
+        if ($app->isActive() && $app->hasPendingVersion()) {
+            return $this->rejectPendingVersion($app);
+        }
+
+        if ($app->isDraft()) {
+            return $this->rejectDraftSubmission($app);
+        }
+
+        throw new RuntimeException('Nothing to reject for this app');
+    }
+
+    /**
      * Reject a queued version upgrade on an already-active app (DEV review).
      */
     public function rejectPendingVersion(App $app): App
@@ -158,6 +174,39 @@ final class AppPublishService
         $this->skipStalePendingVersions($app->id);
 
         return $app;
+    }
+
+    /**
+     * Reject an initial or resubmitted draft submission (app stays draft for publisher retry).
+     */
+    public function rejectDraftSubmission(App $app): App
+    {
+        if (!$app->isDraft()) {
+            throw new RuntimeException('Only draft apps can be rejected this way');
+        }
+
+        if ($app->hasPendingVersion()) {
+            throw new RuntimeException('Use reject pending for active app version upgrades');
+        }
+
+        $version = AppSemver::normalize((string) ($app->version ?? ''));
+        if ($version === '' || !AppSemver::isValid($version)) {
+            throw new RuntimeException('No version to reject');
+        }
+
+        $exists = AppVersion::query()
+            ->where('app_id', $app->id)
+            ->where('version', $version)
+            ->exists();
+
+        if (!$exists) {
+            throw new RuntimeException('Version bundle not found');
+        }
+
+        $this->setVersionReviewStatus($app->id, $version, AppVersionReviewStatus::REJECTED);
+        $this->skipOtherPendingVersions($app->id, $version);
+
+        return $app->refresh() ?? $app;
     }
 
     /**

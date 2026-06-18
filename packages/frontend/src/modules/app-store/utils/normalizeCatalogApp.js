@@ -24,6 +24,12 @@ export function normalizeCatalogApp(row) {
     version: typeof row.version === 'string' && row.version.trim() ? row.version.trim() : null,
     pending_version: pendingVersion,
     rejected_version: rejectedVersion,
+    awaiting_dev_review:
+      typeof row.awaiting_dev_review === 'boolean' ? row.awaiting_dev_review : null,
+    current_version_review_status:
+      typeof row.current_version_review_status === 'string' && row.current_version_review_status.trim()
+        ? row.current_version_review_status.trim()
+        : null,
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : slug,
     description: typeof row.description === 'string' ? row.description : '',
     icon: typeof row.icon === 'string' && row.icon ? row.icon : '📦',

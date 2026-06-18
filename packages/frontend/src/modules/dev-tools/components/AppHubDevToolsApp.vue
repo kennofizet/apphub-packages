@@ -149,6 +149,7 @@ import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
+import { isAwaitingDevReview } from '../../../utils/publisherTestVersion.js'
 import AppHubDevToolsCodeReview from './AppHubDevToolsCodeReview.vue'
 import AppHubDevToolsReviewItem from './AppHubDevToolsReviewItem.vue'
 
@@ -227,7 +228,7 @@ const inspect = reactive({})
 const selectedFile = reactive({})
 const fileContent = reactive({})
 
-const draftApps = computed(() => allApps.value.filter((a) => a?.status === 'draft' || a?.pending_version))
+const draftApps = computed(() => allApps.value.filter((a) => isAwaitingDevReview(a)))
 const activeApps = computed(() => allApps.value.filter((a) => a?.status === 'active'))
 const expandedApp = computed(() =>
   expandedSlug.value ? allApps.value.find((a) => a?.slug === expandedSlug.value) ?? null : null,
@@ -447,7 +448,7 @@ async function reject(slug) {
   }
 
   if (app.status === 'draft') {
-    await confirmDialog.confirm({
+    const ok = await confirmDialog.confirm({
       title: labels.value.reject_title,
       message: labels.value.reject_confirm,
       hint: labels.value.reject_done,
@@ -455,6 +456,18 @@ async function reject(slug) {
       cancelLabel: labels.value.confirm_cancel,
       danger: true,
     })
+    if (!ok) return
+
+    try {
+      await executeRejectPending(slug)
+    } catch (err) {
+      const message = err?.response?.data?.error ?? err?.message ?? labels.value.reject_error_failed
+      await confirmDialog.alert({
+        title: labels.value.reject_title,
+        message,
+        confirmLabel: labels.value.confirm_ok,
+      })
+    }
     return
   }
 
