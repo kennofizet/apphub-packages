@@ -930,18 +930,22 @@ function handleUninstallUserApp(appOrSlug) {
   return true
 }
 
+function resolveCatalogMergedApp(app) {
+  if (!app?.slug || app.builtin) return app
+  const catalog = appStore.findCatalogItem(app.slug)
+  return catalog ? { ...catalog, ...app } : app
+}
+
 function iconShowsDraftStatus(app) {
   if (!app || app.builtin) return false
-  const catalog = appStore.findCatalogItem(app.slug)
-  const merged = catalog ? { ...catalog, ...app } : app
+  const merged = resolveCatalogMergedApp(app)
   if (isRejectedDraftSubmission(merged)) return false
-  if (app.status === 'draft') return true
-  return catalog?.status === 'draft'
+  if (merged.status === 'draft') return true
+  return false
 }
 
 function iconRejectedHint(app) {
-  const catalog = appStore.findCatalogItem(app?.slug)
-  const merged = catalog ? { ...catalog, ...app } : app
+  const merged = resolveCatalogMergedApp(app)
   if (isRejectedDraftSubmission(merged)) {
     return labels.value.desktop_icon_rejected_draft_hint
   }
@@ -951,6 +955,9 @@ function iconRejectedHint(app) {
 function syncUserAppPublisherFields(catalogApp) {
   const slug = catalogApp?.slug
   if (!slug || !shell.findUserAppBySlug(slug)) return false
+
+  const rejectedVersion = catalogApp.rejected_version
+    ?? (catalogApp.current_version_review_status === 'rejected' ? catalogApp.version : null)
 
   shell.patchUserAppBySlug(slug, {
     status: catalogApp.status,
@@ -962,7 +969,7 @@ function syncUserAppPublisherFields(catalogApp) {
     permissions: Array.isArray(catalogApp.permissions) ? catalogApp.permissions : [],
     pending_version: catalogApp.pending_version ?? null,
     catalog_version: catalogApp.version ?? null,
-    rejected_version: catalogApp.rejected_version ?? null,
+    rejected_version: rejectedVersion ?? null,
   })
 
   const pinVersion = resolvePublisherTestVersion(catalogApp)
@@ -975,25 +982,28 @@ function syncUserAppPublisherFields(catalogApp) {
 
 function iconShowsPendingTest(app) {
   if (!app || app.builtin || iconShowsDraftStatus(app)) return false
-  if (isTestingPendingVersion(app)) return true
+  const merged = resolveCatalogMergedApp(app)
+  if (isTestingPendingVersion(merged)) return true
 
-  const catalog = appStore.findCatalogItem(app.slug)
-  if (!catalog?.pending_version) return false
+  const pending = merged.pending_version
+  if (!pending) return false
 
-  const installed = app.installedVersion ?? app.version
-  return Boolean(installed && installed === catalog.pending_version)
+  const installed = merged.installedVersion ?? merged.version
+  return Boolean(installed && installed === pending)
 }
 
 function iconShowsRejectedTest(app) {
   if (!app || app.builtin || iconShowsDraftStatus(app)) return false
   if (iconShowsPendingTest(app)) return false
-  if (isRunningRejectedVersion(app)) return true
+  const merged = resolveCatalogMergedApp(app)
+  if (isRejectedDraftSubmission(merged)) return true
+  if (isRunningRejectedVersion(merged)) return true
 
-  const catalog = appStore.findCatalogItem(app.slug)
-  if (!catalog?.rejected_version) return false
+  const rejected = merged.rejected_version
+  if (!rejected) return false
 
-  const installed = app.installedVersion ?? app.version
-  return Boolean(installed && installed === catalog.rejected_version)
+  const installed = merged.installedVersion ?? merged.version
+  return Boolean(installed && installed === rejected)
 }
 
 function syncPublisherVersionBadgesFromCatalog() {
@@ -1033,6 +1043,7 @@ async function refreshPublisherCatalog() {
     perPage: clampPerPage(48),
   })
   syncPublisherVersionBadgesFromCatalog()
+  schedulePersist()
 }
 
 async function refreshPublisherCatalogIfReady() {
@@ -1629,9 +1640,11 @@ async function tryInitialOpenSlug() {
 }
 
 watch(
-  () => moduleOptions?.hasToken,
-  (hasToken) => {
-    if (hasToken) tryInitialOpenSlug()
+  () => [moduleOptions?.hasToken, moduleOptions?.originBootstrapLoading],
+  ([hasToken, bootstrapLoading]) => {
+    if (!hasToken || bootstrapLoading === true) return
+    refreshPublisherCatalogIfReady()
+    tryInitialOpenSlug()
   },
 )
 
@@ -1923,7 +1936,6 @@ async function initDesktopShell() {
     shell.restoreSession(session, wm)
     ensureBuiltinPositions()
     assignDefaultIconPositions()
-    schedulePersist()
     await tryInitialOpenSlug()
     await refreshPublisherCatalogIfReady()
     return
