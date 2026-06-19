@@ -1,4 +1,4 @@
-import { cpSync, existsSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
@@ -8,12 +8,15 @@ import { removeZipFilesIn, zipDirectory, zipFiles } from './lib/zip.mjs'
 const exampleRoot = join(fileURLToPath(import.meta.url), '..', '..')
 const htmlRoot = join(exampleRoot, 'demo-simple', 'html')
 const vueRoot = join(exampleRoot, 'demo-simple', 'vue')
+const iframeRoot = join(exampleRoot, 'demo-iframe', 'html')
 const releaseDir = join(exampleRoot, 'release')
 
 const htmlManifestPath = join(htmlRoot, 'manifest.json')
 const vueManifestPath = join(vueRoot, 'manifest.json')
+const iframeManifestPath = join(iframeRoot, 'manifest.json')
 const htmlZipPath = join(releaseDir, 'demo-simple-html.zip')
 const vueZipPath = join(releaseDir, 'demo-simple-vue.zip')
+const iframeManifestReleasePath = join(releaseDir, 'demo-iframe-manifest.json')
 
 const HTML_FILES = ['manifest.json', 'index.html', 'styles.css', 'app.js']
 
@@ -34,14 +37,19 @@ const htmlMeta = updateManifestVersion(htmlManifestPath)
 console.log(`HTML  ${htmlMeta.previousVersion} → ${htmlMeta.version}  (${htmlMeta.manifest.slug})`)
 
 const vueMeta = updateManifestVersion(vueManifestPath)
-console.log(`Vue   ${vueMeta.previousVersion} → ${vueMeta.version}  (${vueMeta.manifest.slug})\n`)
+console.log(`Vue   ${vueMeta.previousVersion} → ${vueMeta.version}  (${vueMeta.manifest.slug})`)
+
+const iframeMeta = updateManifestVersion(iframeManifestPath)
+console.log(`Iframe ${iframeMeta.previousVersion} → ${iframeMeta.version}  (${iframeMeta.manifest.slug})\n`)
 
 await packHtml()
 await packVue()
+packIframeManifest()
 
 console.log('\nDone — drop these on App Hub desktop:')
 console.log(`  ${htmlZipPath}`)
 console.log(`  ${vueZipPath}`)
+console.log(`  ${iframeManifestReleasePath}  (serve demo-iframe first — see demo-iframe/README.md)`)
 
 async function packHtml() {
   const files = HTML_FILES.map((name) => join(htmlRoot, name))
@@ -67,4 +75,13 @@ async function packVue() {
 
   await zipDirectory(dist, vueZipPath)
   console.log(`Packed Vue  → release/demo-simple-vue.zip (v${vueMeta.version})`)
+}
+
+function packIframeManifest() {
+  if (!existsSync(iframeManifestPath)) {
+    throw new Error(`Iframe demo missing: ${iframeManifestPath}`)
+  }
+  const text = readFileSync(iframeManifestPath, 'utf8')
+  writeFileSync(iframeManifestReleasePath, text)
+  console.log(`Copied iframe manifest → release/demo-iframe-manifest.json (v${iframeMeta.version})`)
 }

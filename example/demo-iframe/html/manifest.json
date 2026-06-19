@@ -1,0 +1,17 @@
+{
+  "slug": "demo-iframe-htmlz1z",
+  "name": "demo-iframe-htmlz1z",
+  "version": "1.0.21",
+  "description": "Self-hosted iframe app — serve this folder, then drop manifest.json on App Hub.",
+  "icon": "🌐",
+  "runtime_type": "iframe",
+  "entry_url": "http://localhost:15180/",
+  "healthcheck_url": "http://localhost:15180/health",
+  "permissions": [
+    "user.read",
+    "desktop.notify"
+  ],
+  "api_urls": [
+    "http://localhost:51732"
+  ]
+}

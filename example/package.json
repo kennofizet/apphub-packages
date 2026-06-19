@@ -4,7 +4,8 @@
   "description": "App Hub publisher example apps — bump versions and pack test zips",
   "type": "module",
   "scripts": {
-    "pack": "node scripts/pack-all.mjs"
+    "pack": "node scripts/pack-all.mjs",
+    "serve:iframe": "node demo-iframe/serve.mjs"
   },
   "devDependencies": {
     "archiver": "^7.0.1"

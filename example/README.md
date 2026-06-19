@@ -1,15 +1,29 @@
 # App Hub — examples
 
-Publisher-facing **sample apps** for testing the hosted runtime. These live outside `packages/` and are **not** shipped with the Hub module.
+Publisher-facing **sample apps** for testing hosted and iframe runtimes. These live outside `packages/` and are **not** shipped with the Hub module.
 
 ## `demo-simple/`
 
-Two minimal hosted bundles you can zip and drop on the App Hub desktop.
+Two minimal **hosted** bundles you can zip and drop on the App Hub desktop.
 
 | Folder | Stack | App slug |
 |--------|--------|----------|
 | `demo-simple/html/` | HTML + CSS + JS | `demo-simple-html` |
 | `demo-simple/vue/` | Vue 3 + Vite | `demo-simple-vue` |
+
+## `demo-iframe/`
+
+Self-hosted **iframe** app — no zip. Serve `html/` locally, then drop `manifest.json` on the Hub desktop.
+
+| Folder | Stack | App slug |
+|--------|--------|----------|
+| `demo-iframe/html/` | HTML + CSS + JS | `demo-iframe-html` |
+
+See [`demo-iframe/README.md`](demo-iframe/README.md) for serve + register steps.
+
+---
+
+## Hosted demos (`demo-simple/`)
 
 Each folder includes a `manifest.json`. Hub reads **only** that file from inside the zip (no manual fields in the UI).
 
@@ -67,6 +81,40 @@ No `"action": "replace"` — bump `version` in `manifest.json` and drop again.
 
 ---
 
+## Iframe publish (self-hosted, no zip)
+
+Use **`demo-iframe/`** for a full walkthrough. In short:
+
+1. `npm run serve:iframe` from `example/` (serves on `http://localhost:15180/`)
+2. `npm run pack` — bumps `demo-iframe/html/manifest.json` and copies to `release/demo-iframe-manifest.json`
+3. Drop that manifest on the Hub desktop
+
+Or `POST /apps/register` with JSON:
+
+```json
+{
+  "slug": "my-iframe-app",
+  "name": "My Iframe App",
+  "version": "1.0.0",
+  "description": "Runs on my own origin",
+  "icon": "🌐",
+  "runtime_type": "iframe",
+  "entry_url": "https://tools.example.com/apps/my-app/",
+  "healthcheck_url": "https://tools.example.com/apps/my-app/health",
+  "permissions": ["user.read"]
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `runtime_type` | yes | Must be `iframe` |
+| `entry_url` | yes | HTTPS in production; `http://localhost` allowed in local dev when configured |
+| `version` | yes | Same semver rules as hosted zip publish |
+
+DEV approves in Dev Tools like hosted apps. Hub loads `entry_url` in the runner iframe with `launch_token` query.
+
+---
+
 ## Quick pack (both demos)
 
 From **`example/`** (one command for re-testing on Hub):
@@ -79,7 +127,7 @@ npm run pack
 
 This will:
 
-1. **Bump patch version** in `demo-simple/html/manifest.json` and `demo-simple/vue/manifest.json`
+1. **Bump patch version** in `demo-simple/html/manifest.json`, `demo-simple/vue/manifest.json`, and `demo-iframe/html/manifest.json`
 2. **Delete old `.zip` files** in `example/release/` and demo `release/` folders
 3. **Build** the Vue demo and create fresh zips:
 
@@ -87,8 +135,9 @@ This will:
 |--------|------|
 | `release/demo-simple-html.zip` | `demo-simple-html` |
 | `release/demo-simple-vue.zip` | `demo-simple-vue` |
+| `release/demo-iframe-manifest.json` | `demo-iframe-html` (iframe — serve first) |
 
-Drop both zips on the App Hub desktop (close windows first). Each run increments version so re-upload succeeds.
+Drop hosted zips or the iframe manifest on the App Hub desktop (close windows first). Each run increments version so re-upload succeeds.
 
 ---
 

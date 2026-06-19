@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Iframe — HTML</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <h1>Demo Iframe (HTML)</h1>
+    <p id="version" class="app__version" aria-live="polite">Version …</p>
+    <p class="app__lead">Self-hosted at <code>entry_url</code> — Hub loads this page in an iframe.</p>
+    <p id="status" class="app__status">Ready.</p>
+    <button type="button" id="btn" class="app__btn">Say hello (display_user)</button>
+    <button type="button" id="btn-verify" class="app__btn app__btn--secondary">Verify user (API)</button>
+    <p id="hello" class="app__hello" hidden></p>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

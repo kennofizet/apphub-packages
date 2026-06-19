@@ -1,0 +1,80 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.app {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.app__lead {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.app__lead code {
+  font-size: 0.85em;
+  color: #cbd5e1;
+}
+
+.app__version {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #6ee7b7;
+  background: #064e3b;
+  border: 1px solid #334155;
+}
+
+.app__status {
+  font-size: 0.85rem;
+  color: #86efac;
+}
+
+.app__btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #059669;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app__btn:hover {
+  background: #047857;
+}
+
+.app__btn--secondary {
+  background: #334155;
+}
+
+.app__btn--secondary:hover {
+  background: #475569;
+}
+
+.app__hello {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #0f172a;
+  font-size: 0.9rem;
+}
