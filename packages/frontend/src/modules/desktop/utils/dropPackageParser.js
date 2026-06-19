@@ -7,6 +7,7 @@ const MAX_MANIFEST_BYTES = 64 * 1024
 /**
  * Parse dropped files into an install intent.
  * Hosted publish: drop .zip (manifest.json inside zip) → draft submit, await DEV approval.
+ * Iframe publish: drop manifest.json only (runtime_type: iframe + entry_url) → same flow.
  */
 export async function parseDropFiles(dataTransfer) {
   let files = [...(dataTransfer?.files ?? [])]
@@ -41,6 +42,10 @@ export async function parseDropFiles(dataTransfer) {
   if (jsonFile) {
     const manifest = await readManifestFile(jsonFile)
     if (!manifest) return null
+
+    if (isIframePublishManifest(manifest)) {
+      return buildIframePublishIntent(manifest)
+    }
 
     if (manifest.source === 'appstore' && manifest.slug) {
       const slug = normalizeSlug(manifest.slug)
@@ -87,9 +92,33 @@ export async function parseDropFiles(dataTransfer) {
 function isHostedPublishManifest(manifest) {
   if (!manifest || typeof manifest !== 'object') return false
   const runtime = typeof manifest.runtime_type === 'string' ? manifest.runtime_type.toLowerCase() : ''
+  if (runtime === 'iframe') return false
   if (runtime === 'hosted') return true
   if (manifest.source === 'publish' || manifest.source === 'hosted') return true
   return Boolean(manifest.slug && manifest.name && !manifest.entry_url)
+}
+
+function isIframePublishManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object') return false
+  const runtime = typeof manifest.runtime_type === 'string' ? manifest.runtime_type.toLowerCase() : ''
+  if (runtime !== 'iframe') return false
+  return Boolean(manifest.entry_url || manifest.runtime_url)
+}
+
+function buildIframePublishIntent(manifest) {
+  const slug = manifest?.slug ? normalizeSlug(manifest.slug) : null
+
+  return {
+    method: 'publish',
+    publishMode: 'iframe',
+    manifest,
+    slug,
+    name: clampString(manifest?.name) || slug || 'iframe-app',
+    icon: clampString(manifest?.icon, 16) || '🌐',
+    description: clampString(manifest?.description ?? manifest?.short_description, 500),
+    permissions: resolveAppPermissions(manifest ?? {}),
+    api_urls: resolveAppApiUrls(manifest ?? {}),
+  }
 }
 
 function buildPublishIntent(zipFile, manifest) {
@@ -100,6 +129,7 @@ function buildPublishIntent(zipFile, manifest) {
 
   return {
     method: 'publish',
+    publishMode: 'hosted',
     zipFile,
     manifest,
     slug,

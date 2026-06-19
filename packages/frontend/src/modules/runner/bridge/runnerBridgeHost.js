@@ -38,6 +38,7 @@ function isBridgeMessage(data) {
  *   getBridgeApiBase?: () => string | null,
  *   getPublisherApiBase?: () => string | null,
  *   getManifestPermissions?: () => string[],
+ *   getAppVersion?: () => string | null,
  *   isOpaqueHostedSandbox?: () => boolean,
  * }} options
  */
@@ -116,6 +117,7 @@ export function createRunnerBridgeHost(options) {
         bridge_api_base: options.getBridgeApiBase?.() ?? null,
         publisher_api_base: options.getPublisherApiBase?.() ?? null,
         caller_origin: options.getEntryOrigin?.() ?? null,
+        app_version: options.getAppVersion?.() ?? null,
         ...(displayUser ? { display_user: displayUser } : {}),
       },
     })

@@ -76,11 +76,16 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       client.post(`/dev/apps/${encodeURIComponent(slug)}/status`, { status }),
     devRejectPendingVersion: (slug) =>
       client.post(`/dev/apps/${encodeURIComponent(slug)}/reject-pending`),
-    registerApp: (formData) =>
-      client.post('/apps/register', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120_000,
-      }),
+    registerApp: (payload) => {
+      if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+        return client.post('/apps/register', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120_000,
+        })
+      }
+
+      return client.post('/apps/register', payload, { timeout: 120_000 })
+    },
     appVersions: (slug) => client.get(`/apps/${encodeURIComponent(slug)}/versions`),
     bridgeUser: (launchToken, appSlug) =>
       client.get('/bridge/user', { headers: bridgeHeaders(launchToken, appSlug) }),

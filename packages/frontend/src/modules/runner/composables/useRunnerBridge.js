@@ -30,7 +30,15 @@ export function useRunnerBridge(options) {
       getBridgeApiBase: options.getBridgeApiBase,
       getPublisherApiBase: options.getPublisherApiBase,
       getManifestPermissions: options.getManifestPermissions,
-      isOpaqueHostedSandbox: () => options.isHosted?.() === true,
+      getAppVersion: options.getAppVersion,
+      getRuntimeType: options.getRuntimeType,
+      isOpaqueHostedSandbox: () => {
+        if (typeof options.isOpaqueSandbox === 'function') {
+          return options.isOpaqueSandbox()
+        }
+        const rt = options.getRuntimeType?.() ?? ''
+        return options.isHosted?.() === true || rt === 'iframe'
+      },
     })
 
     host.start()

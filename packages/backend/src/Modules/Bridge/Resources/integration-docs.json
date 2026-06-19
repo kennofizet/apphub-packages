@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.8.0",
+  "schema_version": "1.9.0",
   "package": {
     "name": "apphub",
     "version": "0.2.0",
@@ -152,7 +152,7 @@
       "deploy": {
         "hosted": "Build dist/ → zip with manifest.json (runtime_type: hosted) → drop on Hub desktop → POST /apps/register (draft) → DEV approves → active in store.",
         "local": "Drop a local manifest on the desktop for private install (no server listing).",
-        "iframe": "Self-hosted entry_url — register via host backend when iframe listing API is available."
+        "iframe": "Self-hosted entry_url — drop manifest.json (runtime_type: iframe) on Hub desktop or POST /apps/register JSON (draft) → DEV approves → active in store."
       },
       "steps": [
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
@@ -331,7 +331,7 @@
         "path": "apps/register",
         "auth": "token",
         "audience": ["publisher"],
-        "description": "Hosted publish: multipart bundle zip (manifest.json inside). Creates or upgrades draft app."
+        "description": "Publish: hosted = multipart bundle zip (manifest.json inside); iframe = JSON body with runtime_type iframe + entry_url (no zip). Creates or upgrades draft app."
       },
       {
         "method": "GET",

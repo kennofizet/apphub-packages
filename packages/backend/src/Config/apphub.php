@@ -20,7 +20,12 @@ return [
     /** Comma-separated origins allowed for iframe entry_url (e.g. https://apps.example.com). Required in production. */
     'allowed_runtime_origins' => array_values(array_filter(array_map(
         static fn (string $v): string => trim($v),
-        explode(',', (string) env('APPHUB_ALLOWED_RUNTIME_ORIGINS', '')),
+        explode(',', (string) env(
+            'APPHUB_ALLOWED_RUNTIME_ORIGINS',
+            in_array(env('APP_ENV', 'production'), ['local', 'testing'], true)
+                ? 'http://localhost:5180,http://127.0.0.1:5180,http://localhost:15180,http://127.0.0.1:15180'
+                : '',
+        )),
     ))),
 
     /** Hub SPA origins allowed to embed hosted runtime (frame-ancestors CSP). */

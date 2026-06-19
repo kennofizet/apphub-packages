@@ -96,12 +96,17 @@ export function resolveLaunchUrl(responseData) {
 }
 
 /**
- * Hosted apps always use opaque iframe origin (no allow-same-origin) so publisher JS cannot read Hub storage.
+ * Strict sandbox for all Hub runtimes (no allow-same-origin).
+ * Publisher iframe gets opaque/null origin — cannot read Hub localStorage (different parent origin).
+ * Publisher also cannot use normal first-party storage on entry_url; use Hub bridge + publisher backend.
  * @param {string} runtimeType
  */
 export function iframeSandboxAttrs(runtimeType) {
-  if (runtimeType === RUNTIME_HOSTED) {
-    return 'allow-scripts allow-forms allow-popups'
-  }
+  void runtimeType
   return 'allow-scripts allow-forms allow-popups'
+}
+
+/** True when iframe document has opaque origin (hosted + strict iframe). */
+export function iframeUsesOpaqueSandbox(runtimeType) {
+  return runtimeType === RUNTIME_HOSTED || runtimeType === RUNTIME_IFRAME
 }

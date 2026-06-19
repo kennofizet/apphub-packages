@@ -5,6 +5,8 @@ namespace Kennofizet\AppHub\Modules\Catalog\Support;
 use Illuminate\Http\UploadedFile;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
+use Kennofizet\AppHub\Modules\Launch\Services\AppEntryUrlGuard;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchDeniedException;
 use RuntimeException;
 use ZipArchive;
 
@@ -42,7 +44,12 @@ final class AppManifestParser
                 throw new RuntimeException('Could not read manifest.json from zip');
             }
 
-            return $this->fromJsonString($raw);
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                throw new RuntimeException('manifest.json must be valid JSON');
+            }
+
+            return $this->normalizeHosted($decoded);
         } finally {
             $archive->close();
         }
@@ -69,7 +76,102 @@ final class AppManifestParser
             throw new RuntimeException('manifest.json must be valid JSON');
         }
 
-        return $this->normalize($decoded);
+        return $this->normalizeHosted($decoded);
+    }
+
+    /**
+     * @param array<string, mixed> $manifest
+     * @return array{
+     *     slug: string,
+     *     name: string,
+     *     version: string,
+     *     short_description?: string|null,
+     *     icon?: string|null,
+     *     entry_url: string,
+     *     api_base_url?: string|null,
+     *     healthcheck_url?: string|null,
+     *     runtime_type: string,
+     *     manifest: array<string, mixed>
+     * }
+     */
+    public function normalizeIframe(array $manifest): array
+    {
+        $slug = strtolower(trim((string) ($manifest['slug'] ?? '')));
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {
+            throw new RuntimeException('manifest: slug is required (a-z0-9, max 64)');
+        }
+
+        $name = trim((string) ($manifest['name'] ?? ''));
+        if ($name === '') {
+            throw new RuntimeException('manifest: name is required');
+        }
+
+        $version = AppSemver::normalize((string) ($manifest['version'] ?? ''));
+        if ($version === '' || !AppSemver::isValid($version)) {
+            throw new RuntimeException('manifest: version is required (semver, e.g. 1.0.0)');
+        }
+
+        $runtimeType = strtolower(trim((string) ($manifest['runtime_type'] ?? AppRuntimeType::IFRAME)));
+        if ($runtimeType !== AppRuntimeType::IFRAME) {
+            throw new RuntimeException('manifest: runtime_type must be "iframe" for entry_url register');
+        }
+
+        $entryUrl = trim((string) ($manifest['entry_url'] ?? $manifest['runtime_url'] ?? ''));
+        if ($entryUrl === '') {
+            throw new RuntimeException('manifest: entry_url is required for iframe apps');
+        }
+
+        try {
+            AppEntryUrlGuard::assertRegisterableUrl($entryUrl);
+        } catch (LaunchDeniedException $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        $description = trim((string) ($manifest['description'] ?? $manifest['short_description'] ?? ''));
+
+        $document = [
+            'slug' => $slug,
+            'name' => mb_substr($name, 0, 255),
+            'version' => $version,
+            'description' => $description !== '' ? mb_substr($description, 0, 500) : null,
+            'runtime_type' => AppRuntimeType::IFRAME,
+            'entry_url' => mb_substr($entryUrl, 0, 2048),
+            'icon' => $this->normalizeIcon($manifest['icon'] ?? null),
+        ];
+
+        foreach (['api_base_url', 'healthcheck_url'] as $urlKey) {
+            if (!empty($manifest[$urlKey]) && is_string($manifest[$urlKey])) {
+                $document[$urlKey] = mb_substr(trim($manifest[$urlKey]), 0, 2048);
+            }
+        }
+
+        $permissions = AppBridgeScope::normalizeList($manifest['permissions'] ?? null);
+        if ($permissions !== []) {
+            $document['permissions'] = $permissions;
+        }
+
+        $apiUrls = AppManifestApiUrl::fromManifest($manifest);
+        if ($apiUrls !== []) {
+            AppManifestApiUrl::assertProductionSafe($manifest);
+            $document['api_urls'] = $apiUrls;
+            $pinned = AppManifestApiUrl::resolvePinnedClientIps($apiUrls);
+            if ($pinned !== []) {
+                $document['api_url_pinned_ips'] = $pinned;
+            }
+        }
+
+        return [
+            'slug' => $slug,
+            'name' => $document['name'],
+            'version' => $version,
+            'short_description' => $document['description'],
+            'icon' => $document['icon'],
+            'entry_url' => $document['entry_url'],
+            'runtime_type' => AppRuntimeType::IFRAME,
+            'api_base_url' => $document['api_base_url'] ?? null,
+            'healthcheck_url' => $document['healthcheck_url'] ?? null,
+            'manifest' => $document,
+        ];
     }
 
     /**
@@ -87,7 +189,7 @@ final class AppManifestParser
      *     manifest: array<string, mixed>
      * }
      */
-    public function normalize(array $manifest): array
+    public function normalizeHosted(array $manifest): array
     {
         $slug = strtolower(trim((string) ($manifest['slug'] ?? '')));
         if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $slug)) {

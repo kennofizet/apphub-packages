@@ -114,6 +114,11 @@ export function createDesktopDropInstall(options = {}) {
       throw err
     }
 
+    if (job.intent.publishMode === 'iframe') {
+      const res = await api.registerApp(job.intent.manifest)
+      return res?.data?.data ?? null
+    }
+
     const body = new FormData()
     body.append('bundle', job.intent.zipFile)
 

@@ -246,6 +246,8 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   getBridgeApiBase: () => backendUrl.value || null,
   getPublisherApiBase: () => resolveAppApiUrls({ api_urls: props.apiUrls })[0] ?? null,
   getManifestPermissions: () => manifestPermissions.value,
+  getAppVersion: () => props.installedVersion || null,
+  getRuntimeType: () => props.runtimeType,
   bridgeDesktopMessage: (token, slug, payload) => api?.bridgeDesktopMessage?.(token, slug, payload),
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onSessionScopeGranted: onRuntimeScopeGranted,

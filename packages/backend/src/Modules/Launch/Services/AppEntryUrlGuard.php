@@ -18,6 +18,15 @@ final class AppEntryUrlGuard
         }
 
         $url = trim((string) ($app->entry_url ?? ''));
+        self::assertRegisterableUrl($url);
+    }
+
+    /**
+     * @throws LaunchDeniedException
+     */
+    public static function assertRegisterableUrl(string $url): void
+    {
+        $url = trim($url);
         if ($url === '') {
             throw new LaunchDeniedException('App entry URL is not configured', 422);
         }
@@ -37,25 +46,33 @@ final class AppEntryUrlGuard
             throw new LaunchDeniedException('App entry URL uses a blocked scheme', 422);
         }
 
-        $isLocal = in_array($host, ['localhost', '127.0.0.1', '::1'], true)
-            || str_starts_with($host, '127.');
-
-        if ($scheme === 'http:' && $isLocal && AppManifestApiUrl::allowsLocalhostApiUrls()) {
-            return;
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            throw new LaunchDeniedException('App entry URL must use HTTP or HTTPS', 422);
         }
 
-        if ($scheme !== 'https:') {
-            throw new LaunchDeniedException('App entry URL must use HTTPS', 422);
-        }
-
-        $origin = $this->originOf($url);
+        $origin = self::originOfStatic($url);
         if ($origin === null) {
             throw new LaunchDeniedException('App entry URL is invalid', 422);
         }
 
-        $allowed = $this->allowedOrigins();
+        $allowed = self::allowedOriginsFromConfig();
+        if ($allowed !== [] && in_array($origin, $allowed, true)) {
+            return;
+        }
+
+        $isLocal = in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            || str_starts_with($host, '127.');
+
+        if ($scheme === 'http' && $isLocal && self::allowsLocalhostEntryUrls()) {
+            return;
+        }
+
+        if ($scheme !== 'https') {
+            throw new LaunchDeniedException('App entry URL must use HTTPS', 422);
+        }
+
         if ($allowed === []) {
-            if (AppManifestApiUrl::allowsLocalhostApiUrls()) {
+            if (self::allowsLocalhostEntryUrls() && $isLocal) {
                 return;
             }
 
@@ -70,8 +87,23 @@ final class AppEntryUrlGuard
         }
     }
 
+    private static function allowsLocalhostEntryUrls(): bool
+    {
+        if (AppManifestApiUrl::allowsLocalhostApiUrls()) {
+            return true;
+        }
+
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        $env = strtolower(trim((string) config('app.env', '')));
+
+        return in_array($env, ['local', 'testing'], true);
+    }
+
     /** @return list<string> */
-    private function allowedOrigins(): array
+    private static function allowedOriginsFromConfig(): array
     {
         $raw = config('apphub.allowed_runtime_origins', []);
         if (!is_array($raw)) {
@@ -87,7 +119,7 @@ final class AppEntryUrlGuard
             if ($entry === '') {
                 continue;
             }
-            $origin = $this->originOf($entry) ?? rtrim($entry, '/');
+            $origin = self::originOfStatic($entry) ?? rtrim($entry, '/');
             if (!in_array($origin, $origins, true)) {
                 $origins[] = $origin;
             }
@@ -96,7 +128,7 @@ final class AppEntryUrlGuard
         return $origins;
     }
 
-    private function originOf(string $url): ?string
+    private static function originOfStatic(string $url): ?string
     {
         $parts = parse_url($url);
         if (!is_array($parts)) {

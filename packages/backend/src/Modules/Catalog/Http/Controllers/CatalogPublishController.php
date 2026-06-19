@@ -27,19 +27,33 @@ class CatalogPublishController extends Controller
             return $this->apiErrorResponse('Authentication required', 401);
         }
 
-        $request->validate([
-            'bundle' => 'required|file|mimes:zip|max:51200',
-        ]);
-
-        $zip = $request->file('bundle');
-        if ($zip === null) {
-            return $this->apiErrorResponse('Bundle zip is required', 422);
-        }
-
         $meta = null;
+
         try {
-            $meta = $this->manifests->fromZip($zip);
-            $app = $this->publish->registerHosted($userId, $meta, $zip);
+            if ($request->hasFile('bundle')) {
+                $request->validate([
+                    'bundle' => 'required|file|mimes:zip|max:51200',
+                ]);
+
+                $zip = $request->file('bundle');
+                if ($zip === null) {
+                    return $this->apiErrorResponse('Bundle zip is required', 422);
+                }
+
+                $meta = $this->manifests->fromZip($zip);
+                $app = $this->publish->registerHosted($userId, $meta, $zip);
+            } else {
+                $payload = $request->all();
+                if (!is_array($payload) || $payload === []) {
+                    return $this->apiErrorResponse(
+                        'Send multipart bundle zip (hosted) or JSON manifest with entry_url (iframe)',
+                        422,
+                    );
+                }
+
+                $meta = $this->manifests->normalizeIframe($payload);
+                $app = $this->publish->registerIframe($userId, $meta);
+            }
         } catch (RuntimeException $e) {
             $extra = [];
             if (is_array($meta) && isset($meta['slug'])) {

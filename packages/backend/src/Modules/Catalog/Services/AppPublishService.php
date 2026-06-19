@@ -15,6 +15,9 @@ use RuntimeException;
 
 final class AppPublishService
 {
+    private const IFRAME_BUNDLE_PREFIX = 'iframe:';
+    private const IFRAME_BUNDLE_ENTRY = 'iframe';
+
     public function __construct(private readonly AppBundleStorageService $bundles)
     {
     }
@@ -59,6 +62,115 @@ final class AppPublishService
         }
 
         return $this->upgradeHostedApp($existing, $ownerUserId, $meta, $zip);
+    }
+
+    /**
+     * Register new iframe app or submit a newer version (owner only, no zip).
+     *
+     * @param array{
+     *     slug: string,
+     *     name: string,
+     *     version: string,
+     *     short_description?: string|null,
+     *     icon?: string|null,
+     *     entry_url: string,
+     *     api_base_url?: string|null,
+     *     healthcheck_url?: string|null,
+     *     manifest: array<string, mixed>
+     * } $meta
+     */
+    public function registerIframe(int $ownerUserId, array $meta): App
+    {
+        $slug = $this->normalizeSlug($meta['slug']);
+        $existing = App::query()->where('slug', $slug)->first();
+
+        if ($existing === null) {
+            return $this->createIframeApp($ownerUserId, $meta);
+        }
+
+        if ((int) $existing->owner_user_id !== $ownerUserId) {
+            throw new RuntimeException('App slug already exists');
+        }
+
+        $currentVersion = $this->resolveHighestVersion($existing);
+        $nextVersion = AppSemver::normalize($meta['version']);
+
+        if (!AppSemver::isGreaterThan($nextVersion, $currentVersion)) {
+            throw new RuntimeException('Version must be greater than ' . $currentVersion);
+        }
+
+        if (AppVersion::query()->where('app_id', $existing->id)->where('version', $nextVersion)->exists()) {
+            throw new RuntimeException('Version ' . $nextVersion . ' was already uploaded');
+        }
+
+        return $this->upgradeIframeApp($existing, $ownerUserId, $meta);
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function createIframeApp(int $ownerUserId, array $meta): App
+    {
+        $slug = $this->normalizeSlug($meta['slug']);
+        $manifest = $this->buildIframeManifest($meta);
+        $entryUrl = trim((string) $meta['entry_url']);
+        $stored = $this->iframeVersionStored($entryUrl);
+
+        $app = App::query()->create([
+            'owner_user_id' => $ownerUserId,
+            'slug' => $slug,
+            'version' => $meta['version'],
+            'name' => $meta['name'],
+            'short_description' => $meta['short_description'] ?? null,
+            'icon' => $meta['icon'] ?? '📦',
+            'status' => AppStatus::DRAFT,
+            'runtime_type' => AppRuntimeType::IFRAME,
+            'entry_url' => $entryUrl,
+            'healthcheck_url' => $meta['healthcheck_url'] ?? null,
+            'manifest' => $manifest,
+            'bundle_entry' => self::IFRAME_BUNDLE_ENTRY,
+        ]);
+
+        $this->recordVersion($app, $ownerUserId, $meta['version'], $stored, $manifest);
+        $this->ensureOwnerPermissions($app, $ownerUserId);
+
+        return $app;
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function upgradeIframeApp(App $app, int $ownerUserId, array $meta): App
+    {
+        if ($app->runtime_type !== AppRuntimeType::IFRAME) {
+            throw new RuntimeException('App is not an iframe runtime app');
+        }
+
+        $entryUrl = trim((string) $meta['entry_url']);
+        $stored = $this->iframeVersionStored($entryUrl);
+        $manifest = $this->buildIframeManifest($meta);
+        $nextVersion = AppSemver::normalize($meta['version']);
+
+        $this->recordVersion($app, $ownerUserId, $nextVersion, $stored, $manifest);
+
+        if ($app->status === AppStatus::ACTIVE) {
+            return $this->queueActiveVersionUpgrade($app, $meta, $nextVersion);
+        }
+
+        $app->version = $nextVersion;
+        $app->name = $meta['name'];
+        $app->short_description = $meta['short_description'] ?? $app->short_description;
+        $app->icon = $meta['icon'] ?? $app->icon;
+        $app->entry_url = $entryUrl;
+        $app->healthcheck_url = $meta['healthcheck_url'] ?? $app->healthcheck_url;
+        $app->manifest = $manifest;
+        $app->pending_version = null;
+        $app->status = AppStatus::DRAFT;
+        $app->save();
+
+        $this->skipOtherPendingVersions($app->id, $nextVersion);
+
+        return $app;
     }
 
     /**
@@ -224,11 +336,37 @@ final class AppPublishService
             ->where('version', $pending)
             ->first();
 
-        if ($row === null || $row->bundle_path === null || $row->bundle_path === '') {
+        if ($row === null) {
             throw new RuntimeException('Pending version bundle not found');
         }
 
         $manifest = is_array($row->manifest) ? $row->manifest : [];
+
+        if ($this->isIframeBundleMarker((string) $row->bundle_path)) {
+            $entryUrl = trim((string) ($manifest['entry_url'] ?? ''));
+            if ($entryUrl === '') {
+                throw new RuntimeException('Pending iframe entry_url not found');
+            }
+
+            $app->version = $pending;
+            $app->manifest = $manifest;
+            $app->entry_url = $entryUrl;
+            $app->bundle_path = null;
+            $app->bundle_hash = null;
+            $app->bundle_entry = self::IFRAME_BUNDLE_ENTRY;
+            $app->pending_version = null;
+            $app->status = AppStatus::ACTIVE;
+            $app->save();
+
+            $this->setVersionReviewStatus($app->id, $pending, AppVersionReviewStatus::PUBLISHED);
+            $this->skipStalePendingVersions($app->id);
+
+            return $app;
+        }
+
+        if ($row->bundle_path === null || $row->bundle_path === '') {
+            throw new RuntimeException('Pending version bundle not found');
+        }
 
         $app->version = $pending;
         $app->manifest = $manifest;
@@ -370,6 +508,10 @@ final class AppPublishService
             $url = $manifest['healthcheck_url'];
             $app->healthcheck_url = is_string($url) && $url !== '' ? $url : null;
         }
+
+        if (isset($manifest['entry_url']) && is_string($manifest['entry_url']) && $manifest['entry_url'] !== '') {
+            $app->entry_url = $manifest['entry_url'];
+        }
     }
 
     private function resolveHighestVersion(App $app): string
@@ -415,6 +557,35 @@ final class AppPublishService
         $document['bundle_entry'] = $stored['entry'];
 
         return $document;
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     * @return array<string, mixed>
+     */
+    private function buildIframeManifest(array $meta): array
+    {
+        return is_array($meta['manifest'] ?? null) ? $meta['manifest'] : [];
+    }
+
+    /**
+     * @return array{path: string, hash: string, entry: string, file_count: int}
+     */
+    private function iframeVersionStored(string $entryUrl): array
+    {
+        $hash = hash('sha256', $entryUrl);
+
+        return [
+            'path' => self::IFRAME_BUNDLE_PREFIX . $hash,
+            'hash' => $hash,
+            'entry' => self::IFRAME_BUNDLE_ENTRY,
+            'file_count' => 0,
+        ];
+    }
+
+    private function isIframeBundleMarker(string $path): bool
+    {
+        return str_starts_with($path, self::IFRAME_BUNDLE_PREFIX);
     }
 
     private function setVersionReviewStatus(int $appId, string $version, string $status): void
