@@ -36,10 +36,10 @@ Minimal **self-hosted** app for testing iframe register (`runtime_type: iframe`,
 - `html/index.html`, `styles.css`, `app.js` — app UI
 - `serve.mjs` — local static server
 
-## Security (strict sandbox)
+## Security (iframe sandbox)
 
-Hub loads iframe apps **without** `allow-same-origin`. That does **not** let the publisher read App Hub `localStorage` — Hub runs on a **different origin** (e.g. `:5173` vs `:15180`). The browser blocks cross-origin storage access either way.
+Hub loads **approved** iframe apps (`apps.entry_url` + DEV review) with `allow-same-origin` so real publisher sites (Vue/React on `oz.reg.vn`, etc.) can load JS/CSS and use storage **on their own origin**.
 
-Strict sandbox means the app also **cannot** `fetch('./manifest.json')` on its own host (opaque origin). Use **Hub bridge** (`apphub:bridge:ready` → `publisher_api_base`, `app_version`, `launch_token`) and your **publisher backend** for API calls — see `app.js` in this demo.
+That does **not** allow reading App Hub `localStorage` — Hub runs on a different origin (`:5173` vs publisher host). Trust gate = DEV approves each `entry_url`.
 
-Ensure `APPHUB_ALLOW_LOCALHOST_API_URLS=true` and matching `APPHUB_ALLOWED_RUNTIME_ORIGINS` in your test host `.env` when using `http://localhost:15180`.
+Ensure `APPHUB_ALLOW_LOCALHOST_API_URLS=true` (or `APP_ENV=local`) when using `http://localhost:15180`. No `APPHUB_ALLOWED_RUNTIME_ORIGINS` needed — catalog `entry_url` + DEV approval is the allowlist.

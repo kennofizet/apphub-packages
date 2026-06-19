@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "pack": "node scripts/pack-all.mjs",
+    "pack:storage": "node scripts/pack-storage-poc.mjs",
     "serve:iframe": "node demo-iframe/serve.mjs"
   },
   "devDependencies": {

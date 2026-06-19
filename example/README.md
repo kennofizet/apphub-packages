@@ -21,6 +21,16 @@ Self-hosted **iframe** app — no zip. Serve `html/` locally, then drop `manifes
 
 See [`demo-iframe/README.md`](demo-iframe/README.md) for serve + register steps.
 
+## `demo-storage-poc/` (localStorage isolation)
+
+Three **hosted** zips to verify zip apps do **not** share `localStorage`:
+
+```bash
+npm run pack:storage
+```
+
+Drop `demo-storage-writer.zip`, `demo-storage-reader.zip`, `demo-storage-reader-b.zip` → approve → open Writer then Readers. See [`demo-storage-poc/README.md`](demo-storage-poc/README.md).
+
 ---
 
 ## Hosted demos (`demo-simple/`)
@@ -108,10 +118,10 @@ Or `POST /apps/register` with JSON:
 | Field | Required | Notes |
 |-------|----------|--------|
 | `runtime_type` | yes | Must be `iframe` |
-| `entry_url` | yes | HTTPS in production; `http://localhost` allowed in local dev when configured |
+| `entry_url` | yes | HTTPS in production; `http://localhost` when `APPHUB_ALLOW_LOCALHOST_API_URLS` or `APP_ENV=local` |
 | `version` | yes | Same semver rules as hosted zip publish |
 
-DEV approves in Dev Tools like hosted apps. Hub loads `entry_url` in the runner iframe with `launch_token` query.
+DEV approves in Dev Tools — that approval is the trust gate. Hub loads the registered `entry_url` at launch (no per-domain env list).
 
 ---
 

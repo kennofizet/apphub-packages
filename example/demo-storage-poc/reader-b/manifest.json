@@ -1,0 +1,12 @@
+{
+  "slug": "demo-storage-reader-b",
+  "name": "Storage POC — Reader B",
+  "version": "1.0.5",
+  "description": "Second reader zip — same localStorage read test.",
+  "main": "index.html",
+  "icon": "👀",
+  "runtime_type": "hosted",
+  "permissions": [
+    "user.read"
+  ]
+}

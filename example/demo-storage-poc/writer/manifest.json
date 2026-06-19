@@ -1,0 +1,12 @@
+{
+  "slug": "demo-storage-writer",
+  "name": "Storage POC — Writer",
+  "version": "1.0.5",
+  "description": "Writes apphub_cross_app_test to localStorage (hosted sandbox test).",
+  "main": "index.html",
+  "icon": "✏️",
+  "runtime_type": "hosted",
+  "permissions": [
+    "user.read"
+  ]
+}

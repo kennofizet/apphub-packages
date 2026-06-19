@@ -1,0 +1,8 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #1e1b4b; color: #e0e7ff; }
+.app { max-width: 32rem; margin: 2rem auto; padding: 1.5rem; background: #312e81; border-radius: 12px; }
+.app__lead { color: #a5b4fc; font-size: 0.9rem; }
+.app__meta { font-size: 0.8rem; color: #c4b5fd; word-break: break-all; }
+.app__result { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; word-break: break-word; }
+.app__result--ok { background: #064e3b; color: #6ee7b7; }
+.app__result--bad { background: #450a0a; color: #fca5a5; }

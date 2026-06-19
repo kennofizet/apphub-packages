@@ -1,0 +1,12 @@
+{
+  "slug": "demo-storage-reader",
+  "name": "Storage POC — Reader A",
+  "version": "1.0.5",
+  "description": "Reads apphub_cross_app_test from localStorage (hosted sandbox test).",
+  "main": "index.html",
+  "icon": "👁️",
+  "runtime_type": "hosted",
+  "permissions": [
+    "user.read"
+  ]
+}
