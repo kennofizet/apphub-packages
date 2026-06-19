@@ -17,11 +17,23 @@ return [
         FILTER_VALIDATE_BOOL,
     ),
 
-    /** Optional enterprise host cap for iframe entry_url. Empty = per-app catalog entry_url + DEV approval. */
+    /** Optional enterprise host cap for iframe entry_url (non-empty = only these origins at register/launch). */
     'allowed_runtime_origins' => array_values(array_filter(array_map(
         static fn (string $v): string => trim($v),
         explode(',', (string) env('APPHUB_ALLOWED_RUNTIME_ORIGINS', '')),
     ))),
+
+    /**
+     * When enterprise list is empty: allow any HTTPS publisher origin after catalog entry_url + DEV approval.
+     * Production defaults false — set APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true to opt in.
+     */
+    'allow_any_publisher_runtime_origin' => filter_var(
+        env(
+            'APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN',
+            in_array(env('APP_ENV', 'production'), ['local', 'testing'], true),
+        ),
+        FILTER_VALIDATE_BOOL,
+    ),
 
     /** Hub SPA origins allowed to embed hosted runtime (frame-ancestors CSP). */
     'allowed_hub_origins' => array_values(array_filter(array_map(

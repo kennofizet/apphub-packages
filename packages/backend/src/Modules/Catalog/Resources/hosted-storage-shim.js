@@ -61,6 +61,7 @@
   }
 
   window.addEventListener('message', function (event) {
+    if (event.source !== window.parent) return
     var data = event.data
     if (!data || data.channel !== CHANNEL || data.op !== 'snapshot') return
     var snapshot = data.data

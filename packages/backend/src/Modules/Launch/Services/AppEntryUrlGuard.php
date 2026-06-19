@@ -77,24 +77,42 @@ final class AppEntryUrlGuard
     }
 
     /**
-     * Optional host-wide cap (enterprise). Empty = any HTTPS publisher origin after DEV approval.
+     * Enterprise cap when configured; otherwise production requires explicit catalog-trust opt-in.
      *
      * @throws LaunchDeniedException
      */
     private static function assertEnterpriseAllowlistIfConfigured(string $url): void
     {
         $allowed = self::enterpriseOriginsFromConfig();
-        if ($allowed === []) {
+        if ($allowed !== []) {
+            $origin = self::originOfStatic($url);
+            if ($origin === null || !in_array($origin, $allowed, true)) {
+                throw new LaunchDeniedException(
+                    'App entry URL origin is not in the host enterprise allowlist (APPHUB_ALLOWED_RUNTIME_ORIGINS)',
+                    403,
+                );
+            }
+
             return;
         }
 
-        $origin = self::originOfStatic($url);
-        if ($origin === null || !in_array($origin, $allowed, true)) {
-            throw new LaunchDeniedException(
-                'App entry URL origin is not in the host enterprise allowlist (APPHUB_ALLOWED_RUNTIME_ORIGINS)',
-                403,
-            );
+        if (self::allowsAnyPublisherRuntimeOrigin()) {
+            return;
         }
+
+        throw new LaunchDeniedException(
+            'App entry URL origin is not allowed. Set APPHUB_ALLOWED_RUNTIME_ORIGINS or APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true for catalog entry_url + DEV approval.',
+            403,
+        );
+    }
+
+    private static function allowsAnyPublisherRuntimeOrigin(): bool
+    {
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        return (bool) config('apphub.allow_any_publisher_runtime_origin', false);
     }
 
     private static function isLoopbackHost(string $host): bool

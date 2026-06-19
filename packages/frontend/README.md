@@ -41,9 +41,11 @@ const hostApi = installAppHubModule(app, {
 })
 ```
 
-**Iframe `entry_url`:** Each app’s registered URL (`apps.entry_url`) is the allowlist after DEV approval. You do **not** need `allowedRuntimeOrigins` per publisher domain.
+**Iframe `entry_url`:** Each app’s registered URL (`apps.entry_url`) is the allowlist after DEV approval. You do **not** need `allowedRuntimeOrigins` per publisher domain when using the catalog trust model.
 
 **Optional `allowedRuntimeOrigins`:** Host-wide enterprise policy — when set, iframe apps must also match this list (same as `APPHUB_ALLOWED_RUNTIME_ORIGINS` on Laravel).
+
+**Production (Laravel):** With an empty enterprise list, set `APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true` to allow any HTTPS publisher origin at register/launch (catalog `entry_url` + DEV approval remains the per-app gate). Without that flag or an enterprise list, registration rejects unknown origins (fail-closed).
 
 **Local dev:** `backendUrl` + `token` is enough on `localhost` — localhost `http` entry URLs are allowed via `APPHUB_ALLOW_LOCALHOST_API_URLS` / `APP_ENV=local`.
 
