@@ -86,6 +86,7 @@ final class AppRuntimeServeService
                 $content = $this->rewriteHtmlLaunchToken($content, $plainToken);
             }
             $content = $this->injectRuntimeScrollbarStyles($content);
+            $content = $this->injectHostedStorageShim($content);
 
             $response = new Response($content);
             $response->headers->set('Content-Type', $this->mimeType($absolute));
@@ -338,40 +339,69 @@ final class AppRuntimeServeService
 
         $styleTag = '<style id="apphub-runtime-scrollbars">' . $css . '</style>';
 
+        return $this->injectAfterHeadOpen($html, $styleTag);
+    }
+
+    /**
+     * Hosted zip apps run in an opaque-origin sandbox — native localStorage is blocked.
+     * Inject Hub storage shim before any publisher scripts.
+     */
+    private function injectHostedStorageShim(string $html): string
+    {
+        $js = $this->hostedStorageShimSource();
+        if ($js === '') {
+            return $html;
+        }
+
+        $scriptTag = '<script id="apphub-hosted-storage-shim">' . $js . '</script>';
+
+        return $this->injectAfterHeadOpen($html, $scriptTag);
+    }
+
+    private function injectAfterHeadOpen(string $html, string $fragment): string
+    {
         if (preg_match('/<head\b[^>]*>/i', $html) === 1) {
-            $injected = preg_replace('/<head\b[^>]*>/i', '$0' . $styleTag, $html, 1);
+            $injected = preg_replace('/<head\b[^>]*>/i', '$0' . $fragment, $html, 1);
 
             return is_string($injected) ? $injected : $html;
         }
 
         if (preg_match('/<html\b[^>]*>/i', $html) === 1) {
-            $injected = preg_replace('/<html\b[^>]*>/i', '$0' . $styleTag, $html, 1);
+            $injected = preg_replace('/<html\b[^>]*>/i', '$0' . $fragment, $html, 1);
 
             return is_string($injected) ? $injected : $html;
         }
 
-        return $styleTag . $html;
+        return $fragment . $html;
+    }
+
+    private function hostedStorageShimSource(): string
+    {
+        return $this->readCatalogResource('hosted-storage-shim.js');
     }
 
     private function runtimeDocumentScrollbarCss(): string
     {
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
+        return $this->readCatalogResource('runtime-document-scrollbars.css');
+    }
+
+    private function readCatalogResource(string $filename): string
+    {
+        static $cache = [];
+        if (array_key_exists($filename, $cache)) {
+            return $cache[$filename];
         }
 
-        $path = dirname(__DIR__, 5)
-            . '/frontend/src/modules/desktop/styles/runtime-document-scrollbars.css';
+        $path = dirname(__DIR__) . '/Resources/' . $filename;
+        if (!is_readable($path)) {
+            $cache[$filename] = '';
 
-        if (is_readable($path)) {
-            $cached = (string) file_get_contents($path);
-
-            return $cached;
+            return $cache[$filename];
         }
 
-        $cached = '';
+        $cache[$filename] = trim((string) file_get_contents($path));
 
-        return $cached;
+        return $cache[$filename];
     }
 
     private function authorize(App $app, Request $request): ?AppLaunchToken

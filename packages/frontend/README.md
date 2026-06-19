@@ -36,11 +36,16 @@ const hostApi = installAppHubModule(app, {
   language: 'vi',
   theme: 'dark',
   themeToggle: false,
-  allowedRuntimeOrigins: ['https://publisher-app.example.com'],
+  // Optional enterprise cap only — iframe apps use catalog entry_url + DEV approval by default.
+  // allowedRuntimeOrigins: ['https://apps.yourcompany.com'],
 })
 ```
 
-**Local dev:** `backendUrl` + `token` is enough on `localhost` — the package auto-relaxes origin checks.
+**Iframe `entry_url`:** Each app’s registered URL (`apps.entry_url`) is the allowlist after DEV approval. You do **not** need `allowedRuntimeOrigins` per publisher domain.
+
+**Optional `allowedRuntimeOrigins`:** Host-wide enterprise policy — when set, iframe apps must also match this list (same as `APPHUB_ALLOWED_RUNTIME_ORIGINS` on Laravel).
+
+**Local dev:** `backendUrl` + `token` is enough on `localhost` — localhost `http` entry URLs are allowed via `APPHUB_ALLOW_LOCALHOST_API_URLS` / `APP_ENV=local`.
 
 **Production:** Bootstrap auto-derives URLs from existing Laravel env (no extra App Hub vars):
 

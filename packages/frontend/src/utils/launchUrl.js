@@ -22,10 +22,65 @@ export function isHubHostedRuntimeUrl(url, runtimeBaseOrOptions) {
   }
 }
 
+function parseLaunchUrl(url) {
+  if (!url || typeof url !== 'string') return null
+  try {
+    return new URL(url)
+  } catch {
+    return null
+  }
+}
+
+function isLocalhostHttp(parsed) {
+  return parsed.protocol === 'http:'
+    && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+}
+
+/** HTTPS or localhost HTTP (local dev). */
+export function isEntryUrlFormatAllowed(url) {
+  const parsed = parseLaunchUrl(url)
+  if (!parsed) return false
+  if (BLOCKED_PROTOCOLS.has(parsed.protocol)) return false
+  if (isLocalhostHttp(parsed)) return true
+  return parsed.protocol === 'https:'
+}
+
+/**
+ * Optional host enterprise cap (installAppHubModule allowedRuntimeOrigins).
+ * Empty = trust catalog entry_url after DEV approval.
+ */
+export function passesEnterpriseRuntimeOrigins(origin, allowedOrigins = []) {
+  if (!origin || !Array.isArray(allowedOrigins) || allowedOrigins.length === 0) {
+    return true
+  }
+  return allowedOrigins.some((entry) => {
+    try {
+      return new URL(entry).origin === origin
+    } catch {
+      return false
+    }
+  })
+}
+
+/**
+ * Draft preflight + catalog check: valid URL format + optional enterprise cap.
+ * Per-app allowlist is apps.entry_url in the database (DEV approves).
+ */
+export function isCatalogEntryUrlAllowed(entryUrl, allowedOrigins = []) {
+  if (!isEntryUrlFormatAllowed(entryUrl)) return false
+  const origin = entryUrlOrigin(entryUrl)
+  return passesEnterpriseRuntimeOrigins(origin, allowedOrigins)
+}
+
 /**
  * @param {string} url
- * @param {string[]} [allowedOrigins]
- * @param {{ backendUrl?: string, runtimePublicUrl?: string, runtimeType?: string }} [options]
+ * @param {string[]} [allowedOrigins] optional enterprise host policy
+ * @param {{
+ *   backendUrl?: string,
+ *   runtimePublicUrl?: string,
+ *   runtimeType?: string,
+ *   catalogEntryUrl?: string|null,
+ * }} [options]
  */
 export function isAllowedLaunchUrl(url, allowedOrigins = [], options = {}) {
   if (!url || typeof url !== 'string') return false
@@ -34,33 +89,16 @@ export function isAllowedLaunchUrl(url, allowedOrigins = [], options = {}) {
     return isHubHostedRuntimeUrl(url, options)
   }
 
-  let parsed
-  try {
-    parsed = new URL(url)
-  } catch {
+  const parsed = parseLaunchUrl(url)
+  if (!parsed) return false
+  if (!isEntryUrlFormatAllowed(url)) return false
+
+  const catalogOrigin = entryUrlOrigin(options.catalogEntryUrl ?? '')
+  if (catalogOrigin && parsed.origin !== catalogOrigin) {
     return false
   }
 
-  if (BLOCKED_PROTOCOLS.has(parsed.protocol)) return false
-
-  if (parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')) {
-    return true
-  }
-
-  if (parsed.protocol !== 'https:') return false
-
-  if (allowedOrigins.length === 0) {
-    return false
-  }
-
-  const origin = parsed.origin
-  return allowedOrigins.some((entry) => {
-    try {
-      return new URL(entry).origin === origin
-    } catch {
-      return false
-    }
-  })
+  return passesEnterpriseRuntimeOrigins(parsed.origin, allowedOrigins)
 }
 
 /** @param {string} entryUrl */
@@ -73,10 +111,9 @@ export function entryUrlOrigin(entryUrl) {
   }
 }
 
-/** Check catalog entry_url origin against host allowedRuntimeOrigins. */
+/** @deprecated use isCatalogEntryUrlAllowed */
 export function isEntryUrlAllowed(entryUrl, allowedOrigins = []) {
-  if (!entryUrl || typeof entryUrl !== 'string') return false
-  return isAllowedLaunchUrl(entryUrl, allowedOrigins)
+  return isCatalogEntryUrlAllowed(entryUrl, allowedOrigins)
 }
 
 export function resolveLaunchUrl(responseData) {
@@ -96,17 +133,22 @@ export function resolveLaunchUrl(responseData) {
 }
 
 /**
- * Strict sandbox for all Hub runtimes (no allow-same-origin).
- * Publisher iframe gets opaque/null origin — cannot read Hub localStorage (different parent origin).
- * Publisher also cannot use normal first-party storage on entry_url; use Hub bridge + publisher backend.
+ * Hosted: opaque origin (no allow-same-origin) — untrusted zip on Hub infra.
+ * Iframe (approved entry_url): allow-same-origin so publisher SPAs load assets/storage on their host.
+ * Does not grant Hub localStorage — parent Hub is a different origin.
  * @param {string} runtimeType
  */
 export function iframeSandboxAttrs(runtimeType) {
-  void runtimeType
+  if (runtimeType === RUNTIME_HOSTED) {
+    return 'allow-scripts allow-forms allow-popups'
+  }
+  if (runtimeType === RUNTIME_IFRAME) {
+    return 'allow-scripts allow-forms allow-popups allow-same-origin'
+  }
   return 'allow-scripts allow-forms allow-popups'
 }
 
-/** True when iframe document has opaque origin (hosted + strict iframe). */
+/** Opaque sandbox only for Hub-hosted bundles. */
 export function iframeUsesOpaqueSandbox(runtimeType) {
-  return runtimeType === RUNTIME_HOSTED || runtimeType === RUNTIME_IFRAME
+  return runtimeType === RUNTIME_HOSTED
 }

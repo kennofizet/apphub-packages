@@ -1,15 +1,39 @@
 import { onUnmounted, shallowRef, watch } from 'vue'
 import { entryUrlOrigin } from '../../../utils/launchUrl.js'
 import { createRunnerBridgeHost } from '../bridge/runnerBridgeHost.js'
+import { createHostedStorageHost } from '../storage/hostedStorageHost.js'
 
 /**
  * Wire postMessage bridge between Hub runner and sandboxed app iframe.
  */
 export function useRunnerBridge(options) {
   const hostRef = shallowRef(null)
+  const storageHostRef = shallowRef(null)
+
+  function isOpaqueHostedSandbox() {
+    if (typeof options.isOpaqueSandbox === 'function') {
+      return options.isOpaqueSandbox()
+    }
+    return options.isHosted?.() === true
+  }
+
+  function sharedHostOptions() {
+    return {
+      getIframe: () => options.iframeRef?.value ?? null,
+      getLaunchContext: () => options.launchContext?.value ?? null,
+      appSlug: options.slug,
+      getEntryOrigin: () => {
+        const url = options.launchUrl?.value ?? options.entryUrl?.() ?? ''
+        return entryUrlOrigin(url)
+      },
+      getDisplayUser: options.getDisplayUser,
+      isOpaqueHostedSandbox,
+    }
+  }
 
   function mount() {
     hostRef.value?.stop()
+    storageHostRef.value?.stop()
 
     const host = createRunnerBridgeHost({
       getIframe: () => options.iframeRef?.value ?? null,
@@ -32,22 +56,24 @@ export function useRunnerBridge(options) {
       getManifestPermissions: options.getManifestPermissions,
       getAppVersion: options.getAppVersion,
       getRuntimeType: options.getRuntimeType,
-      isOpaqueHostedSandbox: () => {
-        if (typeof options.isOpaqueSandbox === 'function') {
-          return options.isOpaqueSandbox()
-        }
-        const rt = options.getRuntimeType?.() ?? ''
-        return options.isHosted?.() === true || rt === 'iframe'
-      },
+      isOpaqueHostedSandbox,
     })
 
     host.start()
     hostRef.value = host
+
+    if (isOpaqueHostedSandbox()) {
+      const storageHost = createHostedStorageHost(sharedHostOptions())
+      storageHost.start()
+      storageHostRef.value = storageHost
+    }
+
     return host
   }
 
   function sendReady() {
     hostRef.value?.sendReady()
+    storageHostRef.value?.sendSnapshot?.()
   }
 
   watch(
@@ -62,6 +88,8 @@ export function useRunnerBridge(options) {
   onUnmounted(() => {
     hostRef.value?.stop()
     hostRef.value = null
+    storageHostRef.value?.stop()
+    storageHostRef.value = null
   })
 
   return {

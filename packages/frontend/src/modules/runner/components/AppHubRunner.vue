@@ -115,7 +115,7 @@ import {
   RUNTIME_HOSTED,
   iframeSandboxAttrs,
   isAllowedLaunchUrl,
-  isEntryUrlAllowed,
+  isCatalogEntryUrlAllowed,
   resolveLaunchUrl,
 } from '../../../utils/launchUrl.js'
 import {
@@ -145,7 +145,7 @@ const props = defineProps({
 const api = useAppHubHostApi()
 const notifications = useDesktopNotifications()
 const moduleOptions = inject('apphubOptions', {})
-const allowedOrigins = computed(() => moduleOptions?.allowedRuntimeOrigins ?? [])
+const allowedOrigins = computed(() => moduleOptions?.enterpriseRuntimeOrigins ?? moduleOptions?.allowedRuntimeOrigins ?? [])
 const iframeRef = ref(null)
 const launchContext = ref(null)
 const launchUrl = ref('')
@@ -304,6 +304,7 @@ function launchOptions() {
     backendUrl: backendUrl.value,
     runtimePublicUrl: moduleOptions?.runtimePublicUrl ?? '',
     runtimeType: launchRuntimeType.value,
+    catalogEntryUrl: props.entryUrl,
   }
 }
 
@@ -329,7 +330,7 @@ function onCheckSafe() {
     safeResult.value = false
     return
   }
-  safeResult.value = isEntryUrlAllowed(props.entryUrl, allowedOrigins.value)
+  safeResult.value = isCatalogEntryUrlAllowed(props.entryUrl, allowedOrigins.value)
 }
 
 function isBackendReady() {
@@ -409,7 +410,7 @@ function onIframeLoad() {
 }
 
 function onLaunchClick() {
-  if (!isHosted.value && props.entryUrl && !isEntryUrlAllowed(props.entryUrl, allowedOrigins.value)) {
+  if (!isHosted.value && props.entryUrl && !isCatalogEntryUrlAllowed(props.entryUrl, allowedOrigins.value)) {
     safeResult.value = false
     preflightError.value = labels.value.safe_fail
     return

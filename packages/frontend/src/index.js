@@ -39,7 +39,9 @@ function buildPublicOptions(options = {}) {
     theme: options.theme ?? 'auto',
     themeToggle: options.themeToggle,
     openAppStoreOnMount: options.openAppStoreOnMount !== false,
+    /** Optional enterprise host cap for iframe entry_url. Per-app allowlist = catalog entry_url + DEV approval. */
     allowedRuntimeOrigins: origins,
+    enterpriseRuntimeOrigins: origins,
     coreUrl: options.coreUrl || '',
     backendUrl: (options.backendUrl || '').replace(/\/$/, ''),
     hasToken: !!(options.token),
@@ -292,6 +294,7 @@ function applyModuleOptions(store, options = {}) {
     themeToggle: nextPublic.themeToggle,
     openAppStoreOnMount: nextPublic.openAppStoreOnMount,
     allowedRuntimeOrigins: nextPublic.allowedRuntimeOrigins,
+    enterpriseRuntimeOrigins: nextPublic.enterpriseRuntimeOrigins,
     coreUrl: nextPublic.coreUrl,
     backendUrl: nextPublic.backendUrl,
     hasToken: nextPublic.hasToken,

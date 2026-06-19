@@ -111,7 +111,7 @@ export default {
   draft_ping_no_health_url: 'Not configured',
   draft_ping_safe_check: 'Origin check',
   draft_ping_safe_ok: 'HTTPS origin allowed',
-  draft_ping_safe_fail: 'Origin not in allowedRuntimeOrigins',
+  draft_ping_safe_fail: 'Entry URL is invalid or blocked by host enterprise policy',
   draft_ping_btn: 'Ping health',
   draft_ping_pinging: 'Pinging…',
   draft_ping_ok: 'Health check OK',

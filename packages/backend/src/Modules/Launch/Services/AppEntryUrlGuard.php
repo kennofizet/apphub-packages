@@ -22,9 +22,20 @@ final class AppEntryUrlGuard
     }
 
     /**
+     * Format + optional enterprise host policy. Catalog entry_url + DEV approval is the per-app allowlist.
+     *
      * @throws LaunchDeniedException
      */
     public static function assertRegisterableUrl(string $url): void
+    {
+        self::assertUrlFormat($url);
+        self::assertEnterpriseAllowlistIfConfigured($url);
+    }
+
+    /**
+     * @throws LaunchDeniedException
+     */
+    private static function assertUrlFormat(string $url): void
     {
         $url = trim($url);
         if ($url === '') {
@@ -50,18 +61,11 @@ final class AppEntryUrlGuard
             throw new LaunchDeniedException('App entry URL must use HTTP or HTTPS', 422);
         }
 
-        $origin = self::originOfStatic($url);
-        if ($origin === null) {
+        if (self::originOfStatic($url) === null) {
             throw new LaunchDeniedException('App entry URL is invalid', 422);
         }
 
-        $allowed = self::allowedOriginsFromConfig();
-        if ($allowed !== [] && in_array($origin, $allowed, true)) {
-            return;
-        }
-
-        $isLocal = in_array($host, ['localhost', '127.0.0.1', '::1'], true)
-            || str_starts_with($host, '127.');
+        $isLocal = self::isLoopbackHost($host);
 
         if ($scheme === 'http' && $isLocal && self::allowsLocalhostEntryUrls()) {
             return;
@@ -70,21 +74,33 @@ final class AppEntryUrlGuard
         if ($scheme !== 'https') {
             throw new LaunchDeniedException('App entry URL must use HTTPS', 422);
         }
+    }
 
+    /**
+     * Optional host-wide cap (enterprise). Empty = any HTTPS publisher origin after DEV approval.
+     *
+     * @throws LaunchDeniedException
+     */
+    private static function assertEnterpriseAllowlistIfConfigured(string $url): void
+    {
+        $allowed = self::enterpriseOriginsFromConfig();
         if ($allowed === []) {
-            if (self::allowsLocalhostEntryUrls() && $isLocal) {
-                return;
-            }
+            return;
+        }
 
+        $origin = self::originOfStatic($url);
+        if ($origin === null || !in_array($origin, $allowed, true)) {
             throw new LaunchDeniedException(
-                'App entry URL is not allowed — configure APPHUB_ALLOWED_RUNTIME_ORIGINS',
+                'App entry URL origin is not in the host enterprise allowlist (APPHUB_ALLOWED_RUNTIME_ORIGINS)',
                 403,
             );
         }
+    }
 
-        if (!in_array($origin, $allowed, true)) {
-            throw new LaunchDeniedException('App entry URL origin is not in the host allowlist', 403);
-        }
+    private static function isLoopbackHost(string $host): bool
+    {
+        return in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            || str_starts_with($host, '127.');
     }
 
     private static function allowsLocalhostEntryUrls(): bool
@@ -103,7 +119,7 @@ final class AppEntryUrlGuard
     }
 
     /** @return list<string> */
-    private static function allowedOriginsFromConfig(): array
+    private static function enterpriseOriginsFromConfig(): array
     {
         $raw = config('apphub.allowed_runtime_origins', []);
         if (!is_array($raw)) {

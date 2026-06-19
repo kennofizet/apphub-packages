@@ -34,7 +34,22 @@ final class AppEntryUrlGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    public function test_allows_http_localhost_when_origin_in_allowlist(): void
+    public function test_allows_https_publisher_origin_without_enterprise_list(): void
+    {
+        if (!function_exists('app') || !app()->bound('config')) {
+            $this->markTestSkipped('Laravel app container not available');
+        }
+
+        app('config')->set('apphub.allow_localhost_api_urls', false);
+        app('config')->set('app.env', 'production');
+        app('config')->set('apphub.allowed_runtime_origins', []);
+
+        AppEntryUrlGuard::assertRegisterableUrl('https://translate.google.com/');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_enterprise_list_blocks_unlisted_origin(): void
     {
         if (!function_exists('app') || !app()->bound('config')) {
             $this->markTestSkipped('Laravel app container not available');
@@ -43,15 +58,16 @@ final class AppEntryUrlGuardTest extends TestCase
         app('config')->set('apphub.allow_localhost_api_urls', false);
         app('config')->set('app.env', 'production');
         app('config')->set('apphub.allowed_runtime_origins', [
-            'http://localhost:15180',
+            'https://apps.example.com',
         ]);
 
-        AppEntryUrlGuard::assertRegisterableUrl('http://localhost:15180/');
+        $this->expectException(LaunchDeniedException::class);
+        $this->expectExceptionMessage('enterprise allowlist');
 
-        $this->addToAssertionCount(1);
+        AppEntryUrlGuard::assertRegisterableUrl('https://translate.google.com/');
     }
 
-    public function test_rejects_http_non_localhost_without_allowlist(): void
+    public function test_rejects_http_non_localhost_in_production(): void
     {
         if (!function_exists('app') || !app()->bound('config')) {
             $this->markTestSkipped('Laravel app container not available');

@@ -1,5 +1,4 @@
-/* App Hub — scrollbars inside hosted app documents (html/body).
- * Runner injects this copy at iframe load; backend Catalog/Resources has the same file for runtime serve. */
+/* App Hub — scrollbars inside hosted app documents (html/body). Injected by runtime serve + runner. */
 :root {
   --ah-scrollbar-size: 8px;
   --ah-scrollbar-track: transparent;

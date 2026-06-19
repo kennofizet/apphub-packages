@@ -111,7 +111,7 @@ export default {
   draft_ping_no_health_url: 'Chưa cấu hình',
   draft_ping_safe_check: 'Kiểm tra origin',
   draft_ping_safe_ok: 'Origin HTTPS được phép',
-  draft_ping_safe_fail: 'Origin không nằm trong allowedRuntimeOrigins',
+  draft_ping_safe_fail: 'URL entry không hợp lệ hoặc bị chính sách host chặn',
   draft_ping_btn: 'Ping health',
   draft_ping_pinging: 'Đang ping…',
   draft_ping_ok: 'Health OK',
