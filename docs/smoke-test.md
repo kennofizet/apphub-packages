@@ -27,7 +27,29 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 12 | Open **App Store** (or launch app) | Stale `healthcheck_url` pings automatically; **Unhealthy** badge updates |
 | 13 | App Store unhealthy badge | Failed healthcheck shows **Unhealthy** (card dimmed) |
 | 14 | Disable app (DEV) | Store shows **Offline**; launch blocked |
-| 15 | `AppHubBridge.reportError(err)` in demo | `app_usage_logs` row with `action=error` |
+| 15 | **Report test error** in `demo-simple` or `demo-iframe` | Message confirms send; `apphub_app_usage_logs` row with `action=error` |
+
+### Smoke #15 — reportError (step by step)
+
+1. Open a running app from Hub (**hosted** `demo-simple` or **iframe** `demo-iframe` on `:15180`).
+2. Click **Report test error** (demo HTML bundles — repack/re-drop hosted zip if you use an old bundle).
+3. App shows: `reportError sent — check apphub_app_usage_logs…`
+4. Confirm in DB (test backend):
+
+```bash
+php artisan tinker --execute="echo json_encode(\Kennofizet\AppHub\Modules\Launch\Models\AppUsageLog::query()->where('action','error')->orderByDesc('id')->first()?->metadata);"
+```
+
+### Smoke #12–13 — unhealthy badge
+
+1. Ensure iframe demo has `healthcheck_url` (e.g. `http://localhost:15180/health`).
+2. **Stop** `demo-iframe` server → open **App Store** → card shows **Unhealthy** (red badge, dimmed).
+3. **Start** server → reopen App Store (or wait TTL ~5 min) → badge clears.
+
+### Smoke #14 — disable
+
+1. **Dev Tools** → disable an active app.
+2. App Store shows **Offline**; launch blocked.
 
 ## Healthcheck (automatic)
 

@@ -1,5 +1,6 @@
 const btn = document.getElementById('btn')
 const btnVerify = document.getElementById('btn-verify')
+const btnReportError = document.getElementById('btn-report-error')
 const hello = document.getElementById('hello')
 const status = document.getElementById('status')
 const versionEl = document.getElementById('version')
@@ -61,6 +62,22 @@ async function fetchBridgeUserViaPublisherBackend() {
   }
 
   return body?.data ?? body
+}
+
+function callBridge(method, args) {
+  const bridgeArgs = Array.isArray(args) ? args : [args]
+  return new Promise((resolve, reject) => {
+    const id = `demo-${Date.now()}`
+    const onMsg = (event) => {
+      const msg = event.data
+      if (!msg || msg.channel !== BRIDGE_CHANNEL || msg.event !== 'apphub:bridge:result' || msg.id !== id) return
+      window.removeEventListener('message', onMsg)
+      if (msg.ok) resolve(msg.result)
+      else reject(new Error(msg.error || 'Bridge error'))
+    }
+    window.addEventListener('message', onMsg)
+    window.parent.postMessage({ channel: BRIDGE_CHANNEL, event: 'apphub:bridge:call', id, method, args: bridgeArgs }, '*')
+  })
 }
 
 window.addEventListener('message', (event) => {
@@ -128,6 +145,27 @@ btnVerify?.addEventListener('click', async () => {
       return
     }
     hello.textContent = msg
+  }
+})
+
+btnReportError?.addEventListener('click', async () => {
+  hello.hidden = false
+  if (!bridgeReady) {
+    hello.textContent = 'Bridge not ready — open from App Hub, then try again'
+    requestBridgeReady()
+    return
+  }
+  const err = new Error('demo-iframe-html smoke test error')
+  err.name = 'DemoSmokeError'
+  try {
+    await callBridge('reportError', {
+      message: err.message,
+      name: err.name,
+      stack: err.stack || '',
+    })
+    hello.textContent = 'reportError sent — check apphub_app_usage_logs (action=error) for this app slug'
+  } catch (bridgeErr) {
+    hello.textContent = bridgeErr instanceof Error ? bridgeErr.message : 'reportError failed'
   }
 })
 

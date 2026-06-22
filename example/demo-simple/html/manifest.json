@@ -1,7 +1,7 @@
 {
   "slug": "demo-simple-html",
   "name": "demo-simple-html",
-  "version": "1.1.75",
+  "version": "1.1.84",
   "description": "Plain HTML, CSS, and JavaScript hosted bundle example.",
   "main": "index.html",
   "type": "module",

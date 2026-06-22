@@ -1,7 +1,7 @@
 {
   "slug": "demo-simple-vue",
   "name": "demo-simple-vue",
-  "version": "1.1.75",
+  "version": "1.1.84",
   "description": "Vue 3 + Vite build output hosted bundle example.",
   "main": "index.html",
   "type": "module",

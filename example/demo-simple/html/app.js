@@ -1,5 +1,6 @@
 const btn = document.getElementById('btn')
 const btnVerify = document.getElementById('btn-verify')
+const btnReportError = document.getElementById('btn-report-error')
 const hello = document.getElementById('hello')
 const status = document.getElementById('status')
 const versionEl = document.getElementById('version')
@@ -76,6 +77,7 @@ function refreshBridgeStatus() {
 }
 
 function callBridge(method, args) {
+  const bridgeArgs = Array.isArray(args) ? args : [args]
   return new Promise((resolve, reject) => {
     const id = `demo-${Date.now()}`
     const onMsg = (event) => {
@@ -86,7 +88,7 @@ function callBridge(method, args) {
       else reject(new Error(msg.error || 'Bridge error'))
     }
     window.addEventListener('message', onMsg)
-    window.parent.postMessage({ channel: BRIDGE_CHANNEL, event: 'apphub:bridge:call', id, method, args }, '*')
+    window.parent.postMessage({ channel: BRIDGE_CHANNEL, event: 'apphub:bridge:call', id, method, args: bridgeArgs }, '*')
   })
 }
 
@@ -171,6 +173,27 @@ btnVerify?.addEventListener('click', async () => {
     hello.textContent = msg.includes('App Hub API not found') || msg.includes('Invalid or expired')
       ? msg
       : `${msg} — check proxy APPHUB_BACKEND_URL (hub-host .env, often :8000)`
+  }
+})
+
+btnReportError?.addEventListener('click', async () => {
+  hello.hidden = false
+  if (!bridgeReady) {
+    hello.textContent = 'Bridge not ready — open from App Hub, then try again'
+    requestBridgeReady()
+    return
+  }
+  const err = new Error('demo-simple-html smoke test error')
+  err.name = 'DemoSmokeError'
+  try {
+    await callBridge('reportError', {
+      message: err.message,
+      name: err.name,
+      stack: err.stack || '',
+    })
+    hello.textContent = 'reportError sent — check apphub_app_usage_logs (action=error) for this app slug'
+  } catch (bridgeErr) {
+    hello.textContent = bridgeErr instanceof Error ? bridgeErr.message : 'reportError failed'
   }
 })
 
