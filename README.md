@@ -23,8 +23,8 @@ Publisher docs explain **how to use** the bridge. Endpoint security is documente
 
 | Package | README | Status |
 |---------|--------|--------|
-| Frontend | [packages/frontend/README.md](./packages/frontend/README.md) | Windows desktop shell + App Store module |
-| Backend | `packages/backend` | Not started (minimal rebuild) |
+| Frontend | [packages/frontend/README.md](./packages/frontend/README.md) | Vue 3 desktop shell, App Store, runner (hosted + iframe) |
+| Backend | [packages/backend](./packages/backend) | Laravel API — catalog, launch, bridge, hosted runtime serve |
 
 ## Hub host starter (download & deploy)
 

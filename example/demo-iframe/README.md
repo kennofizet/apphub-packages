@@ -42,4 +42,4 @@ Hub loads **approved** iframe apps (`apps.entry_url` + DEV review) with `allow-s
 
 That does **not** allow reading App Hub `localStorage` — Hub runs on a different origin (`:5173` vs publisher host). Trust gate = DEV approves each `entry_url`.
 
-Ensure `APPHUB_ALLOW_LOCALHOST_API_URLS=true` (or `APP_ENV=local`) when using `http://localhost:15180`. No `APPHUB_ALLOWED_RUNTIME_ORIGINS` needed — catalog `entry_url` + DEV approval is the allowlist.
+Ensure `APPHUB_ALLOW_LOCALHOST_API_URLS=true` (or `APP_ENV=local`) when using `http://localhost:15180`. Catalog `entry_url` + DEV approval is the per-app allowlist. In production with no enterprise list, host sets `APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true`.

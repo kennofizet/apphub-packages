@@ -7,7 +7,7 @@ const versionEl = document.getElementById('version')
 const params = new URLSearchParams(window.location.search)
 const launchToken = params.get('launch_token')
 
-/** @type {string[]} from Hub bridge (manifest api_urls — no manifest.json fetch in strict sandbox) */
+/** @type {string[]} from Hub bridge (manifest api_urls — iframe uses publisher origin; api_urls from bridge:ready) */
 let manifestApiUrls = []
 
 if (launchToken) {
