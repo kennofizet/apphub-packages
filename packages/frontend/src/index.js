@@ -376,8 +376,6 @@ export function installAppHubModule(vueApp, options = {}) {
   let store = getAppHubStore(vueApp)
 
   if (store) {
-    vueApp.provide('apphubHostApp', vueApp)
-    vueApp.provide(APPHUB_MODULE_STORE_KEY, store)
     applyModuleOptions(store, options)
     ensureModuleInfrastructure(vueApp, store)
     reconcileOriginSafety(store)

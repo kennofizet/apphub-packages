@@ -56,7 +56,8 @@ import {
 const hub = useDesktopHubSettings()
 const pinnedRows = useHubPinnedRows(hub)
 const favoriteRows = useHubFavoriteRows(hub)
-const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
+const moduleOptions = inject('apphubOptions', {})
+const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 
 const labels = computed(() => ({
   page_title: t('hub_settings_pin_favorite_title', lang.value),

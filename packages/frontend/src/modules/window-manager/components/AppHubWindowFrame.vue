@@ -75,7 +75,8 @@ const props = defineProps({
 
 const emit = defineEmits(['session-change'])
 
-const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
+const moduleOptions = inject('apphubOptions', {})
+const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 const workAreaRef = inject(DESKTOP_HOST_KEY, null)
 
 const labels = computed(() => ({

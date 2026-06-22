@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.9.0",
+  "schema_version": "1.10.0",
   "package": {
     "name": "apphub",
-    "version": "0.2.0",
+    "version": "0.2.7",
     "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
   },
   "meta": {
@@ -20,7 +20,29 @@
     },
     "publisher": {
       "summary": "Build an app that runs in App Hub and uses the bridge to request permissions, read user info, and send desktop messages.",
-      "human_doc": "App Hub Guide → App bridge tab",
+      "human_doc": "App Hub Guide → App bridge tab (friendly summary; this JSON is the machine-readable contract for AI tools)",
+      "runtime_types": {
+        "hosted": {
+          "summary": "Zip bundle on App Hub. Hub serves …/apps/{slug}/runtime/ in an opaque sandbox (no allow-same-origin).",
+          "manifest": "runtime_type: hosted, main or index.html, zip via POST /apps/register",
+          "launch": "POST /apps/{slug}/launch → runtime_url + launch_token",
+          "storage": "Hub injects a localStorage shim automatically. Await window.__APPHUB_STORAGE__.ready before first reads. Data is per Hub user + app slug.",
+          "choose_when": "Small tools, demos, no publisher HTTPS host"
+        },
+        "iframe": {
+          "summary": "Publisher hosts a SPA at entry_url. Hub embeds it with allow-same-origin on your origin only.",
+          "manifest": "runtime_type: iframe, entry_url (HTTPS), optional healthcheck_url; manifest drop or POST /apps/register JSON",
+          "launch": "POST /apps/{slug}/launch → entry_url + launch_token query param",
+          "storage": "Normal localStorage/sessionStorage on your publisher origin",
+          "choose_when": "Full SPAs, auth, existing domain you control"
+        }
+      },
+      "hosted_storage": {
+        "automatic": "Hub injects hosted-storage-shim.js when serving hosted HTML — publishers use normal localStorage calls.",
+        "ready": "await window.__APPHUB_STORAGE__?.ready before localStorage reads on initial load",
+        "scope": "Isolated per Hub user and app slug — not shared across hosted apps",
+        "iframe_note": "Does not apply to runtime_type iframe — use your own origin storage"
+      },
       "bridge": {
         "overview": "When a user opens your app from the desktop, App Hub loads your runtime in a window and provides AppHubBridge for permissions and desktop features.",
         "connection_flow": [
@@ -30,8 +52,23 @@
           "Use display_user from bridge:ready for UI; call publisher backend GET bridge/user for authoritative identity."
         ],
         "runtime_context": {
-          "fields": ["app_slug", "session_id", "scopes_granted", "permissions", "launch_token", "display_user"],
+          "fields": [
+            "app_slug",
+            "session_id",
+            "scopes_granted",
+            "session_granted",
+            "permissions",
+            "launch_token",
+            "bridge_api_base",
+            "publisher_api_base",
+            "caller_origin",
+            "app_version",
+            "display_user"
+          ],
           "launch_token": "Short-lived secret minted at launch. Treat like a password — never log, expose in UI, or send to third parties. Publisher backend passes it to GET bridge/user. scopes_granted on token mirror server install consent only.",
+          "bridge_api_base": "App Hub API base URL for bridge HTTP routes (from Hub install).",
+          "publisher_api_base": "First manifest api_urls entry — convenience for calling your tool backend.",
+          "app_version": "Installed/catalog version string when available.",
           "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use GET bridge/user from your publisher backend for authoritative identity."
         },
         "discovery": {
@@ -49,6 +86,11 @@
                 "scopes_granted": "string[] — server minted at launch (install consent)",
                 "session_granted": "string[] optional — Hub session desktop consents only (not authoritative)",
                 "permissions": "string[] — manifest permissions for Hub UI",
+                "launch_token": "string|null — short-lived; use via publisher backend only",
+                "bridge_api_base": "string|null — App Hub API base",
+                "publisher_api_base": "string|null — first manifest api_urls entry",
+                "caller_origin": "string|null — publisher entry origin when iframe",
+                "app_version": "string|null — installed version",
                 "display_user": "{ id: number, name: string } optional — UI only from Hub bootstrap"
               }
             },
@@ -90,6 +132,9 @@
           }
         ],
         "manifest": {
+          "runtime_type": "hosted | iframe — required",
+          "entry_url": "string — required for iframe (HTTPS publisher SPA URL); omitted for hosted zip",
+          "healthcheck_url": "string optional — iframe draft preflight ping target",
           "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
           "api_urls": "string[] optional — publisher tool backend URL(s) allowed to call bridge HTTP. TCP client IP must match DNS-pinned IPs stored at publish (production) or resolve live DNS (local dev). localhost/loopback rejected on publish in production.",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
@@ -155,12 +200,119 @@
         "iframe": "Self-hosted entry_url — drop manifest.json (runtime_type: iframe) on Hub desktop or POST /apps/register JSON (draft) → DEV approves → active in store."
       },
       "steps": [
+        "Choose runtime_type: hosted (zip on Hub) or iframe (your entry_url SPA).",
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
         "Listen for apphub:bridge:ready in your app.",
+        "For hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads on load.",
         "Call requestPermission for desktop scopes as needed.",
         "Use sendDesktopMessage, notify, setTaskbarBadge when granted.",
         "Handle denied permissions gracefully in your UI."
-      ]
+      ],
+      "locales": {
+        "vi": {
+          "summary": "Xây app chạy trong App Hub, dùng bridge để xin quyền, đọc thông tin user và gửi tin lên desktop.",
+          "runtime_types": {
+            "hosted": {
+              "summary": "Gói zip trên App Hub. Hub phục vụ …/apps/{slug}/runtime/ trong sandbox opaque (không allow-same-origin).",
+              "manifest": "runtime_type: hosted, main hoặc index.html, zip qua POST /apps/register",
+              "launch": "POST /apps/{slug}/launch → runtime_url + launch_token",
+              "storage": "Hub tự inject shim localStorage. Chờ window.__APPHUB_STORAGE__.ready trước lần đọc đầu. Dữ liệu theo user Hub + slug app.",
+              "choose_when": "Tool nhỏ, demo, không có host HTTPS của publisher"
+            },
+            "iframe": {
+              "summary": "Publisher host SPA tại entry_url. Hub nhúng với allow-same-origin chỉ trên origin của bạn.",
+              "manifest": "runtime_type: iframe, entry_url (HTTPS), healthcheck_url tùy chọn; thả manifest hoặc POST /apps/register JSON",
+              "launch": "POST /apps/{slug}/launch → entry_url + launch_token trên query",
+              "storage": "localStorage/sessionStorage bình thường trên origin publisher",
+              "choose_when": "SPA đầy đủ, auth, domain bạn kiểm soát"
+            }
+          },
+          "hosted_storage": {
+            "automatic": "Hub inject hosted-storage-shim.js khi phục vụ HTML hosted — publisher gọi localStorage như bình thường.",
+            "ready": "await window.__APPHUB_STORAGE__?.ready trước khi đọc localStorage lần đầu khi load",
+            "scope": "Tách theo user Hub và slug app — không chia sẻ giữa các app hosted",
+            "iframe_note": "Không áp dụng runtime_type iframe — dùng storage trên origin của bạn"
+          },
+          "bridge": {
+            "overview": "Khi user mở app từ desktop, App Hub tải runtime trong cửa sổ và cung cấp AppHubBridge cho quyền và tính năng desktop.",
+            "connection_flow": [
+              "User mở app (icon desktop hoặc App Store).",
+              "App Hub launch: POST /apps/{slug}/launch → entry_url + launch_token + scopes_granted (đồng ý trên server).",
+              "App tải trong cửa sổ Hub; AppHubBridge sẵn sàng (hoặc kênh postMessage apphub:bridge).",
+              "Dùng display_user từ bridge:ready cho UI; backend publisher gọi GET bridge/user cho danh tính tin cậy."
+            ],
+            "permissions": [
+              {
+                "scope": "user.read",
+                "description": "Id user và tên hiển thị.",
+                "user_prompt": "Cho phép {app} xem tên của bạn?"
+              },
+              {
+                "scope": "user.profile",
+                "description": "Trường hồ sơ mở rộng (avatar, locale, v.v.) khi user đồng ý.",
+                "user_prompt": "Cho phép {app} đọc hồ sơ của bạn?"
+              },
+              {
+                "scope": "desktop.notify",
+                "description": "Hiện thông báo trên desktop hoặc taskbar.",
+                "user_prompt": "Cho phép {app} gửi thông báo?"
+              },
+              {
+                "scope": "desktop.message",
+                "description": "Hiện banner hoặc tin trên vùng desktop.",
+                "user_prompt": "Cho phép {app} hiện tin trên desktop?"
+              },
+              {
+                "scope": "desktop.badge",
+                "description": "Hiện số hoặc chấm trên icon app ở taskbar.",
+                "user_prompt": "Cho phép {app} cập nhật badge taskbar?"
+              }
+            ],
+            "data_tiers": {
+              "display_only": {
+                "use_for": "Lời chào, nhãn, copy UI trong iframe app",
+                "do_not_use_for": "Phân quyền, audit, hoặc gọi API publisher như user này"
+              },
+              "authoritative": {
+                "use_for": "Danh tính phía server, quyền, tuân thủ",
+                "requires": "user.read hoặc user.profile trên launch token"
+              }
+            },
+            "javascript_api": {
+              "getDisplayUser": {
+                "description": "Snapshot user chỉ cho UI từ bridge:ready (bootstrap Hub). Không gọi HTTP. Không dùng cho auth."
+              },
+              "requestPermission": {
+                "description": "Đồng ý UI Hub cho quyền desktop trong phiên (notify, message, badge). user.* được cấp lúc launch từ quyền cài đặt — không qua bridge runtime."
+              },
+              "sendDesktopMessage": {
+                "description": "Hiện banner hoặc overlay trên desktop."
+              },
+              "notify": {
+                "description": "Lối tắt thông báo desktop."
+              },
+              "setTaskbarBadge": {
+                "description": "Đặt hoặc xóa badge taskbar trên nút app của bạn."
+              }
+            },
+            "example": "// Sau apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // Lời chào UI — không gọi API\nconsole.log('Xin chào', display?.name)\n// User tin cậy: GET bridge/user từ backend publisher (xem http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Xin chào', body: `Chào ${display?.name}`, duration_ms: 5000 })"
+          },
+          "deploy": {
+            "hosted": "Build dist/ → zip có manifest.json (runtime_type: hosted) → thả desktop Hub → POST /apps/register (draft) → DEV duyệt → active trên store.",
+            "local": "Thả manifest local trên desktop để cài riêng (không liệt kê server).",
+            "iframe": "entry_url tự host — thả manifest.json (runtime_type: iframe) trên desktop Hub hoặc POST /apps/register JSON (draft) → DEV duyệt → active trên store."
+          },
+          "steps": [
+            "Chọn runtime_type: hosted (zip trên Hub) hoặc iframe (SPA entry_url của bạn).",
+            "Mở Hướng dẫn App Hub → Cầu nối App, hoặc đọc audiences.publisher.bridge ở đây.",
+            "Lắng nghe apphub:bridge:ready trong app.",
+            "Hosted: await window.__APPHUB_STORAGE__?.ready trước khi đọc localStorage khi load.",
+            "Gọi requestPermission cho quyền desktop khi cần.",
+            "Dùng sendDesktopMessage, notify, setTaskbarBadge khi được cấp.",
+            "Xử lý khi user từ chối quyền một cách graceful trong UI."
+          ]
+        }
+      }
     },
     "agent": {
       "instructions": "Publisher docs = usage only (bridge). Security and package details are host_dev / backend_security — never put those in publisher-facing text.",
@@ -215,6 +367,16 @@
         "launch_url_query": "Hub adds hub_origin and product_origin on hosted runtime URL after POST …/launch",
         "local_dev_defaults": "Hub http://localhost:5173, product http://localhost:3000 when APP_ENV=local",
         "misconfiguration_symptom": "launch OK, runtime/index.html OK, blank app window, no CSS/JS requests"
+      },
+      "iframe_runtime_policy": {
+        "summary": "Per-app apps.entry_url + DEV approval is the allowlist. Optional enterprise cap via APPHUB_ALLOWED_RUNTIME_ORIGINS.",
+        "production_opt_in": "APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true when enterprise list is empty and catalog+DEV model is intended",
+        "sandbox": "iframe runtime uses allow-same-origin on publisher origin only — does not expose Hub localStorage"
+      },
+      "hosted_storage": {
+        "summary": "Hosted zip apps get localStorage shim injected at serve time; Hub parent persists via apphub:storage postMessage.",
+        "resource": "packages/backend/src/Modules/Catalog/Resources/hosted-storage-shim.js",
+        "hub_key_prefix": "apphub_hosted_store:{userId}:{slug}"
       }
     }
   },
@@ -252,9 +414,9 @@
       {
         "method": "GET",
         "path": "integration-docs",
-        "auth": "token",
+        "auth": "none",
         "audience": ["publisher"],
-        "description": "Publisher-safe integration contract (audiences.publisher + bridge routes only)."
+        "description": "Publisher-safe integration contract (audiences.publisher + bridge routes only). Public JSON for AI tools and Guide."
       },
       {
         "method": "GET",

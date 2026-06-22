@@ -38,7 +38,8 @@ import AppHubSettingsScreenPanel from './settings/AppHubSettingsScreenPanel.vue'
 import AppHubSettingsStartMenuPanel from './settings/AppHubSettingsStartMenuPanel.vue'
 
 const section = ref('screen')
-const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
+const moduleOptions = inject('apphubOptions', {})
+const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 
 const labels = computed(() => ({
   title: t('hub_settings_app_title', lang.value),

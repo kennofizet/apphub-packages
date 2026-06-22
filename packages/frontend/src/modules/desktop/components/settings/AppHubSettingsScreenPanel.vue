@@ -28,7 +28,8 @@ import AppHubDesktopDevOriginBar from '../AppHubDesktopDevOriginBar.vue'
 
 const hub = useDesktopHubSettings()
 const { visible: devOriginVisible } = useDevOriginToggle()
-const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
+const moduleOptions = inject('apphubOptions', {})
+const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 const activeTheme = computed(() => unref(hub.activeTheme) ?? 'dark')
 const showThemeToggle = computed(() => unref(hub.showThemeToggle) !== false)
 

@@ -42,7 +42,8 @@ import { resolveLang } from '../../../../i18n/resolveLang.js'
 import { useDesktopHubSettings } from '../../composables/useDesktopHubSettings.js'
 
 const hub = useDesktopHubSettings()
-const lang = computed(() => resolveLang(inject('apphubOptions', {})?.language, 'vi'))
+const moduleOptions = inject('apphubOptions', {})
+const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 
 const labels = computed(() => ({
   title: t('hub_settings_keyboard_title', lang.value),
