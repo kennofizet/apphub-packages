@@ -61,3 +61,5 @@ Requires **Node.js 18+** (uses global `fetch`).
 - `POST /verify-launch-token`
 
 Forwards `X-AppHub-Launch-Token` and `X-AppHub-App-Slug` headers unchanged.
+
+See also [`../verify-launch-token/README.md`](../verify-launch-token/README.md) for curl + standalone `verify.mjs`.

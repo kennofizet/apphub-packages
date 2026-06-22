@@ -31,7 +31,7 @@ Publisher docs **do not** mention:
 - Production, host package, `host_dev`, `installAppHubModule`
 - Security architecture or isolation (that is backend / host_dev)
 
-Human copy: **Guide → App bridge** tab.
+Human copy: **Guide → App bridge** tab. Field reference: [manifest-schema.md](./manifest-schema.md).
 
 ---
 

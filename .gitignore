@@ -9,6 +9,7 @@ example/**/release/
 
 docs/*
 !docs/integration-docs.md
+!docs/manifest-schema.md
 
 *.log
 .DS_Store

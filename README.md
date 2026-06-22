@@ -15,6 +15,7 @@ Monorepo for **apphub-backend** (Laravel) and **apphub-frontend** (Vue 3).
 | File | Description |
 |------|-------------|
 | [docs/integration-docs.md](./docs/integration-docs.md) | Contract overview |
+| [docs/manifest-schema.md](./docs/manifest-schema.md) | `manifest.json` field reference (hosted + iframe) |
 | [packages/backend/src/Modules/Bridge/Resources/integration-docs.json](./packages/backend/src/Modules/Bridge/Resources/integration-docs.json) | Source of truth JSON |
 
 Publisher docs explain **how to use** the bridge. Endpoint security is documented under **host_dev** only.

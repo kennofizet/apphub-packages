@@ -31,6 +31,10 @@ npm run pack:storage
 
 Drop `demo-storage-writer.zip`, `demo-storage-reader.zip`, `demo-storage-reader-b.zip` → approve → open Writer then Readers. See [`demo-storage-poc/README.md`](demo-storage-poc/README.md).
 
+## `verify-launch-token/` (publisher backend)
+
+curl + Node examples for **`POST …/verify-launch-token`** — required when your tool server authorizes users. See [`verify-launch-token/README.md`](verify-launch-token/README.md). For local demos, pair with [`local-bridge-proxy/`](local-bridge-proxy/).
+
 ---
 
 ## Hosted demos (`demo-simple/`)
