@@ -2,7 +2,10 @@
 
 namespace Kennofizet\AppHub\Modules\Launch\Providers;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Kennofizet\AppHub\Core\Providers\ModuleServiceProvider;
+use Kennofizet\AppHub\Modules\Launch\Console\HealthcheckAppsCommand;
+use Kennofizet\AppHub\Modules\Launch\Services\AppEntryUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
 use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppUsageService;
@@ -29,5 +32,16 @@ class LaunchServiceProvider extends ModuleServiceProvider
     public function boot(): void
     {
         $this->loadModuleMigrations();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                HealthcheckAppsCommand::class,
+            ]);
+        }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            $minutes = max(1, (int) config('apphub.healthcheck_schedule_minutes', 5));
+            $schedule->command('apphub:healthcheck')->everyMinutes($minutes);
+        });
     }
 }

@@ -21,6 +21,7 @@ final class LaunchService
         private readonly AppVersionService $versions,
         private readonly AppBridgeConsentService $bridgeConsents,
         private readonly AppEntryUrlGuard $entryUrlGuard,
+        private readonly AppHealthcheckService $healthcheck,
     ) {
     }
 
@@ -59,6 +60,10 @@ final class LaunchService
 
         if (!$this->catalog->userCanLaunch($app, $userId, $userZoneIds)) {
             throw new LaunchDeniedException('You do not have permission to launch this app', 403);
+        }
+
+        if ($this->healthcheck->isStale($app)) {
+            $this->healthcheck->pingAndPersist($app);
         }
 
         $pinnedVersion = $this->normalizeBundleVersion($bundleVersion);

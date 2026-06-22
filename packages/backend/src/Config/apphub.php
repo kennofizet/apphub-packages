@@ -89,4 +89,13 @@ return [
     'bundle_disk' => env('APPHUB_BUNDLE_DISK', 'local'),
     'bundle_max_bytes' => (int) env('APPHUB_BUNDLE_MAX_BYTES', 52_428_800),
     'bundle_storage_root' => env('APPHUB_BUNDLE_STORAGE_ROOT', 'apphub/bundles'),
+
+    /** Re-ping healthcheck_url when older than this (store catalog + launch). */
+    'healthcheck_ttl_seconds' => max(30, (int) env('APPHUB_HEALTHCHECK_TTL_SECONDS', 300)),
+
+    /** Max stale apps to ping per store catalog page (avoids slow first paint). */
+    'healthcheck_catalog_max_per_request' => max(1, min(50, (int) env('APPHUB_HEALTHCHECK_CATALOG_MAX', 24))),
+
+    /** Background schedule interval (minutes). Host must run `php artisan schedule:run` via cron. */
+    'healthcheck_schedule_minutes' => max(1, (int) env('APPHUB_HEALTHCHECK_SCHEDULE_MINUTES', 5)),
 ];

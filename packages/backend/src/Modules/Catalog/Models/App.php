@@ -28,6 +28,8 @@ class App extends Model
         'runtime_type',
         'entry_url',
         'healthcheck_url',
+        'health_ok',
+        'health_checked_at',
         'manifest',
         'bundle_path',
         'bundle_hash',
@@ -37,6 +39,8 @@ class App extends Model
     protected $casts = [
         'owner_user_id' => 'integer',
         'manifest' => 'array',
+        'health_ok' => 'boolean',
+        'health_checked_at' => 'datetime',
     ];
 
     public function __construct(array $attributes = [])

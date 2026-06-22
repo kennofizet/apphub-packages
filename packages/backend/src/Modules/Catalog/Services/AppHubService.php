@@ -5,13 +5,16 @@ namespace Kennofizet\AppHub\Modules\Catalog\Services;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
+use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
 use Kennofizet\PackagesCore\Models\Zone;
 use RuntimeException;
 
 final class AppHubService
 {
-    public function __construct(private readonly AppPublishService $publish)
-    {
+    public function __construct(
+        private readonly AppPublishService $publish,
+        private readonly AppHealthcheckService $healthcheck,
+    ) {
     }
 
     public function isDevUser(?int $userId = null): bool
@@ -53,6 +56,7 @@ final class AppHubService
         if ($status === AppStatus::ACTIVE && $app->hasPendingVersion()) {
             $app = $this->publish->promotePendingVersion($app);
             $this->ensureDefaultZoneAccess($app);
+            $this->pingHealthIfConfigured($app);
 
             return $app;
         }
@@ -63,6 +67,7 @@ final class AppHubService
         if ($status === AppStatus::ACTIVE) {
             $this->publish->markLiveVersionPublished($app);
             $this->ensureDefaultZoneAccess($app);
+            $this->pingHealthIfConfigured($app);
         }
 
         return $app;
@@ -93,5 +98,14 @@ final class AppHubService
             ],
             [],
         );
+    }
+
+    private function pingHealthIfConfigured(App $app): void
+    {
+        if (trim((string) ($app->healthcheck_url ?? '')) === '') {
+            return;
+        }
+
+        $this->healthcheck->pingAndPersist($app);
     }
 }

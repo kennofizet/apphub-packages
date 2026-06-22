@@ -46,6 +46,7 @@ export default {
   app_store_status_draft: 'Bản nháp',
   app_store_status_active: 'Đã duyệt',
   app_store_status_offline: 'Ngừng hoạt động',
+  app_store_status_unhealthy: 'Không khỏe',
   app_store_section_apps: 'Ứng dụng',
   app_store_section_testing: 'Ứng dụng thử nghiệm',
   app_store_section_testing_hint: 'Bản nháp cho chủ sở hữu và tester — chưa công khai cho đến khi duyệt.',

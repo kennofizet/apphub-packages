@@ -37,6 +37,11 @@ export function normalizeCatalogApp(row) {
     runtime_type: typeof row.runtime_type === 'string' ? row.runtime_type : 'iframe',
     entry_url: entryUrl || null,
     healthcheck_url: healthcheckUrl || null,
+    health_ok: row.health_ok === true ? true : row.health_ok === false ? false : null,
+    health_checked_at:
+      typeof row.health_checked_at === 'string' && row.health_checked_at.trim()
+        ? row.health_checked_at.trim()
+        : null,
     bundle_hash: typeof row.bundle_hash === 'string' ? row.bundle_hash : null,
     bundle_entry: typeof row.bundle_entry === 'string' ? row.bundle_entry : null,
     bundle_file_count: Number.isFinite(Number(row.bundle_file_count))

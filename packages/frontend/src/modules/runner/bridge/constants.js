@@ -11,4 +11,5 @@ export const BRIDGE_METHODS = new Set([
   'sendDesktopMessage',
   'notify',
   'setTaskbarBadge',
+  'reportError',
 ])

@@ -13,11 +13,14 @@ use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppPermissionType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
+use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckService;
 
 final class AppCatalogService
 {
-    public function __construct(private readonly AppHubService $appHub)
-    {
+    public function __construct(
+        private readonly AppHubService $appHub,
+        private readonly AppHealthcheckService $healthcheck,
+    ) {
     }
 
     public function findBySlug(string $slug): ?App
@@ -121,6 +124,10 @@ final class AppCatalogService
         $hasMore = $apps->count() > $perPage;
         if ($hasMore) {
             $apps = $apps->take($perPage);
+        }
+
+        if ($mode === AppCatalogMode::STORE && $apps->isNotEmpty()) {
+            $this->healthcheck->refreshStaleApps($apps);
         }
 
         /** @var App|null $last */
@@ -243,6 +250,8 @@ final class AppCatalogService
             'runtime_type' => $app->runtime_type,
             'entry_url' => $app->entry_url,
             'healthcheck_url' => $app->healthcheck_url,
+            'health_ok' => $app->healthcheck_url ? $app->health_ok : null,
+            'health_checked_at' => $app->health_checked_at?->toIso8601String(),
             'bundle_hash' => $app->bundle_hash,
             'bundle_entry' => $app->bundle_entry,
             'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,

@@ -46,6 +46,7 @@ export function useRunnerBridge(options) {
       onDesktopMessage: options.onDesktopMessage,
       onNotify: options.onNotify,
       onTaskbarBadge: options.onTaskbarBadge,
+      reportUsageError: options.reportUsageError,
       getEntryOrigin: () => {
         const url = options.launchUrl?.value ?? options.entryUrl?.() ?? ''
         return entryUrlOrigin(url)

@@ -1133,6 +1133,11 @@
   color: #cbd5e1;
 }
 
+.apphub-store__badge--unhealthy {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
+}
+
 .apphub-store__card--offline {
   opacity: 0.72;
 }

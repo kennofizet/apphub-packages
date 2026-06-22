@@ -33,6 +33,7 @@ function isBridgeMessage(data) {
  *   onDesktopMessage?: (payload: object) => void,
  *   onNotify?: (payload: { title?: string, body?: string, icon?: string }) => void,
  *   onTaskbarBadge?: (count: number | null) => void,
+ *   reportUsageError?: (metadata: Record<string, unknown>) => Promise<void>,
  *   getEntryOrigin?: () => string,
  *   getDisplayUser?: () => { id: number | string, name?: string | null } | null,
  *   getBridgeApiBase?: () => string | null,
@@ -225,6 +226,16 @@ export function createRunnerBridgeHost(options) {
         }
         const count = args?.[0]
         options.onTaskbarBadge?.(count === null || count === undefined ? null : Number(count))
+        reply(id, true, undefined)
+        return
+      }
+
+      if (method === 'reportError') {
+        const raw = args?.[0]
+        const metadata = raw && typeof raw === 'object' && !Array.isArray(raw)
+          ? raw
+          : { message: String(raw ?? 'Unknown error') }
+        await options.reportUsageError?.(metadata)
         reply(id, true, undefined)
         return
       }

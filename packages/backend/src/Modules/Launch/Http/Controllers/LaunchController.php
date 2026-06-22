@@ -118,7 +118,7 @@ class LaunchController extends Controller
             return $this->apiErrorResponse('You do not have permission to test this app', 403);
         }
 
-        return $this->apiResponseWithContext($this->healthcheck->ping($app));
+        return $this->apiResponseWithContext($this->healthcheck->pingAndPersist($app));
     }
 
     public function usage(Request $request, string $slug): JsonResponse
@@ -134,6 +134,9 @@ class LaunchController extends Controller
         $validated = $request->validate([
             'action' => 'required|string|in:' . implode(',', AppUsageService::ALLOWED_ACTIONS),
             'metadata' => 'nullable|array',
+            'metadata.message' => 'nullable|string|max:2000',
+            'metadata.name' => 'nullable|string|max:255',
+            'metadata.stack' => 'nullable|string|max:4000',
         ]);
 
         try {

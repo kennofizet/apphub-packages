@@ -75,7 +75,7 @@
               v-for="app in appStore.filteredStoreApps"
               :key="app.slug"
               class="apphub-store__card"
-              :class="{ 'apphub-store__card--offline': app.status === 'disabled' }"
+              :class="{ 'apphub-store__card--offline': app.status === 'disabled' || app.health_ok === false }"
             >
               <AppHubAppStoreCard
                 :app="app"
@@ -144,6 +144,7 @@ const labels = computed(() => ({
   app_store_unavailable: t('app_store_unavailable', lang.value),
   app_store_status_draft: t('app_store_status_draft', lang.value),
   app_store_status_offline: t('app_store_status_offline', lang.value),
+  app_store_status_unhealthy: t('app_store_status_unhealthy', lang.value),
   app_store_installed: t('app_store_installed', lang.value),
   app_store_uninstall: t('app_store_uninstall', lang.value),
   app_store_update: t('app_store_update', lang.value),

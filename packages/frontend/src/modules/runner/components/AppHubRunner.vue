@@ -266,6 +266,9 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   onTaskbarBadge() {
     /* badge UI deferred — scope recorded server-side */
   },
+  reportUsageError: async (metadata) => {
+    await api?.usage?.(props.slug, { action: 'error', metadata })
+  },
 })
 
 const preflightTargetLabel = computed(() => {

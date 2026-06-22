@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.10.0",
+  "schema_version": "1.10.1",
   "package": {
     "name": "apphub",
     "version": "0.2.7",
@@ -183,6 +183,11 @@
             "signature": "setTaskbarBadge(count: number | null): Promise<void>",
             "requires": ["desktop.badge"],
             "description": "Set or clear taskbar badge on your app button."
+          },
+          "reportError": {
+            "signature": "reportError(error: Error | string | { message?: string, name?: string, stack?: string }): Promise<void>",
+            "requires": [],
+            "description": "Log a runtime error to App Hub usage logs (action error). Hub shell calls POST /apps/{slug}/usage — no extra permission."
           }
         },
         "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Authoritative user: GET bridge/user from your publisher backend (see http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${display?.name}`, duration_ms: 5000 })",

@@ -46,6 +46,7 @@ export default {
   app_store_status_draft: 'Draft',
   app_store_status_active: 'Published',
   app_store_status_offline: 'Offline',
+  app_store_status_unhealthy: 'Unhealthy',
   app_store_section_apps: 'Apps',
   app_store_section_testing: 'Testing apps',
   app_store_section_testing_hint: 'Draft builds for owners and testers — not listed for all users until approved.',

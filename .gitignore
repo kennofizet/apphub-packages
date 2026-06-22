@@ -10,6 +10,7 @@ example/**/release/
 docs/*
 !docs/integration-docs.md
 !docs/manifest-schema.md
+!docs/smoke-test.md
 
 *.log
 .DS_Store

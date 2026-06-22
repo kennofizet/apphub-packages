@@ -77,12 +77,14 @@ const updateAvailable = computed(() => {
 const statusLabel = computed(() => {
   if (props.app.status === 'draft') return props.labels.app_store_status_draft
   if (props.app.status === 'disabled') return props.labels.app_store_status_offline
+  if (props.app.health_ok === false) return props.labels.app_store_status_unhealthy
   return ''
 })
 
 const statusBadgeClass = computed(() => {
   if (props.app.status === 'draft') return 'apphub-store__badge--draft'
   if (props.app.status === 'disabled') return 'apphub-store__badge--offline'
+  if (props.app.health_ok === false) return 'apphub-store__badge--unhealthy'
   return ''
 })
 </script>

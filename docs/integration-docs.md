@@ -25,6 +25,7 @@ Publisher documentation explains **how to use** App Hub from an app:
 - `AppHubBridge` handshake — full `bridge:ready` context (`bridge_api_base`, `publisher_api_base`, `app_version`, …)
 - `getDisplayUser()` for UI; publisher backend `GET bridge/user` for verified identity
 - `requestPermission`, `sendDesktopMessage`, `notify`, `setTaskbarBadge` for desktop features
+- `reportError(error)` — logs runtime errors to usage (`action: error`); no extra permission
 
 Publisher docs **do not** mention:
 
