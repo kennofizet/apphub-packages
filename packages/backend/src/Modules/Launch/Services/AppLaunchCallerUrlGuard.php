@@ -36,6 +36,14 @@ final class AppLaunchCallerUrlGuard
         }
 
         $pinnedIps = $this->versions->pinnedIpsForLaunchBundle($app, $bundleVersion);
+        if (AppManifestApiUrl::requiresApiUrlIpPins() && $pinnedIps === []) {
+            return [
+                'ok' => false,
+                'error' => 'api_urls IP pins are required but missing — re-publish the app bundle',
+                'status' => 403,
+            ];
+        }
+
         $clientIp = trim((string) $request->ip());
         if (!AppManifestApiUrl::clientMatchesAllowedHosts($clientIp, $allowed, $pinnedIps !== [] ? $pinnedIps : null)) {
             return [
@@ -54,14 +62,23 @@ final class AppLaunchCallerUrlGuard
                 ];
             }
 
-            if (AppManifestApiUrl::bridgeProxySecretFromConfig() === '') {
+            $proxySecret = AppManifestApiUrl::bridgeProxySecretFromConfig();
+            if ($proxySecret === '' && AppManifestApiUrl::requiresBridgeProxySecretOnLoopback()) {
+                return [
+                    'ok' => false,
+                    'error' => 'Loopback api_urls require APPHUB_BRIDGE_PROXY_SECRET in this environment',
+                    'status' => 403,
+                ];
+            }
+
+            if ($proxySecret === '') {
                 Log::warning('AppHub bridge: loopback api_urls without APPHUB_BRIDGE_PROXY_SECRET — any local process may call bridge endpoints', [
                     'app_slug' => $app->slug,
                     'client_ip' => $clientIp,
                 ]);
             }
 
-            $attestation = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation($request, $allowed);
+            $attestation = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation($request, $allowed, $proxySecret);
             if ($attestation['ok'] !== true) {
                 return $attestation;
             }

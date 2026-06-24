@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Kennofizet\AppHub\Modules\Bridge\Http\Controllers\BridgeController;
 
-Route::get('bridge/user', [BridgeController::class, 'user']);
+Route::get('bridge/user', [BridgeController::class, 'user'])
+    ->middleware('throttle:apphub-bridge-user');
 Route::post('bridge/notify', [BridgeController::class, 'notify'])
     ->middleware('throttle:apphub-bridge-notify');

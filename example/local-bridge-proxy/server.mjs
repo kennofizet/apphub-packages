@@ -27,6 +27,7 @@ const FORWARD_HEADERS = [
   'content-type',
   'x-apphub-launch-token',
   'x-apphub-app-slug',
+  'x-apphub-session-id',
 ]
 
 function applyCors(res, origin, req) {
@@ -36,7 +37,7 @@ function applyCors(res, origin, req) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Accept, Content-Type, X-AppHub-Launch-Token, X-AppHub-App-Slug',
+    'Accept, Content-Type, X-AppHub-Launch-Token, X-AppHub-App-Slug, X-AppHub-Session-Id',
   )
   if (req?.headers['access-control-request-private-network'] === 'true') {
     res.setHeader('Access-Control-Allow-Private-Network', 'true')

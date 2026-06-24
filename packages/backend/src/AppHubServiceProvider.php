@@ -53,6 +53,15 @@ class AppHubServiceProvider extends ServiceProvider
             return Limit::perMinute(max(1, (int) config('apphub.bridge_rate_limit', 30)))->by($key);
         });
 
+        RateLimiter::for('apphub-bridge-user', function (Request $request): Limit {
+            $token = trim((string) $request->header('X-AppHub-Launch-Token', ''));
+            $key = $token !== ''
+                ? 'bridge-user:' . app(LaunchTokenService::class)->hashToken($token)
+                : 'bridge-user-ip:' . (string) $request->ip();
+
+            return Limit::perMinute(max(1, (int) config('apphub.bridge_user_rate_limit', 15)))->by($key);
+        });
+
         RateLimiter::for('apphub-bridge-notify', function (Request $request): Limit {
             $token = trim((string) $request->header('X-AppHub-Launch-Token', ''));
             $key = $token !== ''

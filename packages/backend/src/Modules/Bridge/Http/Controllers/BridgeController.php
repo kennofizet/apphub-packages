@@ -4,6 +4,8 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Kennofizet\AppHub\Http\Controllers\Controller;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
@@ -36,8 +38,10 @@ class BridgeController extends Controller
         $data = $this->resolveBridgeUser($launch);
 
         if ($this->launchTokens->hasScope($launch, 'user.profile')) {
-            $data['locale'] = 'vi';
-            $data['avatar'] = null;
+            $data['profile'] = [
+                'locale' => 'vi',
+                'avatar' => null,
+            ];
         }
 
         return $this->apiResponseWithContext($data);
@@ -69,6 +73,10 @@ class BridgeController extends Controller
             'user_ids.*' => 'integer|min:1',
         ]);
 
+        if ($response = $this->assertNotifyTokenBudget($request)) {
+            return $response;
+        }
+
         try {
             $result = $this->notifications->fanOutFromPublisher(
                 $app,
@@ -81,6 +89,8 @@ class BridgeController extends Controller
         } catch (RuntimeException $e) {
             return $this->apiErrorResponse($e->getMessage(), 422);
         }
+
+        $this->recordNotifyTokenUse($request);
 
         return $this->apiResponseWithContext([
             'accepted' => true,
@@ -108,5 +118,38 @@ class BridgeController extends Controller
             : (string) $user->id;
 
         return ['id' => $userId, 'name' => $name];
+    }
+
+    private function assertNotifyTokenBudget(Request $request): ?JsonResponse
+    {
+        $tokenHash = trim((string) $request->attributes->get('apphub_launch_token_hash', ''));
+        if ($tokenHash === '') {
+            return null;
+        }
+
+        $key = 'apphub-bridge-notify-count:' . $tokenHash;
+        $max = max(1, (int) config('apphub.bridge_notify_max_per_token', 50));
+        if ((int) Cache::get($key, 0) >= $max) {
+            return $this->apiErrorResponse('Notify limit exceeded for this launch session', 429);
+        }
+
+        return null;
+    }
+
+    private function recordNotifyTokenUse(Request $request): void
+    {
+        $tokenHash = trim((string) $request->attributes->get('apphub_launch_token_hash', ''));
+        if ($tokenHash === '') {
+            return;
+        }
+
+        $key = 'apphub-bridge-notify-count:' . $tokenHash;
+        $count = (int) Cache::get($key, 0) + 1;
+        $expiresAt = $request->attributes->get('apphub_launch_expires_at');
+        $ttlSeconds = $expiresAt instanceof Carbon
+            ? max(1, $expiresAt->diffInSeconds(now()))
+            : max(60, (int) config('apphub.launch_token_ttl', 180));
+
+        Cache::put($key, $count, $ttlSeconds);
     }
 }

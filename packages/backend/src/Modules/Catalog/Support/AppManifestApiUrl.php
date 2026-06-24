@@ -389,6 +389,20 @@ final class AppManifestApiUrl
         return filter_var(config('apphub.allow_localhost_api_urls'), FILTER_VALIDATE_BOOL);
     }
 
+    public static function requiresApiUrlIpPins(): bool
+    {
+        return self::useApiUrlIpPinsFromConfig();
+    }
+
+    public static function requiresBridgeProxySecretOnLoopback(): bool
+    {
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        return filter_var(config('apphub.require_bridge_proxy_secret_on_loopback'), FILTER_VALIDATE_BOOL);
+    }
+
     private static function useApiUrlIpPinsFromConfig(): bool
     {
         if (!function_exists('config')) {

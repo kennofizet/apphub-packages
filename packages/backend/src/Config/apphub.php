@@ -72,9 +72,21 @@ return [
      */
     'bridge_proxy_secret' => trim((string) env('APPHUB_BRIDGE_PROXY_SECRET', '')),
 
+    /** When true, loopback api_urls require APPHUB_BRIDGE_PROXY_SECRET (default off in local/testing). */
+    'require_bridge_proxy_secret_on_loopback' => filter_var(
+        env(
+            'APPHUB_REQUIRE_BRIDGE_PROXY_SECRET',
+            !in_array(env('APP_ENV', 'production'), ['local', 'testing'], true),
+        ),
+        FILTER_VALIDATE_BOOL,
+    ),
+
     /** Per-minute rate limits (per launch token hash or IP). */
     'bridge_rate_limit' => max(1, (int) env('APPHUB_BRIDGE_RATE_LIMIT', 30)),
+    'bridge_user_rate_limit' => max(1, (int) env('APPHUB_BRIDGE_USER_RATE_LIMIT', 15)),
     'bridge_notify_rate_limit' => max(1, (int) env('APPHUB_BRIDGE_NOTIFY_RATE_LIMIT', 10)),
+    /** Max POST bridge/notify calls per launch token until expiry. */
+    'bridge_notify_max_per_token' => max(1, (int) env('APPHUB_BRIDGE_NOTIFY_MAX_PER_TOKEN', 50)),
     'verify_launch_rate_limit' => max(1, (int) env('APPHUB_VERIFY_LAUNCH_RATE_LIMIT', 20)),
 
     /** Max inbox rows created per POST bridge/notify (broadcast cap). */

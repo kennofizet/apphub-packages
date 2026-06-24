@@ -73,8 +73,12 @@ export function createHostedStorageHost(options) {
     if (!frame?.contentWindow) return false
     if (event.source !== frame.contentWindow) return false
 
+    if (options.isOpaqueHostedSandbox?.()) {
+      return true
+    }
+
     const entryOrigin = options.getEntryOrigin?.() ?? ''
-    if (!entryOrigin) return true
+    if (!entryOrigin) return false
 
     try {
       if (event.origin === 'null' || event.origin === '') return true

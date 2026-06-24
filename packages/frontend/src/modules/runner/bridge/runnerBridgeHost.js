@@ -104,6 +104,8 @@ export function createRunnerBridgeHost(options) {
     const ctx = options.getLaunchContext?.() ?? {}
     const displayUser = resolveDisplayUser()
     const permissions = manifestPermissions()
+    const publisherApiBase = options.getPublisherApiBase?.() ?? null
+    const hasPublisherBridge = typeof publisherApiBase === 'string' && publisherApiBase.trim() !== ''
     postToFrame({
       channel: BRIDGE_CHANNEL,
       event: BRIDGE_EVENT_READY,
@@ -113,9 +115,9 @@ export function createRunnerBridgeHost(options) {
         scopes_granted: [...tokenScopes],
         session_granted: [...sessionGranted],
         permissions,
-        launch_token: ctx.launch_token ?? null,
+        ...(hasPublisherBridge && ctx.launch_token ? { launch_token: ctx.launch_token } : {}),
         bridge_api_base: options.getBridgeApiBase?.() ?? null,
-        publisher_api_base: options.getPublisherApiBase?.() ?? null,
+        publisher_api_base: publisherApiBase,
         caller_origin: options.getEntryOrigin?.() ?? null,
         app_version: options.getAppVersion?.() ?? null,
         ...(tokenScopes.has('user.read') && displayUser ? { display_user: displayUser } : {}),
@@ -205,7 +207,9 @@ export function createRunnerBridgeHost(options) {
           return
         }
         const payload = args?.[0] ?? {}
-        options.onDesktopMessage?.(payload)
+        const title = String(payload?.title ?? '').trim().slice(0, 255)
+        const body = String(payload?.body ?? '').trim().slice(0, 2000)
+        options.onDesktopMessage?.({ ...payload, title, body })
         reply(id, true, undefined)
         return
       }

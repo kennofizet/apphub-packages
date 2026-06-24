@@ -34,11 +34,16 @@
   }
 
   function bridgeHeaders(token, slug) {
-    return {
+    const headers = {
       Accept: 'application/json',
       'X-AppHub-Launch-Token': token,
       'X-AppHub-App-Slug': slug,
     }
+    const sessionId = bridgeContext?.session_id
+    if (typeof sessionId === 'string' && sessionId.trim()) {
+      headers['X-AppHub-Session-Id'] = sessionId.trim()
+    }
+    return headers
   }
 
   /**

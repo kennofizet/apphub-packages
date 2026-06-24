@@ -41,21 +41,21 @@ final class AppRuntimeServeService
     public function serve(App $app, string $path, Request $request): Response
     {
         if ($request->isMethod('OPTIONS')) {
-            return $this->corsPreflight();
+            return $this->corsPreflight($request);
         }
 
         if ($app->runtime_type !== AppRuntimeType::HOSTED) {
-            return $this->runtimeError('Not a hosted app', 404);
+            return $this->runtimeError('Not a hosted app', 404, $request);
         }
 
         $token = $this->authorize($app, $request);
         if ($token === null) {
-            return $this->runtimeError('Invalid or expired launch token', 401);
+            return $this->runtimeError('Invalid or expired launch token', 401, $request);
         }
 
         $bundle = $this->versions->resolveLaunchBundle($app, $token->bundle_version, (int) $token->user_id);
         if ($bundle === null) {
-            return $this->runtimeError('Bundle not published', 404);
+            return $this->runtimeError('Bundle not published', 404, $request);
         }
 
         $path = ltrim(str_replace('\\', '/', $path), '/');
@@ -64,17 +64,17 @@ final class AppRuntimeServeService
         }
 
         if (str_contains($path, '..')) {
-            return $this->runtimeError('Invalid path', 400);
+            return $this->runtimeError('Invalid path', 400, $request);
         }
 
         try {
             $absolute = $this->bundles->absolutePath($bundle['path'], $path);
         } catch (RuntimeException) {
-            return $this->runtimeError('Invalid path', 400);
+            return $this->runtimeError('Invalid path', 400, $request);
         }
 
         if (!is_file($absolute)) {
-            return $this->runtimeError('Not found', 404);
+            return $this->runtimeError('Not found', 404, $request);
         }
 
         $plainToken = (string) $request->query('launch_token', '');
@@ -102,15 +102,15 @@ final class AppRuntimeServeService
             $this->applyRuntimeSecurityHeaders($response, $connectOrigins, $request);
         }
 
-        $this->applyRuntimeCors($response);
+        $this->applyRuntimeCors($response, $request);
 
         return $response;
     }
 
-    private function corsPreflight(): Response
+    private function corsPreflight(Request $request): Response
     {
         $response = new Response('', 204);
-        $this->applyRuntimeCors($response);
+        $this->applyRuntimeCors($response, $request);
         $response->headers->set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type');
         $response->headers->set('Access-Control-Max-Age', '86400');
@@ -118,10 +118,10 @@ final class AppRuntimeServeService
         return $response;
     }
 
-    private function runtimeError(string $message, int $status): Response
+    private function runtimeError(string $message, int $status, ?Request $request = null): Response
     {
         $response = new Response($message, $status);
-        $this->applyRuntimeCors($response);
+        $this->applyRuntimeCors($response, $request);
 
         return $response;
     }
@@ -129,10 +129,36 @@ final class AppRuntimeServeService
     /**
      * Hosted apps load in a sandboxed iframe (opaque origin). Vite bundles use crossorigin on assets,
      * so subresources require CORS. Auth uses launch_token query param (cookie is unreliable cross-site).
+     * Reflects allowed Hub/product origins when present; falls back to * for opaque sandbox.
      */
-    private function applyRuntimeCors(Response $response): void
+    private function applyRuntimeCors(Response $response, ?Request $request = null): void
     {
+        $origin = $request !== null ? trim((string) $request->headers->get('Origin', '')) : '';
+        if ($origin !== '' && $origin !== 'null' && $this->isAllowedRuntimeCorsOrigin($origin)) {
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
+            $response->headers->set('Vary', 'Origin');
+
+            return;
+        }
+
         $response->headers->set('Access-Control-Allow-Origin', '*');
+    }
+
+    private function isAllowedRuntimeCorsOrigin(string $origin): bool
+    {
+        foreach (['allowed_hub_origins', 'allowed_product_origins'] as $key) {
+            $allowed = config('apphub.' . $key, []);
+            if (!is_array($allowed)) {
+                continue;
+            }
+            foreach ($allowed as $entry) {
+                if (is_string($entry) && rtrim(trim($entry), '/') === rtrim($origin, '/')) {
+                    return true;
+                }
+            }
+        }
+
+        return AppManifestApiUrl::allowsLocalhostApiUrls() && $this->isLoopbackOrigin($origin);
     }
 
     /**

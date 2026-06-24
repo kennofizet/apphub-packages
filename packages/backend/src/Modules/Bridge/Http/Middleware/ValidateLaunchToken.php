@@ -37,6 +37,14 @@ final class ValidateLaunchToken
             return response()->json(['success' => false, 'error' => 'Invalid or expired launch token'], 401);
         }
 
+        $tokenSessionId = trim((string) ($record->session_id ?? ''));
+        if ($tokenSessionId !== '') {
+            $requestSessionId = trim((string) $request->header('X-AppHub-Session-Id', ''));
+            if ($requestSessionId === '' || !hash_equals($tokenSessionId, $requestSessionId)) {
+                return response()->json(['success' => false, 'error' => 'Invalid launch session'], 401);
+            }
+        }
+
         $guard = $this->callerUrlGuard->validate(
             $record->app,
             $payload['bundle_version'] ?? null,
@@ -48,6 +56,10 @@ final class ValidateLaunchToken
         }
 
         $request->attributes->set('apphub_launch', $payload);
+        $request->attributes->set('apphub_launch_token_hash', $this->launchTokens->hashToken($token));
+        if ($record->expires_at !== null) {
+            $request->attributes->set('apphub_launch_expires_at', $record->expires_at);
+        }
 
         return $next($request);
     }

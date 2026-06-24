@@ -28,7 +28,10 @@ Misconfigured proxies let attackers spoof `api_urls` checks by forging `X-Forwar
 | `APPHUB_USE_API_URL_IP_PINS` | `true` |
 | `APPHUB_BRIDGE_PROXY_SECRET` | empty (not used in prod); set only for hardened local dev |
 | `APPHUB_BRIDGE_RATE_LIMIT` | `30` (per token / minute) |
+| `APPHUB_BRIDGE_USER_RATE_LIMIT` | `15` (per token / minute) |
 | `APPHUB_BRIDGE_NOTIFY_RATE_LIMIT` | `10` (per token / minute) |
+| `APPHUB_BRIDGE_NOTIFY_MAX_PER_TOKEN` | `50` (per launch session) |
+| `APPHUB_REQUIRE_BRIDGE_PROXY_SECRET` | `true` in production/staging when loopback `api_urls` allowed |
 | `APPHUB_NOTIFY_MAX_RECIPIENTS` | `100` |
 | `APPHUB_ALLOWED_HUB_ORIGINS` | your Hub SPA origin(s) |
 | `APPHUB_ALLOWED_RUNTIME_ORIGINS` | optional enterprise cap for iframe `entry_url` |
@@ -38,8 +41,9 @@ Misconfigured proxies let attackers spoof `api_urls` checks by forging `X-Forwar
 ## Launch tokens
 
 - Minted server-side on `POST /apps/{slug}/launch`; scopes come from install consent DB only.
-- **Multi-use** for runtime assets, `bridge/user`, and `bridge/notify` until TTL — rate-limited per token hash.
+- **Multi-use** for runtime assets, `bridge/user`, and `bridge/notify` until TTL — rate-limited per token hash; notify also capped per session (`APPHUB_BRIDGE_NOTIFY_MAX_PER_TOKEN`).
 - **One-shot** only on `POST verify-launch-token` (publisher tool backend).
+- Bridge HTTP requires matching `X-AppHub-Session-Id` when the launch token has a `session_id` (sent on `bridge:ready`).
 - Tokens appear in hosted runtime URLs and `apphub:bridge:ready` — treat as session secrets; use short TTL (`APPHUB_LAUNCH_TOKEN_TTL`, max 180s).
 
 Do **not** bind bridge calls to the user’s mint IP: the caller is the publisher server / proxy, not the Hub browser session.
