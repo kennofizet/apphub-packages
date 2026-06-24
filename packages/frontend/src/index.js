@@ -284,13 +284,46 @@ function credentialsUnchanged(prev, next) {
     && prev.hostAccessSecret === next.hostAccessSecret
 }
 
+/** Re-apply installAppHubModule with partial patch — keep credentials and public options not in patch. */
+function mergeInstallOptions(store, patch = {}) {
+  const creds = {
+    coreUrl: 'coreUrl' in patch ? (patch.coreUrl || '') : (store.credentials.coreUrl || ''),
+    backendUrl: 'backendUrl' in patch ? (patch.backendUrl || '') : (store.credentials.backendUrl || ''),
+    token: 'token' in patch ? (patch.token || '') : (store.credentials.token || ''),
+    hostAccessSecret: 'hostAccessSecret' in patch
+      ? (patch.hostAccessSecret || '')
+      : (store.credentials.hostAccessSecret || ''),
+  }
+
+  return {
+    language: store.options.language,
+    theme: store.options.theme,
+    themeToggle: store.options.themeToggle,
+    openAppStoreOnMount: store.options.openAppStoreOnMount,
+    allowedRuntimeOrigins: store.options.allowedRuntimeOrigins,
+    allowSameOriginEmbed: store.options.allowSameOriginEmbed,
+    allowUnsafeOrigin: store.options.allowUnsafeOrigin,
+    dedicatedHubHost: store.options.dedicatedHubHost,
+    hubOrigin: store.options.hubOrigin,
+    productOrigin: store.options.productOrigin,
+    runtimePublicUrl: store.options.runtimePublicUrl,
+    enforceDedicatedHubOrigin: store.options.enforceDedicatedHubOrigin,
+    enforceIsolatedHostedRuntime: store.options.enforceIsolatedHostedRuntime,
+    enforceDevFriendlyOrigins: store.options.enforceDevFriendlyOrigins,
+    isDevUser: store.options.isDevUser,
+    ...patch,
+    ...creds,
+  }
+}
+
 function applyModuleOptions(store, options = {}) {
   const prevCredentials = { ...store.credentials }
-  const nextCredentials = buildCredentials(options)
+  const merged = mergeInstallOptions(store, options)
+  const nextCredentials = buildCredentials(merged)
   Object.assign(store.credentials, nextCredentials)
   const credsUnchanged = credentialsUnchanged(prevCredentials, nextCredentials)
 
-  const nextPublic = buildPublicOptions({ ...options, token: options.token ?? store.credentials.token })
+  const nextPublic = buildPublicOptions(merged)
   Object.assign(store.options, {
     language: nextPublic.language,
     theme: nextPublic.theme,
@@ -311,10 +344,13 @@ function applyModuleOptions(store, options = {}) {
     enforceIsolatedHostedRuntime: nextPublic.enforceIsolatedHostedRuntime,
     enforceDevFriendlyOrigins: nextPublic.enforceDevFriendlyOrigins,
   })
-  applyOriginSafety(store.options, options)
+  applyOriginSafety(store.options, merged)
   if (store.credentials.backendUrl && store.credentials.token) {
     if (credsUnchanged) {
       reconcileOriginSafety(store)
+      if (!store.facade.hasImpl()) {
+        enableModuleApi(store)
+      }
     } else {
       void startBootstrapSession(store)
     }

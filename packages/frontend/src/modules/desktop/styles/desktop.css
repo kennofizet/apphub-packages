@@ -706,7 +706,7 @@
   display: flex;
   align-items: center;
   font-size: 0.75rem;
-  color: #e2e8f0;
+  color: var(--ah-text-secondary);
   padding: 0 0 0 8px;
   height: 48px;
 }
@@ -1193,6 +1193,113 @@
   font-size: 0.8rem;
   line-height: 1.45;
   max-width: 42em;
+}
+
+.apphub-draft-store__publisher-docs {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.apphub-draft-store__publisher-docs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.apphub-draft-store__publisher-docs-toggle:hover {
+  opacity: 0.92;
+}
+
+.apphub-draft-store__publisher-docs-toggle-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.apphub-draft-store__publisher-docs-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.apphub-draft-store__publisher-docs-chevron {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.apphub-draft-store__publisher-docs-body {
+  padding: 0 20px 12px;
+}
+
+.apphub-draft-store__publisher-docs--open .apphub-draft-store__publisher-docs-toggle {
+  padding-bottom: 6px;
+}
+
+.apphub-draft-store__publisher-docs-lead,
+.apphub-draft-store__publisher-docs-path {
+  margin: 0 0 6px;
+}
+
+.apphub-draft-store__publisher-docs-path {
+  opacity: 0.92;
+}
+
+.apphub-draft-store__publisher-docs-muted {
+  margin: 6px 0 0;
+  opacity: 0.85;
+}
+
+.apphub-draft-store__publisher-docs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.apphub-draft-store__publisher-docs-url {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  word-break: break-all;
+  border: 1px solid;
+}
+
+.apphub-draft-store__publisher-docs-btn,
+.apphub-draft-store__publisher-docs-link {
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.apphub-draft-store__publisher-docs-btn {
+  padding: 5px 10px;
+  border: 1px solid;
+}
+
+.apphub-draft-store__publisher-docs-link {
+  padding: 5px 10px;
+  text-decoration: none;
+  border: 1px solid transparent;
 }
 
 .apphub-draft-store__body {

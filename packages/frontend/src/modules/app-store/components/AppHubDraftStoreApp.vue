@@ -8,6 +8,46 @@
       </div>
     </header>
 
+    <aside
+      class="apphub-draft-store__publisher-docs"
+      :class="{ 'apphub-draft-store__publisher-docs--open': publisherDocsOpen }"
+      aria-label="Publisher integration API"
+    >
+      <button
+        type="button"
+        class="apphub-draft-store__publisher-docs-toggle"
+        :aria-expanded="publisherDocsOpen"
+        :aria-label="publisherDocsOpen ? labels.publisher_hub_docs_collapse : labels.publisher_hub_docs_expand"
+        @click="publisherDocsOpen = !publisherDocsOpen"
+      >
+        <span class="apphub-draft-store__publisher-docs-toggle-icon" aria-hidden="true">📘</span>
+        <span class="apphub-draft-store__publisher-docs-title">{{ labels.publisher_hub_docs_title }}</span>
+        <span class="apphub-draft-store__publisher-docs-chevron" aria-hidden="true">{{ publisherDocsOpen ? '▾' : '▸' }}</span>
+      </button>
+      <div v-show="publisherDocsOpen" class="apphub-draft-store__publisher-docs-body">
+        <p class="apphub-draft-store__publisher-docs-lead">{{ labels.publisher_hub_docs_lead }}</p>
+        <p class="apphub-draft-store__publisher-docs-path">{{ labels.publisher_hub_docs_path }}</p>
+        <div v-if="integrationDocsUrl" class="apphub-draft-store__publisher-docs-actions">
+          <code class="apphub-draft-store__publisher-docs-url">{{ integrationDocsUrl }}</code>
+          <button
+            type="button"
+            class="apphub-draft-store__publisher-docs-btn"
+            @click.stop="copyIntegrationDocsUrl"
+          >
+            {{ copyDocsLabel }}
+          </button>
+          <a
+            class="apphub-draft-store__publisher-docs-link"
+            :href="integrationDocsUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            @click.stop
+          >{{ labels.publisher_hub_docs_open }}</a>
+        </div>
+        <p v-else class="apphub-draft-store__publisher-docs-muted">{{ labels.publisher_hub_docs_no_api }}</p>
+      </div>
+    </aside>
+
     <div ref="scrollRoot" class="apphub-draft-store__body apphub-draft-store__body--scroll">
       <input
         v-model="catalog.search"
@@ -128,6 +168,7 @@ import { CATALOG_MODE_PUBLISHER } from '../constants/catalogModes.js'
 import { useCatalogInfiniteScroll } from '../composables/useCatalogInfiniteScroll.js'
 import { useAppStore } from '../composables/useAppStore.js'
 import { isAwaitingDevReview, isRejectedDraftSubmission } from '../../../utils/publisherTestVersion.js'
+import { resolveRuntimeApiBase } from '../../../utils/originSafety.js'
 import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
 
 const props = defineProps({
@@ -147,11 +188,49 @@ const moduleOptions = inject('apphubOptions', {})
 const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 const pingingSlug = ref('')
 const pingResults = reactive({})
+const docsUrlCopied = ref(false)
+const publisherDocsOpen = ref(false)
+
+const integrationDocsUrl = computed(() => {
+  const base = resolveRuntimeApiBase({
+    backendUrl: hubStore?.credentials?.backendUrl || moduleOptions?.backendUrl,
+    runtimePublicUrl: moduleOptions?.runtimePublicUrl,
+  })
+  if (!base) return ''
+  return `${base.replace(/\/$/, '')}/integration-docs`
+})
+
+const copyDocsLabel = computed(() =>
+  docsUrlCopied.value
+    ? t('publisher_hub_docs_copied', lang.value)
+    : t('publisher_hub_docs_copy', lang.value),
+)
+
+async function copyIntegrationDocsUrl() {
+  const url = integrationDocsUrl.value
+  if (!url) return
+  try {
+    await navigator.clipboard.writeText(url)
+    docsUrlCopied.value = true
+    window.setTimeout(() => {
+      docsUrlCopied.value = false
+    }, 2000)
+  } catch {
+    /* ignore */
+  }
+}
 
 const labels = computed(() => ({
   draft_store_title: t('draft_store_title', lang.value),
   draft_store_intro: t('draft_store_intro', lang.value),
   draft_store_empty: t('draft_store_empty', lang.value),
+  publisher_hub_docs_title: t('publisher_hub_docs_title', lang.value),
+  publisher_hub_docs_lead: t('publisher_hub_docs_lead', lang.value),
+  publisher_hub_docs_path: t('publisher_hub_docs_path', lang.value),
+  publisher_hub_docs_open: t('publisher_hub_docs_open', lang.value),
+  publisher_hub_docs_no_api: t('publisher_hub_docs_no_api', lang.value),
+  publisher_hub_docs_expand: t('publisher_hub_docs_expand', lang.value),
+  publisher_hub_docs_collapse: t('publisher_hub_docs_collapse', lang.value),
   app_store_search: t('app_store_search', lang.value),
   app_store_install: t('app_store_install', lang.value),
   app_store_loading: t('app_store_loading', lang.value),

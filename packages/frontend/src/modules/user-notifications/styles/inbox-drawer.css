@@ -78,7 +78,7 @@
   height: 48px;
   padding-right: 8px;
   padding-left: 14px;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid var(--ah-border-subtle);
 }
 
 .apphub-desktop__clock {
@@ -86,7 +86,7 @@
   display: flex;
   align-items: center;
   font-size: 0.75rem;
-  color: #e2e8f0;
+  color: var(--ah-text-secondary);
   padding: 0 8px 0 0;
   height: 48px;
 }
@@ -394,7 +394,7 @@
 }
 
 .apphub-desktop--light .apphub-desktop__tray-clock {
-  border-left-color: rgba(15, 23, 42, 0.08);
+  border-left-color: var(--ah-border-subtle);
 }
 
 .apphub-desktop--light .apphub-inbox-drawer__panel {

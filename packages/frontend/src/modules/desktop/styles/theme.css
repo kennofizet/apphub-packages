@@ -114,6 +114,10 @@
   border-left-color: var(--ah-border-subtle);
 }
 
+.apphub-desktop--light .apphub-desktop__clock {
+  color: var(--ah-text-muted);
+}
+
 .apphub-desktop__task {
   color: var(--ah-text-secondary);
 }
@@ -353,6 +357,40 @@
 .apphub-draft-store__msg,
 .apphub-draft-card__desc {
   color: var(--ah-text-muted);
+}
+
+.apphub-draft-store__publisher-docs {
+  border-bottom-color: var(--ah-border);
+  background: var(--ah-draft-hero-bg);
+  color: var(--ah-text-secondary);
+}
+
+.apphub-draft-store__publisher-docs-title {
+  color: var(--ah-draft-accent);
+}
+
+.apphub-draft-store__publisher-docs-toggle:hover {
+  background: var(--ah-hover);
+}
+
+.apphub-draft-store__publisher-docs-chevron {
+  color: var(--ah-text-muted);
+}
+
+.apphub-draft-store__publisher-docs-url {
+  background: var(--ah-surface-input);
+  border-color: var(--ah-border);
+  color: var(--ah-text);
+}
+
+.apphub-draft-store__publisher-docs-btn {
+  border-color: var(--ah-border);
+  background: var(--ah-hover);
+  color: var(--ah-text);
+}
+
+.apphub-draft-store__publisher-docs-link {
+  color: #93c5fd;
 }
 
 .apphub-draft-store__search {
