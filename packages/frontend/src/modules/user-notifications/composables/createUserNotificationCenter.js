@@ -61,13 +61,33 @@ export function createUserNotificationCenter(options = {}) {
 
   async function refreshSummary() {
     const api = getApi()
-    if (!api?.notificationsSummary) return
+    if (!api?.notificationsSummary) return null
     try {
       const res = await api.notificationsSummary()
       const count = res?.data?.data?.unread_count
-      if (typeof count === 'number') setUnreadCount(count)
+      if (typeof count === 'number') {
+        setUnreadCount(count)
+        return count
+      }
     } catch {
       /* ignore */
+    }
+    return null
+  }
+
+  /** Poll: cheap unread count only; full inbox when count rises or drawer is open. */
+  async function pollInbox() {
+    const previous = state.unreadCount
+    const next = await refreshSummary()
+    if (typeof next !== 'number') return
+
+    if (next > previous) {
+      await loadInbox({ reset: true, announce: true })
+      return
+    }
+
+    if (state.drawerOpen && next !== previous) {
+      await loadInbox({ reset: true, announce: false })
     }
   }
 
@@ -198,6 +218,13 @@ export function createUserNotificationCenter(options = {}) {
     state.hasMore = false
 
     try {
+      const summaryUnread = await refreshSummary()
+      if (summaryUnread === 0) {
+        state.items = []
+        seeded = true
+        return true
+      }
+
       const res = await api.notifications({ per_page: 20 })
       const items = res?.data?.data ?? []
       const meta = res?.data?.meta ?? {}
@@ -211,7 +238,7 @@ export function createUserNotificationCenter(options = {}) {
         await refreshSummary()
       }
 
-      const unread = items
+      const unreadItems = items
         .filter((row) => !row.read_at)
         .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
         .slice(0, 3)
@@ -221,8 +248,8 @@ export function createUserNotificationCenter(options = {}) {
       }
       seeded = true
 
-      if (unread.length > 0) {
-        pushDesktopToasts(unread, { staggerMs: 380 })
+      if (unreadItems.length > 0) {
+        pushDesktopToasts(unreadItems, { staggerMs: 380 })
       }
     } catch {
       return false
@@ -307,19 +334,19 @@ export function createUserNotificationCenter(options = {}) {
     }
   }
 
-  function startPolling(intervalMs = 45_000) {
+  function startPolling(intervalMs = 60_000) {
     stopPolling()
 
     const tick = () => {
       if (typeof document !== 'undefined' && document.hidden) return
-      void loadInbox({ reset: true, announce: true })
+      void pollInbox()
     }
 
     pollTimer = window.setInterval(tick, intervalMs)
 
     if (typeof document !== 'undefined') {
       visibilityHandler = () => {
-        if (!document.hidden) void loadInbox({ reset: true, announce: true })
+        if (!document.hidden) void pollInbox()
       }
       document.addEventListener('visibilitychange', visibilityHandler)
     }
@@ -353,6 +380,7 @@ export function createUserNotificationCenter(options = {}) {
     toggleDrawer,
     dismissItem,
     readAll,
+    pollInbox,
     startPolling,
     stopPolling,
     dispose,
