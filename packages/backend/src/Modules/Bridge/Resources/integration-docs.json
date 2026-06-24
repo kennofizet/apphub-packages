@@ -96,7 +96,7 @@
             },
             "child_to_parent_call": {
               "event": "apphub:bridge:call",
-              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|notify|setTaskbarBadge", "args": "array" }
+              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError", "args": "array" }
             },
             "parent_to_child_result": {
               "event": "apphub:bridge:result",
@@ -117,7 +117,7 @@
           },
           {
             "scope": "desktop.notify",
-            "description": "Show a notification on the desktop or taskbar.",
+            "description": "Install consent for POST bridge/notify from publisher backend (manifest api_urls). Not a postMessage bridge method.",
             "user_prompt": "Allow {app} to send notifications?"
           },
           {
@@ -136,7 +136,7 @@
           "entry_url": "string — required for iframe (HTTPS publisher SPA URL); omitted for hosted zip",
           "healthcheck_url": "string optional — iframe draft preflight ping target",
           "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
-          "api_urls": "string[] optional — publisher tool backend URL(s) allowed to call bridge HTTP. TCP client IP must match DNS-pinned IPs stored at publish (production) or resolve live DNS (local dev). localhost/loopback rejected on publish in production.",
+          "api_urls": "string[] optional — publisher tool backend URL(s) for bridge HTTP. Caller TCP IP must match DNS-pinned IPs at publish (production) or resolve live DNS (local dev). Optional APPHUB_BRIDGE_PROXY_SECRET for loopback port hardening. localhost rejected on publish in production.",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
         },
         "data_tiers": {
@@ -160,7 +160,7 @@
           },
           "requestPermission": {
             "signature": "requestPermission(scope: string): Promise<boolean>",
-            "description": "Hub UI consent for desktop scopes during the session (notify, message, badge). user.* scopes are granted at launch from install permissions — not via runtime bridge calls."
+            "description": "Hub UI consent for desktop.message and desktop.badge during the session. user.* and desktop.notify are granted at install — not via runtime bridge calls."
           },
           "sendDesktopMessage": {
             "signature": "sendDesktopMessage(payload: DesktopMessage): Promise<void>",
@@ -173,11 +173,6 @@
               "duration_ms": "number optional",
               "priority": "normal | high optional"
             }
-          },
-          "notify": {
-            "signature": "notify({ title, body, icon? }): Promise<void>",
-            "requires": ["desktop.notify"],
-            "description": "Desktop notification shortcut."
           },
           "setTaskbarBadge": {
             "signature": "setTaskbarBadge(count: number | null): Promise<void>",
@@ -192,10 +187,10 @@
         },
         "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Authoritative user: GET bridge/user from your publisher backend (see http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${display?.name}`, duration_ms: 5000 })",
         "http_companion": {
-          "note": "Call GET bridge/user from your publisher tool backend (server-side) or via a dev proxy on api_urls. App Hub matches the caller TCP IP to manifest api_urls (DNS). Browser apps should fetch your backend, not App Hub directly. Hub postMessage is for permissions/UI only.",
+          "note": "Publisher tool backends (manifest api_urls) may call GET bridge/user and POST bridge/notify. App Hub matches caller TCP IP to api_urls. Implement fetch in your app against your api_urls proxy — not Hub postMessage. Hub postMessage is for desktop UI (message, badge) and reportError only.",
           "routes": [
-            "GET bridge/user — scoped user snapshot",
-            "POST bridge/desktop/message — same as sendDesktopMessage"
+            "GET bridge/user — scoped user snapshot (requires user.read on launch token)",
+            "POST bridge/notify — fan-out desktop notifications (requires desktop.notify on launch token)"
           ]
         }
       },
@@ -210,7 +205,8 @@
         "Listen for apphub:bridge:ready in your app.",
         "For hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads on load.",
         "Call requestPermission for desktop scopes as needed.",
-        "Use sendDesktopMessage, notify, setTaskbarBadge when granted.",
+        "Use sendDesktopMessage, setTaskbarBadge when granted.",
+        "For notifications: POST bridge/notify from your publisher backend (see http_companion).",
         "Handle denied permissions gracefully in your UI."
       ],
       "locales": {
@@ -259,7 +255,7 @@
               },
               {
                 "scope": "desktop.notify",
-                "description": "Hiện thông báo trên desktop hoặc taskbar.",
+                "description": "Quyền cài đặt cho POST bridge/notify từ backend publisher (api_urls). Không phải phương thức postMessage bridge.",
                 "user_prompt": "Cho phép {app} gửi thông báo?"
               },
               {
@@ -288,13 +284,10 @@
                 "description": "Snapshot user chỉ cho UI từ bridge:ready (bootstrap Hub). Không gọi HTTP. Không dùng cho auth."
               },
               "requestPermission": {
-                "description": "Đồng ý UI Hub cho quyền desktop trong phiên (notify, message, badge). user.* được cấp lúc launch từ quyền cài đặt — không qua bridge runtime."
+                "description": "Đồng ý UI Hub cho desktop.message và desktop.badge trong phiên. user.* và desktop.notify được cấp lúc cài đặt — không qua bridge runtime."
               },
               "sendDesktopMessage": {
                 "description": "Hiện banner hoặc overlay trên desktop."
-              },
-              "notify": {
-                "description": "Lối tắt thông báo desktop."
               },
               "setTaskbarBadge": {
                 "description": "Đặt hoặc xóa badge taskbar trên nút app của bạn."
@@ -313,7 +306,8 @@
             "Lắng nghe apphub:bridge:ready trong app.",
             "Hosted: await window.__APPHUB_STORAGE__?.ready trước khi đọc localStorage khi load.",
             "Gọi requestPermission cho quyền desktop khi cần.",
-            "Dùng sendDesktopMessage, notify, setTaskbarBadge khi được cấp.",
+            "Dùng sendDesktopMessage, setTaskbarBadge khi được cấp.",
+            "Thông báo desktop: POST bridge/notify từ backend publisher (xem http_companion).",
             "Xử lý khi user từ chối quyền một cách graceful trong UI."
           ]
         }
@@ -467,10 +461,10 @@
       },
       {
         "method": "POST",
-        "path": "bridge/desktop/message",
+        "path": "bridge/notify",
         "auth": "launch_token",
         "audience": ["publisher"],
-        "description": "Desktop message. Requires desktop.message scope."
+        "description": "Fan-out desktop notifications. Caller IP must match manifest api_urls. Headers: X-AppHub-Launch-Token, X-AppHub-App-Slug. Requires desktop.notify on launch token."
       },
       {
         "method": "GET",

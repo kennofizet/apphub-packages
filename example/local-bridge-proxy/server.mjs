@@ -2,7 +2,7 @@
  * Local publisher tool backend proxy for App Hub bridge APIs.
  *
  * Browser demo apps call this server (manifest api_urls). This process forwards
- * to App Hub; App Hub checks the proxy's IP against api_urls — not Origin headers.
+ * to App Hub; App Hub checks the proxy's IP against api_urls.
  *
  * Usage (PowerShell):
  *   $env:APPHUB_BACKEND_URL = "http://localhost/jmm/zz/api/knf/apphub"
@@ -15,6 +15,7 @@ import { URL } from 'node:url'
 
 const PORT = Number(process.env.PORT || 51732)
 const APPHUB_BASE = String(process.env.APPHUB_BACKEND_URL || '').replace(/\/$/, '')
+const BRIDGE_PROXY_SECRET = String(process.env.APPHUB_BRIDGE_PROXY_SECRET || '').trim()
 
 if (!APPHUB_BASE) {
   console.error('Set APPHUB_BACKEND_URL (e.g. http://localhost/jmm/zz/api/knf/apphub)')
@@ -74,6 +75,10 @@ const server = http.createServer(async (req, res) => {
 
   const target = `${APPHUB_BASE}${incoming.pathname}${incoming.search}`
   const headers = {}
+  if (BRIDGE_PROXY_SECRET !== '') {
+    headers['x-apphub-bridge-proxy-secret'] = BRIDGE_PROXY_SECRET
+    headers['x-apphub-publisher-origin'] = `http://localhost:${PORT}`
+  }
   for (const name of FORWARD_HEADERS) {
     const value = req.headers[name]
     if (typeof value === 'string' && value !== '') {

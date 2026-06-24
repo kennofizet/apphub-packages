@@ -1,0 +1,429 @@
+.apphub-taskbar-tray {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 48px;
+}
+
+.apphub-taskbar-tray__sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.apphub-taskbar-notif {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.apphub-taskbar-notif:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apphub-taskbar-notif--pulse {
+  animation: apphub-taskbar-notif-pulse 0.55s ease-in-out 3;
+}
+
+@keyframes apphub-taskbar-notif-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+.apphub-taskbar-notif__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.apphub-taskbar-notif__badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-taskbar-notif__badge--pop {
+  animation: apphub-taskbar-notif-badge-pop 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes apphub-taskbar-notif-badge-pop {
+  0% { transform: scale(0.6); }
+  55% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.apphub-desktop__tray-clock {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding-right: 8px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.apphub-desktop__clock {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  padding: 0 8px 0 0;
+  height: 48px;
+}
+
+.apphub-desktop__tray-clock .apphub-taskbar-tray__sep {
+  margin: 0 4px;
+}
+
+.apphub-inbox-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.apphub-inbox-drawer__backdrop {
+  flex: 1;
+  border: none;
+  background: rgba(15, 23, 42, 0.45);
+  cursor: pointer;
+}
+
+.apphub-inbox-drawer__panel {
+  width: min(400px, 100vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 41, 59, 0.97);
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.apphub-inbox-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.apphub-inbox-drawer__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.apphub-inbox-drawer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apphub-inbox-drawer__read-all {
+  border: none;
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.apphub-inbox-drawer__read-all:hover {
+  background: rgba(59, 130, 246, 0.28);
+}
+
+.apphub-inbox-drawer__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.apphub-inbox-drawer__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apphub-inbox-drawer__body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.apphub-inbox-drawer__empty {
+  margin: 24px 8px;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.apphub-inbox-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apphub-inbox-drawer__card {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 72px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.apphub-inbox-drawer__card:hover {
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.apphub-inbox-drawer__card--unread {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.apphub-inbox-drawer__card--unread:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.apphub-inbox-drawer__card-accent {
+  width: 3px;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.apphub-inbox-drawer__card--unread .apphub-inbox-drawer__card-accent {
+  background: #3b82f6;
+}
+
+.apphub-inbox-drawer__card--removing {
+  opacity: 0;
+  transform: translateX(14px) scale(0.98);
+  pointer-events: none;
+}
+
+.apphub-inbox-card-enter-active {
+  transition:
+    opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-inbox-card-leave-active {
+  transition:
+    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-inbox-card-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.apphub-inbox-card-leave-to {
+  opacity: 0;
+  transform: translateX(16px) scale(0.98);
+}
+
+.apphub-inbox-card-move {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-inbox-drawer__card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 44px;
+  padding: 14px 0 0 10px;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.apphub-inbox-drawer__card-body {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px 12px 4px;
+}
+
+.apphub-inbox-drawer__card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.apphub-inbox-drawer__card-meta strong {
+  color: #cbd5e1;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apphub-inbox-drawer__card-meta time {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.apphub-inbox-drawer__card-title {
+  margin: 0 0 3px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.apphub-inbox-drawer__card-text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.apphub-inbox-drawer__card-dismiss {
+  flex-shrink: 0;
+  width: 36px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  align-self: stretch;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.apphub-inbox-drawer__card-dismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.apphub-inbox-drawer__more {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  color: #cbd5e1;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.apphub-inbox-drawer-enter-active .apphub-inbox-drawer__panel,
+.apphub-inbox-drawer-leave-active .apphub-inbox-drawer__panel {
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-inbox-drawer-enter-from .apphub-inbox-drawer__panel,
+.apphub-inbox-drawer-leave-to .apphub-inbox-drawer__panel {
+  transform: translateX(100%);
+}
+
+.apphub-inbox-drawer-enter-active .apphub-inbox-drawer__backdrop,
+.apphub-inbox-drawer-leave-active .apphub-inbox-drawer__backdrop {
+  transition: opacity 0.28s ease;
+}
+
+.apphub-inbox-drawer-enter-from .apphub-inbox-drawer__backdrop,
+.apphub-inbox-drawer-leave-to .apphub-inbox-drawer__backdrop {
+  opacity: 0;
+}
+
+.apphub-desktop--light .apphub-taskbar-tray {
+  border-left-color: rgba(15, 23, 42, 0.08);
+}
+
+.apphub-desktop--light .apphub-taskbar-tray__sep {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.apphub-desktop--light .apphub-taskbar-notif {
+  color: #1e293b;
+}
+
+.apphub-desktop--light .apphub-desktop__tray-clock {
+  border-left-color: rgba(15, 23, 42, 0.08);
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__panel {
+  background: rgba(248, 250, 252, 0.98);
+  border-left-color: rgba(148, 163, 184, 0.35);
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__title,
+.apphub-desktop--light .apphub-inbox-drawer__card-title {
+  color: #0f172a;
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__card {
+  background: #fff;
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__card--unread {
+  background: #f8fafc;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__card-meta strong,
+.apphub-desktop--light .apphub-inbox-drawer__card-text {
+  color: #475569;
+}
+
+.apphub-desktop--light .apphub-inbox-drawer__card-dismiss:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}

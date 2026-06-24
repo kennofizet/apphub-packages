@@ -286,18 +286,24 @@
         <span class="apphub-desktop__taskbar-draft-store-label">{{ devToolsApp.name }}</span>
       </button>
 
-      <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
+      <div class="apphub-desktop__tray-clock">
+        <span class="apphub-desktop__clock">{{ shell.state.clock }}</span>
+        <span class="apphub-taskbar-tray__sep" aria-hidden="true" />
+        <AppHubTaskbarNotificationBell />
+      </div>
     </footer>
 
     <AppHubDesktopDevOriginBar placement="corner" />
 
     <AppHubDesktopNotifications />
+    <AppHubNotificationDrawer />
   </div>
 </template>
 
 <script setup>
 import { computed, getCurrentInstance, inject, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue'
 import { getHostApiForApp, isBackendReadyForApp } from '../../../composables/useAppHubHostApi.js'
+import { getAppHubStore } from '../../../moduleStore.js'
 import {
   CATALOG_MODE_DRAFT,
   CATALOG_MODE_PUBLISHER,
@@ -312,6 +318,12 @@ import {
   createDesktopNotificationsState,
   DESKTOP_NOTIFICATIONS_KEY,
 } from '../../notifications/index.js'
+import {
+  AppHubNotificationDrawer,
+  AppHubTaskbarNotificationBell,
+  createUserNotificationCenter,
+  USER_NOTIFICATION_CENTER_KEY,
+} from '../../user-notifications/index.js'
 import { AppHubWindowFrame, useWindowManager } from '../../window-manager/index.js'
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
@@ -927,6 +939,19 @@ function handleUninstallUserApp(appOrSlug) {
   shell.removeUserApp(app.id)
   assignDefaultIconPositions()
   schedulePersist()
+
+  if (slug && isBackendReadyForApp(rootApp)) {
+    const api = getHostApiForApp(rootApp)
+    void (async () => {
+      try {
+        if (api?.revokeBridgeConsents) await api.revokeBridgeConsents(slug)
+      } catch {
+        /* ignore */
+      }
+      await userNotificationCenter.loadInbox({ reset: true, announce: false })
+    })()
+  }
+
   return true
 }
 
@@ -1483,6 +1508,19 @@ function resolveDropPosition(x, y) {
 const desktopNotifications = createDesktopNotificationsState()
 provide(DESKTOP_NOTIFICATIONS_KEY, desktopNotifications)
 
+const userNotificationCenter = createUserNotificationCenter({
+  getApi: () => getHostApiForApp(rootApp),
+  getCacheKey: () => {
+    const store = getAppHubStore(rootApp)
+    const backend = String(store?.credentials?.backendUrl ?? '').trim()
+    if (!backend) return ''
+    const userId = store?.zoneContext?.state?.user?.id
+    return userId != null && userId !== '' ? `${backend}#${userId}` : backend
+  },
+  desktopNotifications,
+})
+provide(USER_NOTIFICATION_CENTER_KEY, userNotificationCenter)
+
 const dropInstall = createDesktopDropInstall({
   getAppStore: () => appStore,
   getHostApi: () => getHostApiForApp(rootApp),
@@ -1904,6 +1942,13 @@ watch(desktopReady, async (ready) => {
   if (ready) await initDesktopShell()
 })
 
+watch(
+  () => isBackendReadyForApp(rootApp) && !!getHostApiForApp(rootApp)?.notifications,
+  (ready) => {
+    if (ready) void startUserNotificationInbox()
+  },
+)
+
 async function initDesktopShell() {
   if (initDesktopShell.done) return
   initDesktopShell.done = true
@@ -1938,6 +1983,7 @@ async function initDesktopShell() {
     assignDefaultIconPositions()
     await tryInitialOpenSlug()
     await refreshPublisherCatalogIfReady()
+    await startUserNotificationInbox()
     return
   }
 
@@ -1947,6 +1993,7 @@ async function initDesktopShell() {
   if (props.initialOpenSlug) {
     await tryInitialOpenSlug()
     await refreshPublisherCatalogIfReady()
+    await startUserNotificationInbox()
     return
   }
 
@@ -1960,6 +2007,20 @@ async function initDesktopShell() {
   }
 
   await refreshPublisherCatalogIfReady()
+  await startUserNotificationInbox()
+}
+
+let userNotificationInboxStarted = false
+
+async function startUserNotificationInbox() {
+  if (userNotificationInboxStarted) return
+  if (!isBackendReadyForApp(rootApp)) return
+  const api = getHostApiForApp(rootApp)
+  if (!api?.notifications) return
+
+  userNotificationInboxStarted = true
+  await userNotificationCenter.bootstrapInbox()
+  userNotificationCenter.startPolling()
 }
 
 onUnmounted(() => {
@@ -1977,6 +2038,7 @@ onUnmounted(() => {
   document.removeEventListener('focusin', onDocumentFocusIn, true)
   document.removeEventListener('mousedown', onDocumentPointerDown)
   document.removeEventListener('keydown', onDocumentKeyDown)
+  userNotificationCenter.dispose()
   persistSession()
 })
 </script>

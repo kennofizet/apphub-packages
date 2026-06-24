@@ -28,11 +28,20 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 13 | App Store unhealthy badge | Failed healthcheck shows **Unhealthy** (card dimmed) |
 | 14 | Disable app (DEV) | Store shows **Offline**; launch blocked |
 | 15 | **Report test error** in `demo-simple` or `demo-iframe` | Message confirms send; `apphub_app_usage_logs` row with `action=error` |
+| 16 | **Send desktop notify** in demo (`desktop.notify` + `api_urls` + proxy) | `POST …/bridge/notify` via proxy; bell + toast |
 
-### Smoke #15 — reportError (step by step)
+### Smoke #16 — desktop.notify
+
+1. Manifest includes `"desktop.notify"` in `permissions` and `api_urls` (e.g. `http://localhost:51732`).
+2. Run `example/local-bridge-proxy` (same as smoke #5 verify user).
+3. Open app → **Send desktop notify** (install must include `desktop.notify` on launch token).
+4. App calls `POST {api_urls}/bridge/notify` from demo (not Hub postMessage).
+5. Click **🔔** → drawer; dismiss with **×** or **Mark all read**.
+
+### Smoke #15 — reportError
 
 1. Open a running app from Hub (**hosted** `demo-simple` or **iframe** `demo-iframe` on `:15180`).
-2. Click **Report test error** (demo HTML bundles — repack/re-drop hosted zip if you use an old bundle).
+2. Click **Report test error** (repack/re-drop hosted zip if you use an old bundle).
 3. App shows: `reportError sent — check apphub_app_usage_logs…`
 4. Confirm in DB (test backend):
 

@@ -9,6 +9,7 @@ use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentIntentService;
 use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
+use Kennofizet\AppHub\Modules\Launch\Services\UserNotificationService;
 
 class BridgeConsentController extends Controller
 {
@@ -16,6 +17,7 @@ class BridgeConsentController extends Controller
         private readonly AppCatalogService $catalog,
         private readonly AppBridgeConsentService $consents,
         private readonly AppBridgeConsentIntentService $intents,
+        private readonly UserNotificationService $notifications,
     ) {
     }
 
@@ -88,6 +90,33 @@ class BridgeConsentController extends Controller
         $recorded = $this->consents->recordManifestConsents($app, $userId, $bundleVersion);
 
         return $this->apiResponseWithContext(['scopes_recorded' => $recorded]);
+    }
+
+    /** Revoke install consent and clear inbox rows when user uninstalls from Hub. */
+    public function destroy(string $slug): JsonResponse
+    {
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
+        }
+
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
+        }
+
+        $userId = (int) self::currentUserId();
+        $app = $this->catalog->findBySlug($slug);
+        if ($app === null) {
+            return $this->apiErrorResponse('App not found', 404);
+        }
+
+        $revoked = $this->consents->revokeAllForUser($app, $userId);
+        $dismissed = $this->notifications->dismissAllForUserAndApp($userId, (int) $app->id);
+
+        return $this->apiResponseWithContext([
+            'scopes_revoked' => $revoked,
+            'notifications_dismissed' => $dismissed,
+            'unread_count' => $this->notifications->unreadCountForUser($userId),
+        ]);
     }
 
     private function normalizeBundleVersion(?string $version): ?string

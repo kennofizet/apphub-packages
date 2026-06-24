@@ -707,9 +707,8 @@
   align-items: center;
   font-size: 0.75rem;
   color: #e2e8f0;
-  padding: 0 14px;
+  padding: 0 0 0 8px;
   height: 48px;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 @keyframes apphub-start-in {

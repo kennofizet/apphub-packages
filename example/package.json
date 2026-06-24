@@ -4,9 +4,10 @@
   "description": "App Hub publisher example apps — bump versions and pack test zips",
   "type": "module",
   "scripts": {
+    "sync:shared": "node scripts/sync-shared.mjs",
     "pack": "node scripts/pack-all.mjs",
     "pack:storage": "node scripts/pack-storage-poc.mjs",
-    "serve:iframe": "node demo-iframe/serve.mjs"
+    "serve:iframe": "node scripts/sync-shared.mjs && node demo-iframe/serve.mjs"
   },
   "devDependencies": {
     "archiver": "^7.0.1"

@@ -8,3 +8,5 @@ Route::post('apps/{slug}/install-intent', [BridgeConsentController::class, 'crea
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
 Route::post('apps/{slug}/bridge-consents', [BridgeConsentController::class, 'store'])
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
+Route::delete('apps/{slug}/bridge-consents', [BridgeConsentController::class, 'destroy'])
+    ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');

@@ -5,17 +5,19 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Kennofizet\AppHub\Http\Controllers\Controller;
+use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
+use Kennofizet\AppHub\Modules\Launch\Services\UserNotificationService;
 use Kennofizet\PackagesCore\Models\User;
+use RuntimeException;
 
 class BridgeController extends Controller
 {
-    private const ALLOWED_MESSAGE_TYPES = ['toast', 'banner', 'host-hint'];
-
     public function __construct(
         private readonly AppCatalogService $catalog,
         private readonly LaunchTokenService $launchTokens,
+        private readonly UserNotificationService $notifications,
     ) {
     }
 
@@ -41,7 +43,8 @@ class BridgeController extends Controller
         return $this->apiResponseWithContext($data);
     }
 
-    public function desktopMessage(Request $request): JsonResponse
+    /** Publisher backend only — caller IP must match manifest api_urls. */
+    public function notify(Request $request): JsonResponse
     {
         $launch = $request->attributes->get('apphub_launch', []);
         $app = $this->catalog->findBySlug((string) ($launch['app_slug'] ?? ''));
@@ -49,22 +52,34 @@ class BridgeController extends Controller
             return $this->apiErrorResponse('App not found', 404);
         }
 
-        if (!$this->launchTokens->hasScope($launch, 'desktop.message')) {
+        if (!$this->launchTokens->hasScope($launch, AppBridgeScope::DESKTOP_NOTIFY)) {
             return $this->apiErrorResponse('Scope not granted', 403);
         }
 
+        $permissions = AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+        if (!in_array(AppBridgeScope::DESKTOP_NOTIFY, $permissions, true)) {
+            return $this->apiErrorResponse('App manifest does not declare desktop.notify', 403);
+        }
+
         $validated = $request->validate([
-            'type' => 'required|string|in:' . implode(',', self::ALLOWED_MESSAGE_TYPES),
-            'title' => 'required|string|max:200',
-            'body' => 'required|string|max:2000',
-            'duration_ms' => 'nullable|integer|min:0|max:600000',
-            'priority' => 'nullable|string|in:normal,high',
+            'title' => 'required|string|max:255',
+            'body' => 'nullable|string|max:2000',
         ]);
+
+        try {
+            $result = $this->notifications->fanOutFromPublisher(
+                $app,
+                $validated['title'],
+                (string) ($validated['body'] ?? ''),
+            );
+        } catch (RuntimeException $e) {
+            return $this->apiErrorResponse($e->getMessage(), 422);
+        }
 
         return $this->apiResponseWithContext([
             'accepted' => true,
-            'app_slug' => $launch['app_slug'] ?? null,
-            'message' => $validated,
+            'app_slug' => $app->slug,
+            'recipients' => $result['created'],
         ]);
     }
 

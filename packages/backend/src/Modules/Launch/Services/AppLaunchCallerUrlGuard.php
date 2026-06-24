@@ -16,7 +16,7 @@ final class AppLaunchCallerUrlGuard
 
     /**
      * Caller TCP IP must resolve to a host declared in manifest api_urls (DNS A/AAAA).
-     * Origin, Referer, and other client headers are not used for authorization.
+     * Optional loopback hardening when APPHUB_BRIDGE_PROXY_SECRET is set.
      *
      * @param array<string, mixed> $launchPayload
      * @return array{ok: true}|array{ok: false, error: string, status: int}
@@ -29,7 +29,7 @@ final class AppLaunchCallerUrlGuard
         if ($allowed === []) {
             return [
                 'ok' => false,
-                'error' => 'This app has no manifest api_urls — bridge HTTP APIs (bridge/user, verify-launch-token) are not enabled',
+                'error' => 'This app has no manifest api_urls — publisher bridge HTTP (bridge/user, bridge/notify) is not enabled',
                 'status' => 403,
             ];
         }
@@ -42,6 +42,13 @@ final class AppLaunchCallerUrlGuard
                 'error' => 'Request source IP is not allowed — caller must run on a host listed in manifest api_urls',
                 'status' => 403,
             ];
+        }
+
+        if (AppManifestApiUrl::allowedUrlsAreLoopbackOnly($allowed)) {
+            $attestation = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation($request, $allowed);
+            if ($attestation['ok'] !== true) {
+                return $attestation;
+            }
         }
 
         return ['ok' => true];

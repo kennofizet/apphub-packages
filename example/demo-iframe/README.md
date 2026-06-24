@@ -26,13 +26,14 @@ Minimal **self-hosted** app for testing iframe register (`runtime_type: iframe`,
 
 3. **Drop** `example/release/demo-iframe-manifest.json` on App Hub desktop (close windows first).
 
-4. Open from desktop → DEV approves draft → test bridge buttons like `demo-simple/html`.
+4. Open from desktop → DEV approves draft → test bridge buttons (same pattern as `demo-simple/html`).
 
-5. Optional: run `example/local-bridge-proxy` on `:51732` for **Verify user (API)**.
+5. Run `example/local-bridge-proxy` on `:51732` for **Verify user (API)** and **Send desktop notify** (`shared/publisher-bridge.js`).
 
 ## Files
 
 - `html/manifest.json` — Hub catalog manifest + served at `entry_url` for version badge
+- `html/publisher-bridge.js` — synced from `example/shared/` (`npm run sync:shared`)
 - `html/index.html`, `styles.css`, `app.js` — app UI
 - `serve.mjs` — local static server
 

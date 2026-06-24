@@ -40,11 +40,10 @@ export function useRunnerBridge(options) {
       getLaunchContext: () => options.launchContext?.value ?? null,
       appSlug: options.slug,
       appName: options.appName,
-      bridgeDesktopMessage: options.bridgeDesktopMessage,
       requestScopeConsent: options.requestScopeConsent,
       onSessionScopeGranted: options.onSessionScopeGranted,
       onDesktopMessage: options.onDesktopMessage,
-      onNotify: options.onNotify,
+      onPublisherNotifySent: options.onPublisherNotifySent,
       onTaskbarBadge: options.onTaskbarBadge,
       reportUsageError: options.reportUsageError,
       getEntryOrigin: () => {

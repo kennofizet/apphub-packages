@@ -6,6 +6,12 @@
 import { pathToFileURL } from 'node:url'
 
 const APPHUB_BASE = process.env.APPHUB_BACKEND_URL?.replace(/\/$/, '')
+const PUBLISHER_ORIGIN = (
+  process.env.APPHUB_PUBLISHER_ORIGIN
+  || process.env.PUBLISHER_ORIGIN
+  || 'http://localhost:51732'
+).replace(/\/$/, '')
+const BRIDGE_PROXY_SECRET = String(process.env.APPHUB_BRIDGE_PROXY_SECRET || '').trim()
 
 export async function verifyLaunchToken(launchToken, appSlug) {
   if (!APPHUB_BASE) {
@@ -15,9 +21,18 @@ export async function verifyLaunchToken(launchToken, appSlug) {
     throw new Error('launch_token is required')
   }
 
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  }
+  if (BRIDGE_PROXY_SECRET !== '') {
+    headers['X-AppHub-Bridge-Proxy-Secret'] = BRIDGE_PROXY_SECRET
+    headers['X-AppHub-Publisher-Origin'] = PUBLISHER_ORIGIN
+  }
+
   const res = await fetch(`${APPHUB_BASE}/verify-launch-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers,
     body: JSON.stringify({
       launch_token: launchToken,
       ...(appSlug ? { app_slug: appSlug } : {}),

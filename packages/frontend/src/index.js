@@ -254,6 +254,7 @@ function createApiFacade() {
     apps: (...args) => impl?.apps?.(...args),
     launch: (...args) => impl?.launch?.(...args),
     recordBridgeConsent: (...args) => impl?.recordBridgeConsent?.(...args),
+    revokeBridgeConsents: (...args) => impl?.revokeBridgeConsents?.(...args),
     createInstallIntent: (...args) => impl?.createInstallIntent?.(...args),
     ping: (...args) => impl?.ping?.(...args),
     verifyLaunchToken: (...args) => impl?.verifyLaunchToken?.(...args),
@@ -269,8 +270,10 @@ function createApiFacade() {
     appVersions: (...args) => impl?.appVersions?.(...args),
     integrationDocs: (...args) => impl?.integrationDocs?.(...args),
     integrationDocsInternal: (...args) => impl?.integrationDocsInternal?.(...args),
-    bridgeUser: (...args) => impl?.bridgeUser?.(...args),
-    bridgeDesktopMessage: (...args) => impl?.bridgeDesktopMessage?.(...args),
+    notifications: (...args) => impl?.notifications?.(...args),
+    notificationsSummary: (...args) => impl?.notificationsSummary?.(...args),
+    notificationsDismiss: (...args) => impl?.notificationsDismiss?.(...args),
+    notificationsReadAll: (...args) => impl?.notificationsReadAll?.(...args),
   }
 }
 

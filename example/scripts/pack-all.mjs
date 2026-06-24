@@ -18,9 +18,12 @@ const htmlZipPath = join(releaseDir, 'demo-simple-html.zip')
 const vueZipPath = join(releaseDir, 'demo-simple-vue.zip')
 const iframeManifestReleasePath = join(releaseDir, 'demo-iframe-manifest.json')
 
-const HTML_FILES = ['manifest.json', 'index.html', 'styles.css', 'app.js']
+const HTML_FILES = ['manifest.json', 'index.html', 'styles.css', 'publisher-bridge.js', 'app.js']
 
 console.log('App Hub examples — bump manifests + pack zips\n')
+
+execSync('node scripts/sync-shared.mjs', { cwd: exampleRoot, stdio: 'inherit' })
+console.log('')
 
 const removed = [
   removeZipFilesIn(releaseDir),

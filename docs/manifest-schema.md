@@ -46,8 +46,10 @@ Granted at **install** (server records consent). Desktop scopes can also be requ
 
 ### `api_urls`
 
-- Only needed when your **publisher backend** calls App Hub HTTP (`GET bridge/user`, `POST verify-launch-token`).
+- Only needed when your **publisher backend** calls App Hub HTTP (`GET bridge/user`, `POST bridge/notify`, `POST verify-launch-token`).
 - App Hub matches the caller **TCP IP** to DNS of hosts in `api_urls` (pinned at publish in production).
+- `localhost` / `127.0.0.1` allowed in local dev when `APPHUB_ALLOW_LOCALHOST_API_URLS` or `APP_ENV=local`.
+- Optional: set `APPHUB_BRIDGE_PROXY_SECRET` (same on Hub + local-bridge-proxy) to also enforce port on loopback — not required for normal dev.
 - `localhost` / `127.0.0.1` allowed in local dev when `APPHUB_ALLOW_LOCALHOST_API_URLS` or `APP_ENV=local`.
 - Browser apps must call **your** backend, not App Hub directly.
 

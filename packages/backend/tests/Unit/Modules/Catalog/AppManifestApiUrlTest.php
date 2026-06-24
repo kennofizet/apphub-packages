@@ -65,6 +65,135 @@ final class AppManifestApiUrlTest extends TestCase
         ));
     }
 
+    public function test_publisher_origin_port_must_match_api_urls(): void
+    {
+        $this->assertFalse(AppManifestApiUrl::publisherOriginMatchesAllowed(
+            'http://localhost:51732',
+            ['http://localhost:5132'],
+        ));
+        $this->assertTrue(AppManifestApiUrl::publisherOriginMatchesAllowed(
+            'http://localhost:5132',
+            ['http://localhost:5132'],
+        ));
+        $this->assertTrue(AppManifestApiUrl::publisherOriginMatchesAllowed(
+            'https://tools.reg.local',
+            ['https://tools.reg.local/apps/demo'],
+        ));
+    }
+
+    public function test_publisher_origin_from_request_header(): void
+    {
+        $request = \Illuminate\Http\Request::create(
+            'http://example.test/bridge/notify',
+            'POST',
+            [],
+            [],
+            [],
+            ['HTTP_X_APPHUB_PUBLISHER_ORIGIN' => 'http://localhost:51732'],
+        );
+
+        $this->assertSame(
+            'http://localhost:51732',
+            AppManifestApiUrl::publisherOriginFromRequest($request),
+        );
+    }
+
+    public function test_publisher_origin_rejects_spoofed_header_without_proxy_secret(): void
+    {
+        $request = \Illuminate\Http\Request::create(
+            'http://example.test/bridge/user',
+            'GET',
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_APPHUB_PUBLISHER_ORIGIN' => 'http://localhost:5132',
+                'REMOTE_ADDR' => '127.0.0.1',
+            ],
+        );
+
+        $allowed = ['http://localhost:5132'];
+        $result = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation(
+            $request,
+            $allowed,
+            'apphub-local-bridge-dev',
+        );
+
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('Bridge-Proxy-Secret', $result['error']);
+    }
+
+    public function test_loopback_attestation_rejects_wrong_publisher_port(): void
+    {
+        $request = \Illuminate\Http\Request::create(
+            'http://example.test/bridge/notify',
+            'POST',
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_APPHUB_BRIDGE_PROXY_SECRET' => 'apphub-local-bridge-dev',
+                'HTTP_X_APPHUB_PUBLISHER_ORIGIN' => 'http://localhost:51732',
+                'REMOTE_ADDR' => '127.0.0.1',
+            ],
+        );
+
+        $result = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation(
+            $request,
+            ['http://localhost:5132'],
+            'apphub-local-bridge-dev',
+        );
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('Publisher origin does not match manifest api_urls', $result['error']);
+    }
+
+    public function test_loopback_attestation_accepts_matching_proxy_origin(): void
+    {
+        $request = \Illuminate\Http\Request::create(
+            'http://example.test/bridge/notify',
+            'POST',
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_APPHUB_BRIDGE_PROXY_SECRET' => 'apphub-local-bridge-dev',
+                'HTTP_X_APPHUB_PUBLISHER_ORIGIN' => 'http://localhost:51732',
+                'REMOTE_ADDR' => '127.0.0.1',
+            ],
+        );
+
+        $result = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation(
+            $request,
+            ['http://localhost:51732'],
+            'apphub-local-bridge-dev',
+        );
+
+        $this->assertTrue($result['ok']);
+    }
+
+    public function test_allowed_urls_are_loopback_only(): void
+    {
+        $this->assertTrue(AppManifestApiUrl::allowedUrlsAreLoopbackOnly(['http://localhost:51732']));
+        $this->assertFalse(AppManifestApiUrl::allowedUrlsAreLoopbackOnly([
+            'http://localhost:51732',
+            'https://api.example.com',
+        ]));
+    }
+
+    public function test_loopback_attestation_skipped_when_secret_unset(): void
+    {
+        $request = \Illuminate\Http\Request::create('http://example.test/bridge/user', 'GET');
+
+        $result = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation(
+            $request,
+            ['http://localhost:51732'],
+            '',
+        );
+
+        $this->assertTrue($result['ok']);
+    }
+
     public function test_client_ip_rejects_unknown_source(): void
     {
         $this->assertFalse(AppManifestApiUrl::clientMatchesAllowedHosts(

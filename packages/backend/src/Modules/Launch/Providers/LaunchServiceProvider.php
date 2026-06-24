@@ -11,6 +11,7 @@ use Kennofizet\AppHub\Modules\Launch\Services\AppLaunchCallerUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppUsageService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchService;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
+use Kennofizet\AppHub\Modules\Launch\Services\UserNotificationService;
 
 class LaunchServiceProvider extends ModuleServiceProvider
 {
@@ -25,6 +26,7 @@ class LaunchServiceProvider extends ModuleServiceProvider
         $this->app->singleton(LaunchService::class);
         $this->app->singleton(AppUsageService::class);
         $this->app->singleton(AppHealthcheckService::class);
+        $this->app->singleton(UserNotificationService::class);
         $this->app->singleton(AppLaunchCallerUrlGuard::class);
         $this->app->singleton(AppEntryUrlGuard::class);
     }

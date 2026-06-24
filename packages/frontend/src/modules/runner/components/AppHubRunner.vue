@@ -110,6 +110,7 @@ import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
 import { useDesktopNotifications } from '../../notifications/index.js'
+import { useUserNotificationCenter } from '../../user-notifications/index.js'
 import AppHubInstallPermissionsDialog from '../../desktop/components/AppHubInstallPermissionsDialog.vue'
 import {
   RUNTIME_HOSTED,
@@ -144,6 +145,7 @@ const props = defineProps({
 
 const api = useAppHubHostApi()
 const notifications = useDesktopNotifications()
+const inboxCenter = useUserNotificationCenter()
 const moduleOptions = inject('apphubOptions', {})
 const allowedOrigins = computed(() => moduleOptions?.enterpriseRuntimeOrigins ?? moduleOptions?.allowedRuntimeOrigins ?? [])
 const iframeRef = ref(null)
@@ -248,7 +250,6 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   getManifestPermissions: () => manifestPermissions.value,
   getAppVersion: () => props.installedVersion || null,
   getRuntimeType: () => props.runtimeType,
-  bridgeDesktopMessage: (token, slug, payload) => api?.bridgeDesktopMessage?.(token, slug, payload),
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onSessionScopeGranted: onRuntimeScopeGranted,
   onDesktopMessage(payload) {
@@ -257,11 +258,8 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
     if (!title && !body) return
     notifications?.info(body || title, body ? title : '')
   },
-  onNotify(payload) {
-    const title = String(payload?.title ?? '').trim()
-    const body = String(payload?.body ?? '').trim()
-    if (!title && !body) return
-    notifications?.info(body || title, body ? title : '')
+  onPublisherNotifySent() {
+    void inboxCenter?.loadInbox?.({ reset: true, announce: true })
   },
   onTaskbarBadge() {
     /* badge UI deferred — scope recorded server-side */

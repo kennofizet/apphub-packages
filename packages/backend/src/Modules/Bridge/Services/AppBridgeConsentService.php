@@ -2,10 +2,13 @@
 
 namespace Kennofizet\AppHub\Modules\Bridge\Services;
 
+use Illuminate\Support\Collection;
 use Kennofizet\AppHub\Modules\Bridge\Models\AppBridgeConsent;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
+use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
+use Kennofizet\PackagesCore\Models\ZoneUser;
 
 final class AppBridgeConsentService
 {
@@ -88,6 +91,85 @@ final class AppBridgeConsentService
     {
         return $this->userHasScope($app, $userId, AppBridgeScope::USER_PROFILE)
             || $this->userHasScope($app, $userId, AppBridgeScope::USER_READ);
+    }
+
+    public function revokeAllForUser(App $app, int $userId): int
+    {
+        if ($userId < 1) {
+            return 0;
+        }
+
+        return AppBridgeConsent::query()
+            ->where('app_id', $app->id)
+            ->where('user_id', $userId)
+            ->delete();
+    }
+
+    /**
+     * App IDs the user still receives desktop.notify for (install consent).
+     *
+     * @return list<int>
+     */
+    public function subscribedNotifyAppIdsForUser(int $userId): array
+    {
+        if ($userId < 1) {
+            return [];
+        }
+
+        return AppBridgeConsent::query()
+            ->where('user_id', $userId)
+            ->where('scope', AppBridgeScope::DESKTOP_NOTIFY)
+            ->distinct()
+            ->pluck('app_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * User IDs in app zones who installed and granted desktop.notify.
+     *
+     * @return Collection<int, int>
+     */
+    public function notifyRecipientUserIdsForApp(App $app): Collection
+    {
+        $zoneIds = AppZoneAccess::query()
+            ->where('app_id', $app->id)
+            ->pluck('zone_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($zoneIds->isEmpty()) {
+            return collect();
+        }
+
+        $zoneUserIds = ZoneUser::query()
+            ->whereIn('zone_id', $zoneIds->all())
+            ->distinct()
+            ->pluck('user_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($zoneUserIds->isEmpty()) {
+            return collect();
+        }
+
+        return AppBridgeConsent::query()
+            ->where('app_id', $app->id)
+            ->where('scope', AppBridgeScope::DESKTOP_NOTIFY)
+            ->whereIn('user_id', $zoneUserIds->all())
+            ->distinct()
+            ->pluck('user_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
     }
 
     /**

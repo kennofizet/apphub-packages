@@ -66,7 +66,7 @@ if (!APPHUB_BASE) throw new Error('Set APPHUB_BACKEND_URL')
 export async function verifyLaunchToken(launchToken, appSlug) {
   const res = await fetch(`${APPHUB_BASE}/verify-launch-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
       launch_token: launchToken,
       ...(appSlug ? { app_slug: appSlug } : {}),

@@ -1,121 +1,58 @@
 const btn = document.getElementById('btn')
 const btnVerify = document.getElementById('btn-verify')
+const btnNotify = document.getElementById('btn-notify')
 const btnReportError = document.getElementById('btn-report-error')
 const hello = document.getElementById('hello')
 const status = document.getElementById('status')
 const versionEl = document.getElementById('version')
 
 const params = new URLSearchParams(window.location.search)
+
+if (typeof AppHubPublisherBridge === 'undefined') {
+  const status = document.getElementById('status')
+  if (status) {
+    status.textContent = 'Missing publisher-bridge.js — run: cd example && npm run sync:shared'
+  }
+  throw new Error('publisher-bridge.js not loaded')
+}
+
+const bridge = AppHubPublisherBridge.createPublisherBridge({
+  getUrlLaunchToken: () => new URLSearchParams(window.location.search).get('launch_token'),
+})
+
 const launchToken = params.get('launch_token')
 
-/** @type {string[]} from Hub bridge (manifest api_urls — iframe uses publisher origin; api_urls from bridge:ready) */
-let manifestApiUrls = []
-
-if (launchToken) {
+if (launchToken && status) {
   status.textContent = 'Launch token present in URL.'
 }
 
-const BRIDGE_CHANNEL = 'apphub:bridge'
-let bridgeReady = false
-/** @type {Record<string, unknown> | null} */
-let bridgeContext = null
-/** @type {{ id: number, name: string } | null} */
-let displayUser = null
-
-function publisherBackendBase() {
-  const fromContext = bridgeContext?.publisher_api_base
-  if (typeof fromContext === 'string' && fromContext.trim()) {
-    return fromContext.trim().replace(/\/$/, '')
-  }
-  if (manifestApiUrls.length) return manifestApiUrls[0]
-  return ''
-}
-
-function refreshBridgeStatus() {
-  if (!bridgeReady || !status) return
-  const backend = publisherBackendBase() || '(Hub bridge publisher_api_base + local-bridge-proxy)'
-  status.textContent = displayUser
-    ? `Bridge ready — Verify → ${backend}/bridge/user`
-    : `Bridge ready — Verify uses ${backend}`
-}
-
-async function fetchBridgeUserViaPublisherBackend() {
-  const slug = typeof bridgeContext?.app_slug === 'string' ? bridgeContext.app_slug : ''
-  const token = launchToken || (typeof bridgeContext?.launch_token === 'string' ? bridgeContext.launch_token : '')
-  const base = publisherBackendBase()
-  if (!slug || !token || !base) {
-    throw new Error('Need app_slug, launch_token, and publisher_api_base from Hub bridge (run local-bridge-proxy)')
-  }
-
-  const res = await fetch(`${base}/bridge/user`, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-      'X-AppHub-Launch-Token': token,
-      'X-AppHub-App-Slug': slug,
-    },
-  })
-
-  const body = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    throw new Error(body?.error || res.statusText || 'Publisher backend / bridge error')
-  }
-
-  return body?.data ?? body
-}
-
-function callBridge(method, args) {
-  const bridgeArgs = Array.isArray(args) ? args : [args]
-  return new Promise((resolve, reject) => {
-    const id = `demo-${Date.now()}`
-    const onMsg = (event) => {
-      const msg = event.data
-      if (!msg || msg.channel !== BRIDGE_CHANNEL || msg.event !== 'apphub:bridge:result' || msg.id !== id) return
-      window.removeEventListener('message', onMsg)
-      if (msg.ok) resolve(msg.result)
-      else reject(new Error(msg.error || 'Bridge error'))
-    }
-    window.addEventListener('message', onMsg)
-    window.parent.postMessage({ channel: BRIDGE_CHANNEL, event: 'apphub:bridge:call', id, method, args: bridgeArgs }, '*')
-  })
+function refreshStatus() {
+  if (!bridge.ready || !status) return
+  status.textContent = bridge.statusLine()
 }
 
 window.addEventListener('message', (event) => {
-  const msg = event.data
-  if (!msg || msg.channel !== BRIDGE_CHANNEL || msg.event !== 'apphub:bridge:ready') return
-  bridgeReady = true
-  bridgeContext = msg.context ?? null
+  if (!bridge.handleBridgeMessage(event.data)) return
 
-  const version = bridgeContext?.app_version
+  const version = bridge.context?.app_version
   if (version && versionEl) {
     versionEl.textContent = `Version ${version}`
   } else if (versionEl) {
     versionEl.hidden = true
   }
 
-  const pubBase = bridgeContext?.publisher_api_base
-  if (typeof pubBase === 'string' && pubBase.trim()) {
-    manifestApiUrls = [pubBase.trim().replace(/\/$/, '')]
-  }
-
-  const raw = bridgeContext?.display_user
-  if (raw && raw.id != null) {
-    displayUser = {
-      id: Number(raw.id),
-      name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : String(raw.id),
-    }
-  }
-  refreshBridgeStatus()
+  refreshStatus()
 })
 
 btn?.addEventListener('click', () => {
   hello.hidden = false
-  if (!bridgeReady) {
+  if (!bridge.ready) {
     hello.textContent = 'Hello from demo-iframe-html!'
     return
   }
-  if (displayUser?.name) {
-    hello.textContent = `Hello ${displayUser.name}! (display_user — UI only, no API)`
+  const display = bridge.displayUser()
+  if (display?.name) {
+    hello.textContent = `Hello ${display.name}! (display_user — UI only, no API)`
     return
   }
   hello.textContent = 'No display_user from Hub — use Verify for API user.'
@@ -123,42 +60,64 @@ btn?.addEventListener('click', () => {
 
 btnVerify?.addEventListener('click', async () => {
   hello.hidden = false
-  if (!bridgeReady) {
+  if (!bridge.ready) {
     hello.textContent = window.parent === window
       ? 'Open this app from App Hub desktop (serve html/ on :15180 first)'
       : 'Bridge not ready — waiting for Hub… try again in a second'
-    requestBridgeReady()
+    bridge.requestBridgeReady()
     return
   }
   try {
-    const scopes = Array.isArray(bridgeContext?.scopes_granted) ? bridgeContext.scopes_granted : []
-    if (!scopes.includes('user.read') && !scopes.includes('user.profile')) {
-      hello.textContent = 'user.read not on launch token — accept install permissions, then reopen app from Hub'
-      return
-    }
-    const user = await fetchBridgeUserViaPublisherBackend()
-    hello.textContent = `Verified: ${user?.name || 'user'} (id ${user?.id}) via ${publisherBackendBase()}/bridge/user`
+    const user = await bridge.fetchBridgeUser()
+    hello.textContent = `Verified: ${user?.name || 'user'} (id ${user?.id}) via ${bridge.publisherBackendBase()}/bridge/user`
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Request failed'
-    if (msg === 'Failed to fetch') {
-      hello.textContent = `Blocked calling ${publisherBackendBase()}/bridge/user — run local-bridge-proxy on :51732`
-      return
-    }
-    hello.textContent = msg
+    hello.textContent = bridge.formatHttpError(err, 'user')
+  }
+})
+
+btnNotify?.addEventListener('click', async () => {
+  hello.hidden = false
+  if (!bridge.ready) {
+    hello.textContent = 'Bridge not ready — open from App Hub, then try again'
+    bridge.requestBridgeReady()
+    return
+  }
+  if (!bridge.scopesGranted().includes('desktop.notify')) {
+    hello.textContent = 'desktop.notify missing on launch token — reinstall app with notify permission, then reopen'
+    return
+  }
+  if (!bridge.publisherBackendBase()) {
+    hello.textContent = 'No publisher_api_base — check manifest api_urls + local-bridge-proxy on :51732'
+    return
+  }
+  btnNotify.disabled = true
+  hello.textContent = `Sending via ${bridge.publisherBackendBase()}/bridge/notify…`
+  try {
+    const result = await bridge.fetchBridgeNotify({
+      title: 'Demo Iframe',
+      body: 'desktop.notify via publisher backend (shared publisher-bridge.js)',
+    })
+    const n = result?.recipients
+    const extra = typeof n === 'number' ? ` (${n} recipient${n === 1 ? '' : 's'})` : ''
+    hello.textContent = `Notify sent${extra} — check Hub bell + toasts`
+  } catch (err) {
+    hello.textContent = bridge.formatHttpError(err, 'notify')
+  } finally {
+    btnNotify.disabled = false
   }
 })
 
 btnReportError?.addEventListener('click', async () => {
   hello.hidden = false
-  if (!bridgeReady) {
+  if (!bridge.ready) {
     hello.textContent = 'Bridge not ready — open from App Hub, then try again'
-    requestBridgeReady()
+    bridge.requestBridgeReady()
     return
   }
   const err = new Error('demo-iframe-html smoke test error')
   err.name = 'DemoSmokeError'
   try {
-    await callBridge('reportError', {
+    await bridge.callBridge('reportError', {
       message: err.message,
       name: err.name,
       stack: err.stack || '',
@@ -169,14 +128,9 @@ btnReportError?.addEventListener('click', async () => {
   }
 })
 
-function requestBridgeReady() {
-  if (window.parent === window) return
-  window.parent.postMessage({ channel: BRIDGE_CHANNEL, event: 'apphub:bridge:ping' }, '*')
-}
-
 if (window.parent !== window) {
   if (status && !launchToken) {
     status.textContent = 'Waiting for Hub bridge…'
   }
-  requestBridgeReady()
+  bridge.requestBridgeReady()
 }

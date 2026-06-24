@@ -31,6 +31,28 @@ npm run pack:storage
 
 Drop `demo-storage-writer.zip`, `demo-storage-reader.zip`, `demo-storage-reader-b.zip` → approve → open Writer then Readers. See [`demo-storage-poc/README.md`](demo-storage-poc/README.md).
 
+## `local-bridge-proxy/` (publisher HTTP for demos)
+
+For **`GET bridge/user`** and **`POST bridge/notify`**, the demo apps call your manifest `api_urls` (not App Hub directly). See [`local-bridge-proxy/README.md`](local-bridge-proxy/README.md).
+
+Shared client: [`shared/publisher-bridge.js`](shared/publisher-bridge.js) — copied into each demo `html/` via `npm run sync:shared` (runs automatically before `pack` and `serve:iframe`).
+
+---
+
+## `shared/publisher-bridge.js`
+
+Copy this into your publisher app (or use the demo pattern):
+
+| Method | Type | Purpose |
+|--------|------|---------|
+| `fetchBridgeUser()` | Publisher HTTP | `GET {api_urls}/bridge/user` |
+| `fetchBridgeNotify({ title, body })` | Publisher HTTP | `POST {api_urls}/bridge/notify` |
+| `callBridge('reportError', …)` | Hub postMessage | Usage log |
+| `callBridge('sendDesktopMessage', …)` | Hub postMessage | Desktop banner/toast UI |
+| `displayUser()` | Hub `bridge:ready` | UI greeting only |
+
+---
+
 ## `verify-launch-token/` (publisher backend)
 
 curl + Node examples for **`POST …/verify-launch-token`** — required when your tool server authorizes users. See [`verify-launch-token/README.md`](verify-launch-token/README.md). For local demos, pair with [`local-bridge-proxy/`](local-bridge-proxy/).
@@ -78,7 +100,7 @@ Required for zip publish: `permissions`. Optional: `api_urls` (only if your tool
 
 `permissions` — bridge scopes users grant on install (`user.read`, `desktop.notify`, …).
 
-`api_urls` — **optional**. Only needed when a **publisher tool backend** calls App Hub (`verify-launch-token`, `bridge/user`). Apps that only use `display_user` and postMessage bridge can omit it. When set, DEV reviews these in Dev Tools; App Hub checks caller TCP IP against the declared host.
+`api_urls` — **required for publisher HTTP demos**. Your tool backend (or [`local-bridge-proxy`](local-bridge-proxy/)) calls App Hub: `GET bridge/user`, `POST bridge/notify`. Use [`shared/publisher-bridge.js`](shared/publisher-bridge.js) as a template. App Hub checks caller TCP IP against the declared host.
 
 ### Version rules (automatic)
 

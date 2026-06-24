@@ -27,11 +27,10 @@ function isBridgeMessage(data) {
  *   } | null,
  *   appSlug: string,
  *   appName: string,
- *   bridgeDesktopMessage?: (token: string, slug: string, payload: object) => Promise<unknown>,
  *   requestScopeConsent: (scope: string) => Promise<boolean>,
  *   onSessionScopeGranted?: (scope: string) => void,
  *   onDesktopMessage?: (payload: object) => void,
- *   onNotify?: (payload: { title?: string, body?: string, icon?: string }) => void,
+ *   onPublisherNotifySent?: () => void,
  *   onTaskbarBadge?: (count: number | null) => void,
  *   reportUsageError?: (metadata: Record<string, unknown>) => Promise<void>,
  *   getEntryOrigin?: () => string,
@@ -46,7 +45,7 @@ function isBridgeMessage(data) {
 export function createRunnerBridgeHost(options) {
   /** Server minted scopes on launch token — never mutated here. */
   let tokenScopes = new Set()
-  /** Hub session desktop consents (notify, message, badge) — UI only. */
+  /** Hub session desktop consents (message, badge) — UI only. */
   let sessionGranted = new Set()
   let stopped = false
 
@@ -202,19 +201,7 @@ export function createRunnerBridgeHost(options) {
           return
         }
         const payload = args?.[0] ?? {}
-        await options.bridgeDesktopMessage?.(token, slug, payload)
         options.onDesktopMessage?.(payload)
-        reply(id, true, undefined)
-        return
-      }
-
-      if (method === 'notify') {
-        if (!await ensureMethodScopeGranted(method)) {
-          reply(id, false, null, 'Scope not granted')
-          return
-        }
-        const payload = args?.[0] ?? {}
-        options.onNotify?.(payload)
         reply(id, true, undefined)
         return
       }
@@ -251,6 +238,10 @@ export function createRunnerBridgeHost(options) {
     if (!isTrustedSource(event)) return
 
     const { event: bridgeEvent, id, method, args } = event.data
+    if (bridgeEvent === 'apphub:publisher:notify-sent') {
+      options.onPublisherNotifySent?.()
+      return
+    }
     if (bridgeEvent === BRIDGE_EVENT_PING) {
       sendReady()
       return

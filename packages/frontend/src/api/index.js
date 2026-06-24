@@ -29,13 +29,6 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     return config
   })
 
-  function bridgeHeaders(launchToken, appSlug) {
-    return {
-      'X-AppHub-Launch-Token': launchToken,
-      'X-AppHub-App-Slug': appSlug,
-    }
-  }
-
   function hostHeaders() {
     return hostAccessSecret ? { 'X-AppHub-Host-Access': hostAccessSecret } : {}
   }
@@ -50,6 +43,8 @@ export function createAppHubApi(backendUrl, token, options = {}) {
     launch: (slug, payload) => client.post(`/apps/${encodeURIComponent(slug)}/launch`, payload ?? {}),
     recordBridgeConsent: (slug, payload) =>
       client.post(`/apps/${encodeURIComponent(slug)}/bridge-consents`, payload ?? {}),
+    revokeBridgeConsents: (slug) =>
+      client.delete(`/apps/${encodeURIComponent(slug)}/bridge-consents`),
     createInstallIntent: (slug, payload) =>
       client.post(`/apps/${encodeURIComponent(slug)}/install-intent`, payload ?? {}),
     ping: (slug) => client.post(`/apps/${encodeURIComponent(slug)}/ping`),
@@ -87,11 +82,9 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       return client.post('/apps/register', payload, { timeout: 120_000 })
     },
     appVersions: (slug) => client.get(`/apps/${encodeURIComponent(slug)}/versions`),
-    bridgeUser: (launchToken, appSlug) =>
-      client.get('/bridge/user', { headers: bridgeHeaders(launchToken, appSlug) }),
-    bridgeDesktopMessage: (launchToken, appSlug, payload) =>
-      client.post('/bridge/desktop/message', payload, {
-        headers: bridgeHeaders(launchToken, appSlug),
-      }),
+    notifications: (params) => client.get('/notifications', { params }),
+    notificationsSummary: () => client.get('/notifications/summary'),
+    notificationsDismiss: (ids) => client.post('/notifications/dismiss', { ids }),
+    notificationsReadAll: () => client.post('/notifications/read-all'),
   }
 }

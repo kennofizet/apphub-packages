@@ -4,6 +4,15 @@ namespace Kennofizet\AppHub\Modules\Catalog\Support;
 
 final class AppManifestApiUrl
 {
+    /** Publisher backend sends this when forwarding bridge HTTP to App Hub. */
+    public const PUBLISHER_ORIGIN_HEADER = 'X-AppHub-Publisher-Origin';
+
+    /**
+     * Shared secret for local bridge proxy only (loopback api_urls).
+     * Not a substitute for production security — use DNS-pinned caller IPs there.
+     */
+    public const BRIDGE_PROXY_SECRET_HEADER = 'X-AppHub-Bridge-Proxy-Secret';
+
     private const MAX_URLS = 20;
 
     private const MAX_LENGTH = 2048;
@@ -129,6 +138,117 @@ final class AppManifestApiUrl
         }
 
         return false;
+    }
+
+    /**
+     * Origin declared by the publisher backend.
+     * Only validated together with bridge proxy attestation on loopback api_urls (header alone is spoofable).
+     */
+    public static function publisherOriginFromRequest(\Illuminate\Http\Request $request): ?string
+    {
+        $raw = trim((string) $request->header(self::PUBLISHER_ORIGIN_HEADER, ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        return self::normalizeSingle($raw);
+    }
+
+    /**
+     * @param list<string> $allowed
+     */
+    public static function publisherOriginMatchesAllowed(string $publisherOrigin, array $allowed): bool
+    {
+        return self::matchesAllowed($publisherOrigin, $allowed);
+    }
+
+    public static function bridgeProxySecretFromConfig(): string
+    {
+        if (!function_exists('config')) {
+            return '';
+        }
+
+        return trim((string) config('apphub.bridge_proxy_secret', ''));
+    }
+
+    public static function bridgeProxyAttestationMatches(string $provided, ?string $expected = null): bool
+    {
+        $expected = $expected ?? self::bridgeProxySecretFromConfig();
+        if ($expected === '') {
+            return false;
+        }
+
+        $provided = trim($provided);
+
+        return $provided !== '' && hash_equals($expected, $provided);
+    }
+
+    /**
+     * @param list<string> $allowed
+     */
+    public static function allowedUrlsAreLoopbackOnly(array $allowed): bool
+    {
+        if ($allowed === []) {
+            return false;
+        }
+
+        foreach ($allowed as $url) {
+            $host = self::hostOf($url);
+            if ($host === null || !self::isLoopbackHost($host)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Loopback dev: require proxy secret + publisher origin (port). Production: caller IP / pins only.
+     *
+     * @param list<string> $allowed
+     * @return array{ok: true}|array{ok: false, error: string, status: int}
+     */
+    public static function validateLoopbackBridgeProxyAttestation(
+        \Illuminate\Http\Request $request,
+        array $allowed,
+        ?string $proxySecret = null,
+    ): array {
+        $proxySecret = $proxySecret ?? self::bridgeProxySecretFromConfig();
+        if ($proxySecret === '') {
+            return ['ok' => true];
+        }
+
+        $attestation = trim((string) $request->header(self::BRIDGE_PROXY_SECRET_HEADER, ''));
+        if (!self::bridgeProxyAttestationMatches($attestation, $proxySecret)) {
+            return [
+                'ok' => false,
+                'error' => 'Invalid or missing '
+                    . self::BRIDGE_PROXY_SECRET_HEADER
+                    . ' — loopback api_urls require a trusted local bridge proxy',
+                'status' => 403,
+            ];
+        }
+
+        $publisherOrigin = self::publisherOriginFromRequest($request);
+        if ($publisherOrigin === null) {
+            return [
+                'ok' => false,
+                'error' => 'Missing '
+                    . self::PUBLISHER_ORIGIN_HEADER
+                    . ' header — bridge proxy must declare its manifest api_urls origin',
+                'status' => 403,
+            ];
+        }
+
+        if (!self::publisherOriginMatchesAllowed($publisherOrigin, $allowed)) {
+            return [
+                'ok' => false,
+                'error' => 'Publisher origin does not match manifest api_urls',
+                'status' => 403,
+            ];
+        }
+
+        return ['ok' => true];
     }
 
     /**

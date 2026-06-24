@@ -66,6 +66,12 @@ return [
         FILTER_VALIDATE_BOOL,
     ),
 
+    /**
+     * Optional local dev hardening — leave empty for normal use (caller IP only).
+     * When set, loopback api_urls also require X-AppHub-Bridge-Proxy-Secret + publisher origin.
+     */
+    'bridge_proxy_secret' => trim((string) env('APPHUB_BRIDGE_PROXY_SECRET', '')),
+
     'apps_table' => env('APPHUB_APPS_TABLE', 'apphub_apps'),
     'app_versions_table' => env('APPHUB_APP_VERSIONS_TABLE', 'apphub_app_versions'),
     'app_permissions_table' => env('APPHUB_APP_PERMISSIONS_TABLE', 'apphub_app_permissions'),
@@ -74,6 +80,7 @@ return [
     'app_zone_access_table' => env('APPHUB_APP_ZONE_ACCESS_TABLE', 'apphub_app_zone_access'),
     'app_launch_tokens_table' => env('APPHUB_APP_LAUNCH_TOKENS_TABLE', 'apphub_app_launch_tokens'),
     'app_usage_logs_table' => env('APPHUB_APP_USAGE_LOGS_TABLE', 'apphub_app_usage_logs'),
+    'user_notifications_table' => env('APPHUB_USER_NOTIFICATIONS_TABLE', 'apphub_user_notifications'),
 
     'rbac' => [
         'driver' => env('APPHUB_RBAC_DRIVER', 'zone'),

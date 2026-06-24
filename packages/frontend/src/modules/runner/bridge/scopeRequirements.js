@@ -1,6 +1,5 @@
 /** Required scope per bridge method (first entry used for auto-prompt). */
 export const BRIDGE_METHOD_SCOPE = Object.freeze({
-  notify: 'desktop.notify',
   sendDesktopMessage: 'desktop.message',
   setTaskbarBadge: 'desktop.badge',
 })
