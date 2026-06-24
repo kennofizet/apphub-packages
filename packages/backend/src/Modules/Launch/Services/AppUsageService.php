@@ -48,6 +48,25 @@ final class AppUsageService
             throw new LaunchDeniedException('You do not have permission to log usage for this app', 403);
         }
 
-        $this->log($userId, $app, $action, $metadata);
+        $this->log($userId, $app, $action, self::sanitizeMetadata($metadata));
+    }
+
+    /** @return array<string, mixed>|null */
+    public static function sanitizeMetadata(?array $metadata): ?array
+    {
+        if ($metadata === null || $metadata === []) {
+            return null;
+        }
+
+        $maxBytes = max(256, (int) config('apphub.usage_report_max_bytes', 4096));
+        $encoded = json_encode($metadata, JSON_THROW_ON_ERROR);
+        if (strlen($encoded) > $maxBytes) {
+            return [
+                'message' => 'Metadata truncated — exceeded size limit',
+                'truncated' => true,
+            ];
+        }
+
+        return $metadata;
     }
 }

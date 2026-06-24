@@ -118,7 +118,7 @@ export function createRunnerBridgeHost(options) {
         publisher_api_base: options.getPublisherApiBase?.() ?? null,
         caller_origin: options.getEntryOrigin?.() ?? null,
         app_version: options.getAppVersion?.() ?? null,
-        ...(displayUser ? { display_user: displayUser } : {}),
+        ...(tokenScopes.has('user.read') && displayUser ? { display_user: displayUser } : {}),
       },
     })
   }
@@ -128,8 +128,12 @@ export function createRunnerBridgeHost(options) {
     if (!frame?.contentWindow) return false
     if (event.source !== frame.contentWindow) return false
 
+    if (options.isOpaqueHostedSandbox?.()) {
+      return true
+    }
+
     const entryOrigin = options.getEntryOrigin?.() ?? ''
-    if (!entryOrigin) return true
+    if (!entryOrigin) return false
 
     try {
       if (event.origin === 'null' || event.origin === '') return true
@@ -218,6 +222,10 @@ export function createRunnerBridgeHost(options) {
       }
 
       if (method === 'reportError') {
+        if (!await ensureMethodScopeGranted(method)) {
+          reply(id, false, null, 'Scope not granted')
+          return
+        }
         const raw = args?.[0]
         const metadata = raw && typeof raw === 'object' && !Array.isArray(raw)
           ? raw
@@ -239,7 +247,10 @@ export function createRunnerBridgeHost(options) {
 
     const { event: bridgeEvent, id, method, args } = event.data
     if (bridgeEvent === 'apphub:publisher:notify-sent') {
-      options.onPublisherNotifySent?.()
+      syncTokenScopesFromContext()
+      if (tokenScopes.has('desktop.notify')) {
+        options.onPublisherNotifySent?.()
+      }
       return
     }
     if (bridgeEvent === BRIDGE_EVENT_PING) {

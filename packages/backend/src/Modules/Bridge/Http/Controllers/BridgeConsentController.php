@@ -109,6 +109,10 @@ class BridgeConsentController extends Controller
             return $this->apiErrorResponse('App not found', 404);
         }
 
+        if (!$this->catalog->userCanLaunch($app, $userId, self::currentUserZoneIdList())) {
+            return $this->apiErrorResponse('You do not have permission for this app', 403);
+        }
+
         $revoked = $this->consents->revokeAllForUser($app, $userId);
         $dismissed = $this->notifications->dismissAllForUserAndApp($userId, (int) $app->id);
 

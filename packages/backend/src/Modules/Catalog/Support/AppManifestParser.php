@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Launch\Services\AppEntryUrlGuard;
+use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchDeniedException;
 use RuntimeException;
 use ZipArchive;
@@ -141,7 +142,15 @@ final class AppManifestParser
 
         foreach (['api_base_url', 'healthcheck_url'] as $urlKey) {
             if (!empty($manifest[$urlKey]) && is_string($manifest[$urlKey])) {
-                $document[$urlKey] = mb_substr(trim($manifest[$urlKey]), 0, 2048);
+                $trimmed = mb_substr(trim($manifest[$urlKey]), 0, 2048);
+                if ($urlKey === 'healthcheck_url') {
+                    try {
+                        AppHealthcheckUrlGuard::assertSafeUrl($trimmed);
+                    } catch (LaunchDeniedException $e) {
+                        throw new RuntimeException($e->getMessage());
+                    }
+                }
+                $document[$urlKey] = $trimmed;
             }
         }
 
@@ -234,7 +243,15 @@ final class AppManifestParser
 
         foreach (['api_base_url', 'healthcheck_url'] as $urlKey) {
             if (!empty($manifest[$urlKey]) && is_string($manifest[$urlKey])) {
-                $document[$urlKey] = mb_substr(trim($manifest[$urlKey]), 0, 2048);
+                $trimmed = mb_substr(trim($manifest[$urlKey]), 0, 2048);
+                if ($urlKey === 'healthcheck_url') {
+                    try {
+                        AppHealthcheckUrlGuard::assertSafeUrl($trimmed);
+                    } catch (LaunchDeniedException $e) {
+                        throw new RuntimeException($e->getMessage());
+                    }
+                }
+                $document[$urlKey] = $trimmed;
             }
         }
 

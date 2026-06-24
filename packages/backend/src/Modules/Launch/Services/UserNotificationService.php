@@ -17,16 +17,20 @@ final class UserNotificationService
     ) {
     }
     /**
-     * Fan-out publisher notify to zone users who installed the app (desktop.notify consent).
+     * Fan-out publisher notify — defaults to launching user only; broadcast requires explicit flag.
      *
+     * @param list<int> $explicitUserIds
      * @return array{created: int, notification_ids: list<int>}
      */
     public function fanOutFromPublisher(
         App $app,
         string $title,
         string $body,
+        int $launchingUserId,
+        bool $broadcast = false,
+        array $explicitUserIds = [],
     ): array {
-        if (!in_array((string) $app->status, [AppStatus::ACTIVE, AppStatus::DRAFT], true)) {
+        if (!$this->appAllowsPublisherNotify($app)) {
             throw new RuntimeException('App is not available for notifications');
         }
 
@@ -41,9 +45,24 @@ final class UserNotificationService
         }
 
         $body = trim($body);
-        $userIds = $this->bridgeConsents->notifyRecipientUserIdsForApp($app);
+        $consented = $this->bridgeConsents->notifyRecipientUserIdsForApp($app)
+            ->map(static fn ($id): int => (int) $id)
+            ->values();
+
+        $userIds = $this->resolveNotifyRecipientIds(
+            $consented,
+            $launchingUserId,
+            $broadcast,
+            $explicitUserIds,
+        );
+
         if ($userIds->isEmpty()) {
             return ['created' => 0, 'notification_ids' => []];
+        }
+
+        $maxRecipients = max(1, (int) config('apphub.notify_max_recipients', 100));
+        if ($userIds->count() > $maxRecipients) {
+            throw new RuntimeException("Notification recipient limit exceeded (max {$maxRecipients})");
         }
 
         $now = now();
@@ -75,6 +94,64 @@ final class UserNotificationService
             ->all();
 
         return ['created' => count($rows), 'notification_ids' => $ids];
+    }
+
+    private function appAllowsPublisherNotify(App $app): bool
+    {
+        $status = (string) $app->status;
+        if ($status === AppStatus::ACTIVE) {
+            return true;
+        }
+
+        if ($status === AppStatus::DRAFT && $this->allowsDraftNotifyInDev()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function allowsDraftNotifyInDev(): bool
+    {
+        if (!function_exists('config')) {
+            return false;
+        }
+
+        return in_array(strtolower(trim((string) config('app.env', ''))), ['local', 'testing'], true);
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, int> $consented
+     * @param list<int> $explicitUserIds
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function resolveNotifyRecipientIds(
+        \Illuminate\Support\Collection $consented,
+        int $launchingUserId,
+        bool $broadcast,
+        array $explicitUserIds,
+    ): \Illuminate\Support\Collection {
+        $allowed = $consented->flip();
+
+        $explicit = array_values(array_unique(array_filter(array_map(
+            static fn ($id): int => (int) $id,
+            $explicitUserIds,
+        ), static fn (int $id): bool => $id > 0)));
+
+        if ($explicit !== []) {
+            return collect($explicit)
+                ->filter(static fn (int $id): bool => $allowed->has($id))
+                ->values();
+        }
+
+        if ($broadcast) {
+            return $consented->values();
+        }
+
+        if ($launchingUserId > 0 && $allowed->has($launchingUserId)) {
+            return collect([$launchingUserId]);
+        }
+
+        return collect();
     }
 
     /**

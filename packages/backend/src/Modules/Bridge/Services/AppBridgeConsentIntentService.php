@@ -13,6 +13,13 @@ final class AppBridgeConsentIntentService
      */
     public function createIntent(App $app, int $userId, ?string $bundleVersion): array
     {
+        AppBridgeConsentIntent::query()
+            ->where('app_id', $app->id)
+            ->where('user_id', $userId)
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->update(['used_at' => now()]);
+
         $plainToken = Str::random(48);
         $ttl = max(30, (int) config('apphub.install_intent_ttl_seconds', 120));
 

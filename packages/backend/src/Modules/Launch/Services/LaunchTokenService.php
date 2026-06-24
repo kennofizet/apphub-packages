@@ -102,14 +102,9 @@ final class LaunchTokenService
 
     public function peek(string $token): ?array
     {
-        $record = $this->findByPlainToken($token);
-        if ($record === null || $record->isExpired()) {
-            return null;
-        }
+        unset($token);
 
-        $record->loadMissing('app');
-
-        return $this->toPayload($record);
+        return null;
     }
 
     public function recordForGrant(string $token): ?AppLaunchToken

@@ -64,6 +64,9 @@ class BridgeController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'nullable|string|max:2000',
+            'broadcast' => 'sometimes|boolean',
+            'user_ids' => 'sometimes|array|max:50',
+            'user_ids.*' => 'integer|min:1',
         ]);
 
         try {
@@ -71,6 +74,9 @@ class BridgeController extends Controller
                 $app,
                 $validated['title'],
                 (string) ($validated['body'] ?? ''),
+                (int) ($launch['user_id'] ?? 0),
+                (bool) ($validated['broadcast'] ?? false),
+                array_values($validated['user_ids'] ?? []),
             );
         } catch (RuntimeException $e) {
             return $this->apiErrorResponse($e->getMessage(), 422);

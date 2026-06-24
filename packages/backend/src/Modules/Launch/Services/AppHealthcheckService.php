@@ -36,7 +36,10 @@ final class AppHealthcheckService
         $started = microtime(true);
 
         try {
-            $response = Http::timeout(10)->acceptJson()->get($url);
+            $response = Http::timeout(10)
+                ->withOptions(['allow_redirects' => false])
+                ->acceptJson()
+                ->get($url);
             $latencyMs = (int) round((microtime(true) - $started) * 1000);
 
             return [

@@ -190,7 +190,7 @@
           "note": "Publisher tool backends (manifest api_urls) may call GET bridge/user and POST bridge/notify. App Hub matches caller TCP IP to api_urls. Implement fetch in your app against your api_urls proxy — not Hub postMessage. Hub postMessage is for desktop UI (message, badge) and reportError only.",
           "routes": [
             "GET bridge/user — scoped user snapshot (requires user.read on launch token)",
-            "POST bridge/notify — fan-out desktop notifications (requires desktop.notify on launch token)"
+            "POST bridge/notify — notify launching user by default; set broadcast: true or user_ids for wider fan-out (requires desktop.notify on launch token)"
           ]
         }
       },
@@ -464,7 +464,7 @@
         "path": "bridge/notify",
         "auth": "launch_token",
         "audience": ["publisher"],
-        "description": "Fan-out desktop notifications. Caller IP must match manifest api_urls. Headers: X-AppHub-Launch-Token, X-AppHub-App-Slug. Requires desktop.notify on launch token."
+        "description": "Notify installed users with desktop.notify consent. Defaults to launching user only; broadcast: true or user_ids for wider fan-out (capped). Caller IP must match manifest api_urls."
       },
       {
         "method": "GET",

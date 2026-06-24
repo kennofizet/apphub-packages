@@ -139,13 +139,15 @@ class LaunchController extends Controller
             'metadata.stack' => 'nullable|string|max:4000',
         ]);
 
+        $metadata = AppUsageService::sanitizeMetadata($validated['metadata'] ?? null);
+
         try {
             $this->usage->logBySlug(
                 (int) self::currentUserId(),
                 $slug,
                 $validated['action'],
                 self::currentUserZoneIdList(),
-                $validated['metadata'] ?? null,
+                $metadata,
             );
         } catch (LaunchDeniedException $e) {
             return $this->apiErrorResponse($e->getMessage(), $e->httpStatus());

@@ -3,6 +3,7 @@
 namespace Kennofizet\AppHub\Modules\Launch\Services;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
@@ -45,6 +46,21 @@ final class AppLaunchCallerUrlGuard
         }
 
         if (AppManifestApiUrl::allowedUrlsAreLoopbackOnly($allowed)) {
+            if (!AppManifestApiUrl::allowsLocalhostApiUrls()) {
+                return [
+                    'ok' => false,
+                    'error' => 'Loopback api_urls are not allowed in this environment',
+                    'status' => 403,
+                ];
+            }
+
+            if (AppManifestApiUrl::bridgeProxySecretFromConfig() === '') {
+                Log::warning('AppHub bridge: loopback api_urls without APPHUB_BRIDGE_PROXY_SECRET — any local process may call bridge endpoints', [
+                    'app_slug' => $app->slug,
+                    'client_ip' => $clientIp,
+                ]);
+            }
+
             $attestation = AppManifestApiUrl::validateLoopbackBridgeProxyAttestation($request, $allowed);
             if ($attestation['ok'] !== true) {
                 return $attestation;

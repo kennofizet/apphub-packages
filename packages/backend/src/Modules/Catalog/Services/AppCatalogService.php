@@ -249,9 +249,11 @@ final class AppCatalogService
             'status' => $app->status,
             'runtime_type' => $app->runtime_type,
             'entry_url' => $app->entry_url,
-            'healthcheck_url' => $app->healthcheck_url,
-            'health_ok' => $app->healthcheck_url ? $app->health_ok : null,
-            'health_checked_at' => $app->health_checked_at?->toIso8601String(),
+            'healthcheck_url' => $showReviewFields ? $app->healthcheck_url : null,
+            'health_ok' => $showReviewFields && $app->healthcheck_url ? $app->health_ok : null,
+            'health_checked_at' => $showReviewFields && $app->healthcheck_url
+                ? $app->health_checked_at?->toIso8601String()
+                : null,
             'bundle_hash' => $app->bundle_hash,
             'bundle_entry' => $app->bundle_entry,
             'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,

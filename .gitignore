@@ -11,6 +11,7 @@ docs/*
 !docs/integration-docs.md
 !docs/manifest-schema.md
 !docs/smoke-test.md
+!docs/host-security.md
 
 *.log
 .DS_Store

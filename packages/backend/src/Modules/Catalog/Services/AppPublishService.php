@@ -506,7 +506,16 @@ final class AppPublishService
 
         if (array_key_exists('healthcheck_url', $manifest)) {
             $url = $manifest['healthcheck_url'];
-            $app->healthcheck_url = is_string($url) && $url !== '' ? $url : null;
+            if (is_string($url) && $url !== '') {
+                try {
+                    \Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckUrlGuard::assertSafeUrl($url);
+                } catch (\Kennofizet\AppHub\Modules\Launch\Services\LaunchDeniedException $e) {
+                    throw new \RuntimeException($e->getMessage());
+                }
+                $app->healthcheck_url = $url;
+            } else {
+                $app->healthcheck_url = null;
+            }
         }
 
         if (isset($manifest['entry_url']) && is_string($manifest['entry_url']) && $manifest['entry_url'] !== '') {

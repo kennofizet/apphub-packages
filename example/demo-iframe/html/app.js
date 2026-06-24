@@ -96,6 +96,7 @@ btnNotify?.addEventListener('click', async () => {
     const result = await bridge.fetchBridgeNotify({
       title: 'Demo Iframe',
       body: 'desktop.notify via publisher backend (shared publisher-bridge.js)',
+      broadcast: true,
     })
     const n = result?.recipients
     const extra = typeof n === 'number' ? ` (${n} recipient${n === 1 ? '' : 's'})` : ''

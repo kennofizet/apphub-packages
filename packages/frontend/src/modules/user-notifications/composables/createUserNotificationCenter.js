@@ -45,6 +45,7 @@ export function createUserNotificationCenter(options = {}) {
   const dismissQueue = new Set()
   let dismissTimer = null
   let pollTimer = null
+  let visibilityHandler = null
 
   function markRemoving(ids) {
     const list = Array.isArray(ids) ? ids : [ids]
@@ -308,15 +309,30 @@ export function createUserNotificationCenter(options = {}) {
 
   function startPolling(intervalMs = 45_000) {
     stopPolling()
-    pollTimer = window.setInterval(() => {
+
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
       void loadInbox({ reset: true, announce: true })
-    }, intervalMs)
+    }
+
+    pollTimer = window.setInterval(tick, intervalMs)
+
+    if (typeof document !== 'undefined') {
+      visibilityHandler = () => {
+        if (!document.hidden) void loadInbox({ reset: true, announce: true })
+      }
+      document.addEventListener('visibilitychange', visibilityHandler)
+    }
   }
 
   function stopPolling() {
     if (pollTimer) {
       window.clearInterval(pollTimer)
       pollTimer = null
+    }
+    if (visibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', visibilityHandler)
+      visibilityHandler = null
     }
   }
 

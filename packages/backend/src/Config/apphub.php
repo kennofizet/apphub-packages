@@ -72,6 +72,17 @@ return [
      */
     'bridge_proxy_secret' => trim((string) env('APPHUB_BRIDGE_PROXY_SECRET', '')),
 
+    /** Per-minute rate limits (per launch token hash or IP). */
+    'bridge_rate_limit' => max(1, (int) env('APPHUB_BRIDGE_RATE_LIMIT', 30)),
+    'bridge_notify_rate_limit' => max(1, (int) env('APPHUB_BRIDGE_NOTIFY_RATE_LIMIT', 10)),
+    'verify_launch_rate_limit' => max(1, (int) env('APPHUB_VERIFY_LAUNCH_RATE_LIMIT', 20)),
+
+    /** Max inbox rows created per POST bridge/notify (broadcast cap). */
+    'notify_max_recipients' => max(1, min(1000, (int) env('APPHUB_NOTIFY_MAX_RECIPIENTS', 100))),
+
+    /** Max JSON bytes for bridge reportError / usage metadata. */
+    'usage_report_max_bytes' => max(256, (int) env('APPHUB_USAGE_REPORT_MAX_BYTES', 4096)),
+
     'apps_table' => env('APPHUB_APPS_TABLE', 'apphub_apps'),
     'app_versions_table' => env('APPHUB_APP_VERSIONS_TABLE', 'apphub_app_versions'),
     'app_permissions_table' => env('APPHUB_APP_PERMISSIONS_TABLE', 'apphub_app_permissions'),

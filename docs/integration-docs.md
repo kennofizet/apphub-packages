@@ -41,6 +41,8 @@ Human copy: **Guide → App bridge** tab. Field reference: [manifest-schema.md](
 
 Endpoint security lives in **`audiences.host_dev.backend_security`** in JSON. Publishers do not receive this section in human-facing docs.
 
+Human checklist: [host-security.md](./host-security.md) (trusted proxies, rate limits, notify fan-out, embed flags).
+
 Host backend must:
 
 - Enforce scopes on every `bridge/*` call

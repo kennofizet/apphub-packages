@@ -253,8 +253,8 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onSessionScopeGranted: onRuntimeScopeGranted,
   onDesktopMessage(payload) {
-    const title = String(payload?.title ?? '').trim()
-    const body = String(payload?.body ?? '').trim()
+    const title = String(payload?.title ?? '').trim().slice(0, 255)
+    const body = String(payload?.body ?? '').trim().slice(0, 2000)
     if (!title && !body) return
     notifications?.info(body || title, body ? title : '')
   },

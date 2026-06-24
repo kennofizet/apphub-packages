@@ -2,6 +2,7 @@
 export const BRIDGE_METHOD_SCOPE = Object.freeze({
   sendDesktopMessage: 'desktop.message',
   setTaskbarBadge: 'desktop.badge',
+  reportError: 'user.read',
 })
 
 /**
@@ -19,7 +20,8 @@ export function requiredScopeForMethod(method) {
  */
 export function isMethodScopeGranted(method, grantedScopes) {
   const scope = requiredScopeForMethod(method)
-  return scope ? grantedScopes.has(scope) : false
+  if (!scope) return false
+  return grantedScopes.has(scope)
 }
 
 /**

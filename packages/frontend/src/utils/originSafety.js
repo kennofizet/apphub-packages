@@ -222,11 +222,21 @@ function runHostIsolationChecks(options, expectedHubOrigin, expectedRuntimeOrigi
  *   dedicatedHubHost?: boolean,
  * }} [options]
  */
+/** Escape hatch for local dev only — ignored on production Hub origins. */
+function allowOriginBypass(options) {
+  const wants = options.allowUnsafeOrigin === true || options.allowSameOriginEmbed === true
+  if (!wants) return false
+  if (options.isDevUser === true || isLocalDevHostPage()) return true
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(
+      '[AppHub] allowUnsafeOrigin / allowSameOriginEmbed ignored — only honored on localhost or for dev users.',
+    )
+  }
+  return false
+}
+
 export function evaluateOriginSafety(options = {}) {
-  if (
-    options.allowUnsafeOrigin === true
-    || options.allowSameOriginEmbed === true
-  ) {
+  if (allowOriginBypass(options)) {
     return safeResult()
   }
 
