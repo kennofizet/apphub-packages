@@ -1,4 +1,5 @@
-import { computed, inject, toValue } from 'vue'
+import { computed, inject } from 'vue'
+import { toValue } from '../../../utils/toValue.js'
 
 export const DESKTOP_HUB_SETTINGS_KEY = 'apphubDesktopHubSettings'
 
