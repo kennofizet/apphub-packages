@@ -43,7 +43,7 @@ class LaunchServiceProvider extends ModuleServiceProvider
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $minutes = max(1, (int) config('apphub.healthcheck_schedule_minutes', 5));
-            $schedule->command('apphub:healthcheck')->everyMinutes($minutes);
+            $schedule->command('apphub:healthcheck')->cron(sprintf('*/%d * * * *', $minutes));
         });
     }
 }
