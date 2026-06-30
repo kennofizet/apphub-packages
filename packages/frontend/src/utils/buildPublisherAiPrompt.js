@@ -1,9 +1,11 @@
 /**
  * Build a paste-ready prompt for AI coding assistants (Publisher hub).
- * Integration rules + contract reference — not a scaffold for a new demo app.
+ * Integration rules + contract reference for existing apps or the publisher kit.
  *
  * @param {{ integrationDocsUrl: string, apiBase?: string, lang?: string }} options
  */
+
+const PUBLISHER_KIT_REPO = 'https://github.com/kennofizet/apphub-apps-ai-builder'
 export function buildPublisherAiPrompt(options) {
   const url = String(options.integrationDocsUrl ?? '').trim()
   const apiBase = String(options.apiBase ?? '').trim().replace(/\/$/, '')
@@ -20,12 +22,19 @@ function buildEn(url, apiBase) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
 
-  return `You are my App Hub integration assistant. This message is **rules and contract reference** so you know how App Hub works and how to call it. Help me integrate **my existing app** — do not invent a separate demo or smoke-test project.
+  return `You are my App Hub integration assistant. This message is **rules and contract reference** so you know how App Hub works and how to call it. Help me integrate **my app** — use my repo when I have one; do not invent a random demo or smoke-test project.
 
 ## Do not
-- Do not create a new app (no publisher-smoke, demo-*, hello-world, or similar) unless I explicitly ask.
-- Do not invent slug, name, version, or manifest fields — use my repo when I provide paths or files.
+- Do not invent slug, name, version, or manifest fields — use my repo or the publisher kit layout below.
 - Do not call authenticated Hub routes without my session token (see "Copy token for AI" if I pasted token rules separately).
+
+## No app yet (use the official publisher kit)
+If I have **no app** in the workspace (empty project, no apps/<slug>/, or I say I am starting from zero):
+1. Clone ${PUBLISHER_KIT_REPO} (or ask me to clone it into my workspace).
+2. Read **AGENTS.md** and **.cursor/rules/apphub-publisher.mdc** in that repo.
+3. Copy apphub.publisher.example.json → apphub.publisher.json (gitignored); set integration_docs_url to the contract URL below and hub_portal_url from me.
+4. Create the app under **apps/<slug>/** using that kit's structure and **tools/apphub.mjs** for build/zip — not a one-off folder you invent.
+5. Fetch integration docs from integration_docs_url (or GET below) before coding.
 
 ## Contract (fetch first — no auth)
 GET ${url || '{api_prefix}/apphub/integration-docs'}
@@ -33,7 +42,7 @@ Read JSON audiences.publisher — especially bridge, runtime_types, deploy, host
 
 ## Your role
 1. Learn the contract above; answer and code against it.
-2. When I ask for changes, apply Hub rules to **my** project (manifest, build output, bridge, launch).
+2. When I ask for changes, apply Hub rules to **my** project or **apps/<slug>/** in the publisher kit.
 3. Before register/launch automation, ask me for: runtime_type (hosted | iframe), slug, version, and where manifest/build output lives.
 
 ## Auth (for routes that need login)
@@ -58,7 +67,7 @@ Read token from a local gitignored file (.apphub-token.local or .env.local) — 
 ## If something fails
 Use audiences.publisher.hosted_runtime_troubleshooting. Ask me for console/Network details before guessing.
 
-If my app slug or repo is unclear, ask — do not default to a smoke-test app name.`
+If my app slug or repo is unclear, ask. If I have no app yet, use ${PUBLISHER_KIT_REPO} — do not default to a made-up smoke-test name.`
 }
 
 /** @param {string} url @param {string} apiBase */
@@ -66,12 +75,19 @@ function buildVi(url, apiBase) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
 
-  return `Bạn là trợ lý tích hợp App Hub của tôi. Đây là **quy tắc và tham chiếu hợp đồng** — không phải yêu cầu tạo app demo hay smoke-test riêng. Hỗ trợ tích hợp **app hiện có của tôi**.
+  return `Bạn là trợ lý tích hợp App Hub của tôi. Đây là **quy tắc và tham chiếu hợp đồng** — hỗ trợ **app của tôi**; không tự tạo project demo/smoke-test ngẫu nhiên.
 
 ## Không được
-- Không tạo app mới (publisher-smoke, demo-*, hello-world, …) trừ khi tôi yêu cầu rõ.
-- Không tự bịa slug, tên, version, manifest — dùng repo của tôi khi tôi cung cấp.
+- Không tự bịa slug, tên, version, manifest — dùng repo của tôi hoặc bộ publisher kit bên dưới.
 - Không gọi route Hub cần auth nếu thiếu session token (xem "Sao chép token cho AI" nếu tôi đã dán).
+
+## Chưa có app (dùng publisher kit chính thức)
+Nếu tôi **chưa có app** (project trống, không có apps/<slug>/, hoặc tôi nói bắt đầu từ đầu):
+1. Clone ${PUBLISHER_KIT_REPO} (hoặc bảo tôi clone vào workspace).
+2. Đọc **AGENTS.md** và **.cursor/rules/apphub-publisher.mdc** trong repo đó.
+3. Copy apphub.publisher.example.json → apphub.publisher.json (gitignored); điền integration_docs_url (URL hợp đồng bên dưới) và hub_portal_url (tôi cung cấp).
+4. Tạo app trong **apps/<slug>/** theo cấu trúc kit và **tools/apphub.mjs** — không tự nghĩ folder lẻ.
+5. Tải integration docs trước khi code.
 
 ## Hợp đồng (tải trước — không auth)
 GET ${url || '{api_prefix}/apphub/integration-docs'}
@@ -79,7 +95,7 @@ GET ${url || '{api_prefix}/apphub/integration-docs'}
 
 ## Vai trò của bạn
 1. Nắm hợp đồng; trả lời và code theo đó.
-2. Khi tôi nhờ sửa code, áp quy tắc Hub lên **dự án của tôi**.
+2. Khi tôi nhờ sửa code, áp quy tắc Hub lên dự án của tôi hoặc **apps/<slug>/** trong publisher kit.
 3. Trước khi script register/launch, hỏi: runtime_type, slug, version, vị trí manifest/build.
 
 ## Auth
@@ -104,5 +120,5 @@ POST ${registerUrl}, POST ${launchUrl} cần token.
 ## Lỗi
 hosted_runtime_troubleshooting; hỏi tôi log/Network trước khi đoán.
 
-Nếu chưa rõ slug/repo, hỏi — không đặt tên app smoke-test mặc định.`
+Nếu chưa rõ slug/repo, hỏi. Nếu chưa có app, dùng ${PUBLISHER_KIT_REPO} — không đặt tên smoke-test tự bịa.`
 }
