@@ -61,6 +61,7 @@ export function resolvePublisherAudience(doc, lang = 'en') {
  *   uiOnly?: string,
  *   uiDoNot?: string,
  *   trustedBackend?: string,
+ *   hostedTroubleshootingTitle?: string,
  * }} labels — localized section headings and inline prefixes
  * @param {string} [lang='en']
  */
@@ -112,6 +113,101 @@ export function publisherGuideSectionsFromIntegrationDocs(doc, labels, lang = 'e
     ].filter((s) => typeof s === 'string' && s.trim())
     if (lines.length) {
       sections.push({ title: labels.storageTitle, lines })
+    }
+  }
+
+  const hostedTs = publisher.hosted_runtime_troubleshooting
+  if (hostedTs && typeof hostedTs === 'object') {
+    const title =
+      (typeof hostedTs.title === 'string' && hostedTs.title.trim())
+      || labels.hostedTroubleshootingTitle
+      || 'Hosted runtime — troubleshooting'
+    const lines = []
+    if (typeof hostedTs.summary === 'string' && hostedTs.summary.trim()) {
+      lines.push(hostedTs.summary.trim())
+    }
+
+    const zip = hostedTs.zip_contract
+    if (zip && typeof zip === 'object') {
+      if (zip.summary) lines.push(zip.summary)
+      if (Array.isArray(zip.layout)) lines.push(...zip.layout.map((l) => `· ${l}`))
+      if (Array.isArray(zip.example_tree)) {
+        lines.push(`Example zip root: ${zip.example_tree.join(', ')}`)
+      }
+      if (zip.reference) lines.push(zip.reference)
+    }
+
+    const js = hostedTs.javascript_modules
+    if (js && typeof js === 'object') {
+      if (js.summary) lines.push(js.summary)
+      if (Array.isArray(js.hub_html_changes)) {
+        lines.push('Hub HTML changes:')
+        js.hub_html_changes.forEach((l) => lines.push(`  · ${l}`))
+      }
+      if (js.asset_auth) lines.push(js.asset_auth)
+      if (js.mime_types) lines.push(js.mime_types)
+      const imp = js.import_outside_module
+      if (imp && typeof imp === 'object') {
+        if (imp.symptom) lines.push(imp.symptom)
+        if (Array.isArray(imp.likely_causes)) {
+          imp.likely_causes.forEach((l) => lines.push(`  · ${l}`))
+        }
+        if (Array.isArray(imp.publisher_checks)) {
+          lines.push('Publisher checks:')
+          imp.publisher_checks.forEach((l) => lines.push(`  · ${l}`))
+        }
+      }
+    }
+
+    const csp = hostedTs.csp_framing
+    if (csp && typeof csp === 'object') {
+      if (csp.summary) lines.push(csp.summary)
+      if (csp.nested_chain) lines.push(csp.nested_chain)
+      if (csp.self_only_error) lines.push(csp.self_only_error)
+      if (csp.publisher_action) lines.push(csp.publisher_action)
+      if (csp.hub_launch_url) lines.push(csp.hub_launch_url)
+      const env = csp.platform_env
+      if (env && typeof env === 'object') {
+        Object.entries(env).forEach(([k, v]) => {
+          if (typeof v === 'string' && v) lines.push(`${k}: ${v}`)
+        })
+      }
+    }
+
+    const serve = hostedTs.runtime_serving
+    if (serve && typeof serve === 'object') {
+      if (serve.summary) lines.push(serve.summary)
+      if (Array.isArray(serve.behaviors)) {
+        serve.behaviors.forEach((l) => lines.push(`· ${l}`))
+      }
+      if (serve.devtools_expectation) lines.push(serve.devtools_expectation)
+    }
+
+    const checklist = hostedTs.troubleshooting_checklist
+    if (Array.isArray(checklist) && checklist.length) {
+      lines.push('Troubleshooting:')
+      checklist.forEach((row) => {
+        if (!row || typeof row !== 'object') return
+        const parts = [
+          row.symptom,
+          row.likely_cause && `Cause: ${row.likely_cause}`,
+          row.publisher_action && `You: ${row.publisher_action}`,
+          row.platform_action && row.platform_action !== '—' && `Platform: ${row.platform_action}`,
+        ].filter(Boolean)
+        if (parts.length) lines.push(`  · ${parts.join(' — ')}`)
+      })
+    }
+
+    const build = hostedTs.build_tools
+    if (build && typeof build === 'object') {
+      lines.push('Build tools:')
+      Object.entries(build).forEach(([k, v]) => {
+        if (typeof v === 'string' && v) lines.push(`  · ${k}: ${v}`)
+      })
+    }
+
+    if (lines.length) {
+      sections.push({ title, lines })
     }
   }
 

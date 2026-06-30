@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.10.1",
+  "schema_version": "1.11.1",
   "package": {
     "name": "apphub",
     "version": "0.2.7",
@@ -42,6 +42,125 @@
         "ready": "await window.__APPHUB_STORAGE__?.ready before localStorage reads on initial load",
         "scope": "Isolated per Hub user and app slug — not shared across hosted apps",
         "iframe_note": "Does not apply to runtime_type iframe — use your own origin storage"
+      },
+      "hosted_runtime_troubleshooting": {
+        "title": "Hosted runtime — publisher troubleshooting",
+        "summary": "Common errors when opening a hosted zip in App Hub: zip layout, ES modules (type=\"module\"), CSP frame-ancestors when Hub is iframe-embedded, and runtime serve behavior.",
+        "zip_contract": {
+          "summary": "Exact layout for POST /apps/register with multipart field bundle.",
+          "layout": [
+            "manifest.json must be inside the zip (root or one subfolder — Hub picks the shallowest path). Register does not accept a separate manifest for hosted zip uploads.",
+            "Entry file: manifest main, bundle_entry, or entry — default index.html. That path must exist in the extracted bundle.",
+            "Subfolders (assets/, static/, fonts/) are allowed. Zip only build output (e.g. dist/), never node_modules or dev shims (.cmd, .ps1).",
+            "Max size 50 MB (env APPHUB_BUNDLE_MAX_BYTES default 52_428_800; upload rule max 51200 KB).",
+            "Blocked file extensions: php, phtml, phar, exe, bat, cmd, sh, ps1, dll, so, dylib."
+          ],
+          "example_tree": [
+            "manifest.json",
+            "index.html",
+            "assets/index-abc123.js",
+            "assets/index-abc123.css"
+          ],
+          "reference": "Minimum valid layout matches example_tree: manifest.json, index.html, and built assets (e.g. assets/*.js) at zip root. Works with Vite ESM (type=\"module\") or plain classic scripts when paths are relative."
+        },
+        "javascript_modules": {
+          "summary": "ES modules are supported. Filenames like app-o2KUBx4V.js or index-BmAhrHFo.js come from your bundler (Vite), not from Hub renaming or injecting a loader.",
+          "es_modules_supported": true,
+          "hub_html_changes": [
+            "Hub does not inject app-{id}.js or remove type=\"module\".",
+            "Rewrites every src= and href= in HTML to append launch_token query param (including Vite ./assets/*.js with crossorigin).",
+            "Injects one inline classic script id=\"apphub-hosted-storage-shim\" immediately after <head> (localStorage proxy).",
+            "Injects style id=\"apphub-runtime-scrollbars\" after <head>.",
+            "Non-HTML files (.js, .css, images) are served unchanged with correct MIME type."
+          ],
+          "asset_auth": "First request: launch_token on index.html URL. Hub sets HttpOnly cookie apphub_rt_{slug} for follow-up requests. Chunk script tags also get launch_token on src because HTML is rewritten. Missing token → 401 on assets.",
+          "mime_types": ".js and .mjs → application/javascript; charset=UTF-8 (not text/javascript).",
+          "import_outside_module": {
+            "symptom": "Uncaught SyntaxError: Cannot use import statement outside a module",
+            "likely_causes": [
+              "A .js URL returns 401, 404, or HTML — browser executes the error body as a classic script.",
+              "index.html loads the bundle without type=\"module\".",
+              "Zip contains source or wrong folder (not dist/).",
+              "Broken relative paths so chunks 404."
+            ],
+            "publisher_checks": [
+              "DevTools Elements: served index.html still has <script type=\"module\" …>.",
+              "DevTools Network: every .js is 200 with Content-Type application/javascript.",
+              "Compare your zip tree to example_tree (manifest.json, index.html, assets/ at zip root).",
+              "Optional test: Vite IIFE build (no import/export) — if that works, fix ESM entry wiring in index.html; Hub supports type=\"module\"."
+            ],
+            "platform_action": "None for this error — not CSP frame-ancestors."
+          }
+        },
+        "csp_framing": {
+          "summary": "Hosted files are served from the Hub API origin inside a sandboxed runner iframe. Responses include CSP frame-ancestors listing who may embed the runtime document.",
+          "nested_chain": "product shell → Hub SPA iframe → GET …/apps/{slug}/runtime/index.html (API origin document)",
+          "headers": "Content-Security-Policy on every GET …/runtime/{path} (HTML and assets). frame-ancestors lists allowed parent origins.",
+          "frame_ancestors_sources": [
+            "'self' (API origin, e.g. https://backend.example.com)",
+            "APPHUB_ALLOWED_HUB_ORIGINS — Hub SPA that embeds the runner",
+            "APPHUB_ALLOWED_PRODUCT_ORIGINS — product page that embeds Hub in an iframe",
+            "hub_origin and product_origin query params added by Hub frontend after POST …/launch (must match allowlist or loopback in local dev)",
+            "Referer origin when it matches hub/product allowlists"
+          ],
+          "hub_launch_url": "After POST …/launch, Hub appends hub_origin (Hub window origin) and product_origin (product shell embedding Hub) as query params on the hosted runtime URL.",
+          "self_only_error": "Console: Framing 'https://…' violates frame-ancestors 'self' — Hub or product origin missing from server allowlist. Publishers cannot fix this in the zip.",
+          "platform_env": {
+            "APPHUB_ALLOWED_HUB_ORIGINS": "Comma-separated Hub SPA origins",
+            "APPHUB_ALLOWED_PRODUCT_ORIGINS": "Comma-separated product shell origins",
+            "local_dev": "APP_ENV=local|testing defaults often include localhost:5173 (Hub) and localhost:3000 (product). Custom Laragon ports need explicit env values."
+          },
+          "publisher_action": "Send Hub URL and product URL to your platform team. CSP is host configuration, not manifest fields."
+        },
+        "runtime_serving": {
+          "summary": "GET /apps/{slug}/runtime/{path} — public route, launch_token auth, serves pinned bundle version from launch.",
+          "behaviors": [
+            "Default path index.html when {path} omitted.",
+            "HTML: rewrite src/href launch_token, inject shim + scrollbar CSS, set CSP + cookie.",
+            "Assets: BinaryFileResponse, same CSP frame-ancestors, cookie auth when query token absent.",
+            "connect-src CSP includes manifest api_urls origins for fetch/XHR to publisher backends.",
+            "CORS: reflects hub/product origins for Vite crossorigin asset loads."
+          ],
+          "devtools_expectation": "View served index.html source (not zip on disk): script src includes launch_token; shim script present; frame-ancestors in response headers."
+        },
+        "troubleshooting_checklist": [
+          {
+            "symptom": "Cannot use import statement outside a module",
+            "likely_cause": "Chunk loaded as classic script or non-JS response for .js URL",
+            "publisher_action": "Check type=\"module\", Network 200 on all chunks, zip dist/ only",
+            "platform_action": "—"
+          },
+          {
+            "symptom": "401 on assets/*.js",
+            "likely_cause": "launch_token missing on chunk URL; cookie not sent in opaque sandbox",
+            "publisher_action": "Use relative ./assets paths; rely on HTML rewrite (re-publish if index paths wrong)",
+            "platform_action": "Confirm serve rewrite; APPHUB_LAUNCH_TOKEN_TTL not expired mid-load"
+          },
+          {
+            "symptom": "frame-ancestors 'self' blocked",
+            "likely_cause": "Hub/product origin not in APPHUB_ALLOWED_* env",
+            "publisher_action": "Report framing error + URLs to platform team",
+            "platform_action": "Set APPHUB_ALLOWED_HUB_ORIGINS and APPHUB_ALLOWED_PRODUCT_ORIGINS; verify hub_origin on launch URL"
+          },
+          {
+            "symptom": "Blocked file type .cmd / .ps1 on register",
+            "likely_cause": "Zipped node_modules or project root",
+            "publisher_action": "Zip only build output (e.g. dist/), not project root or node_modules",
+            "platform_action": "—"
+          },
+          {
+            "symptom": "Blank runner, launch 200",
+            "likely_cause": "Silent CSP frame block or wrong bundle entry",
+            "publisher_action": "Check console for CSP; verify manifest main points to existing file",
+            "platform_action": "Fix frame-ancestors allowlist; verify bundle entry file exists on server"
+          }
+        ],
+        "build_tools": {
+          "vite": "Default Vite 5/6 dist with type=\"module\" and ./assets/* is the recommended path. base: './' if needed. Zip dist contents + manifest.json at zip root.",
+          "vite_iife_test": "Optional: rollup output format iife to confirm ESM vs classic-script wiring — not required for production.",
+          "webpack": "Relative publicPath (auto or ./) so chunks resolve under …/runtime/.",
+          "plain_html": "Classic <script src> without import/export — no bundler required; same zip layout as example_tree."
+        }
       },
       "bridge": {
         "overview": "When a user opens your app from the desktop, App Hub loads your runtime in a window and provides AppHubBridge for permissions and desktop features.",
@@ -202,6 +321,7 @@
       "steps": [
         "Choose runtime_type: hosted (zip on Hub) or iframe (your entry_url SPA).",
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
+        "Hosted zip issues (ES modules, CSP framing): see audiences.publisher.hosted_runtime_troubleshooting.",
         "Listen for apphub:bridge:ready in your app.",
         "For hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads on load.",
         "Call requestPermission for desktop scopes as needed.",
@@ -233,6 +353,17 @@
             "ready": "await window.__APPHUB_STORAGE__?.ready trước khi đọc localStorage lần đầu khi load",
             "scope": "Tách theo user Hub và slug app — không chia sẻ giữa các app hosted",
             "iframe_note": "Không áp dụng runtime_type iframe — dùng storage trên origin của bạn"
+          },
+          "hosted_runtime_troubleshooting": {
+            "title": "Hosted runtime — xử lý sự cố publisher",
+            "summary": "Lỗi thường gặp khi mở zip hosted: bố cục zip, ES module (type=\"module\"), CSP frame-ancestors khi Hub nằm trong iframe sản phẩm.",
+            "csp_framing": {
+              "self_only_error": "Console: vi phạm frame-ancestors 'self' — origin Hub hoặc sản phẩm chưa có trong allowlist server. Publisher không sửa được trong zip.",
+              "publisher_action": "Gửi URL Hub và URL sản phẩm cho đội nền tảng. CSP do host cấu hình."
+            },
+            "javascript_modules": {
+              "summary": "Hỗ trợ ES module. Tên file dạng app-xxxxx.js là hash của Vite/bundler, không phải loader do Hub inject."
+            }
           },
           "bridge": {
             "overview": "Khi user mở app từ desktop, App Hub tải runtime trong cửa sổ và cung cấp AppHubBridge cho quyền và tính năng desktop.",
@@ -303,6 +434,7 @@
           "steps": [
             "Chọn runtime_type: hosted (zip trên Hub) hoặc iframe (SPA entry_url của bạn).",
             "Mở Hướng dẫn App Hub → Cầu nối App, hoặc đọc audiences.publisher.bridge ở đây.",
+            "Sự cố zip hosted (ES module, CSP framing): xem audiences.publisher.hosted_runtime_troubleshooting.",
             "Lắng nghe apphub:bridge:ready trong app.",
             "Hosted: await window.__APPHUB_STORAGE__?.ready trước khi đọc localStorage khi load.",
             "Gọi requestPermission cho quyền desktop khi cần.",

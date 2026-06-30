@@ -67,6 +67,8 @@ Granted at **install** (server records consent). Desktop scopes can also be requ
 
 Zip layout: `manifest.json` at zip root or one subfolder. Blocked: `.php`, `.exe`, `node_modules`, dangerous paths.
 
+**Troubleshooting (ES modules, CSP framing, 401 assets):** `integration-docs.json` → `audiences.publisher.hosted_runtime_troubleshooting` (also in Guide → App bridge). Use the `example_tree` layout there as your zip checklist.
+
 **Storage:** Hub injects a `localStorage` shim — use normal `localStorage` in code; `await window.__APPHUB_STORAGE__?.ready` before first read on load.
 
 ### Hosted example

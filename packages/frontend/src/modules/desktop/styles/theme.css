@@ -389,6 +389,16 @@
   color: var(--ah-text);
 }
 
+.apphub-draft-store__publisher-docs-copy-url {
+  border-color: var(--ah-border);
+  background: var(--ah-hover);
+  color: var(--ah-text);
+}
+
+.apphub-draft-store__publisher-docs-copy-url:hover {
+  background: var(--ah-surface-input);
+}
+
 .apphub-draft-store__publisher-docs-link {
   color: #93c5fd;
 }

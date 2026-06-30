@@ -20,6 +20,7 @@ Publisher documentation explains **how to use** App Hub from an app:
 - **Runtime types** — `hosted` (zip on Hub) vs `iframe` (your `entry_url` SPA); see `audiences.publisher.runtime_types`
 - Launch flow (`POST /apps/{slug}/launch` — server mints `scopes_granted` from install consent DB)
 - **Hosted storage** — automatic `localStorage` shim; `window.__APPHUB_STORAGE__.ready` (hosted only)
+- **Hosted troubleshooting** — zip contract, ES modules (`type="module"`), CSP `frame-ancestors`, runtime serve; see `audiences.publisher.hosted_runtime_troubleshooting` (schema ≥ 1.11.0)
 - `POST /apps/{slug}/install-intent` when permission dialog opens
 - `POST /apps/{slug}/bridge-consents` with `intent_token` after user Accept
 - `AppHubBridge` handshake — full `bridge:ready` context (`bridge_api_base`, `publisher_api_base`, `app_version`, …)
@@ -94,5 +95,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting)
 - **Major**: breaking bridge or launch contract

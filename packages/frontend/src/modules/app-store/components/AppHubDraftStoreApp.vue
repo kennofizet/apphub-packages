@@ -28,13 +28,60 @@
         <p class="apphub-draft-store__publisher-docs-lead">{{ labels.publisher_hub_docs_lead }}</p>
         <p class="apphub-draft-store__publisher-docs-path">{{ labels.publisher_hub_docs_path }}</p>
         <div v-if="integrationDocsUrl" class="apphub-draft-store__publisher-docs-actions">
-          <code class="apphub-draft-store__publisher-docs-url">{{ integrationDocsUrl }}</code>
+          <div class="apphub-draft-store__publisher-docs-url-row">
+            <code class="apphub-draft-store__publisher-docs-url">{{ integrationDocsUrl }}</code>
+            <button
+              type="button"
+              class="apphub-draft-store__publisher-docs-copy-url"
+              :aria-label="copyUrlLabel"
+              :title="copyUrlLabel"
+              @click.stop="copyIntegrationDocsUrl"
+            >
+              <svg
+                v-if="!docsLinkCopied"
+                class="apphub-draft-store__publisher-docs-copy-url-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  fill="currentColor"
+                  d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
+                />
+              </svg>
+              <svg
+                v-else
+                class="apphub-draft-store__publisher-docs-copy-url-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  fill="currentColor"
+                  d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
+                />
+              </svg>
+            </button>
+          </div>
           <button
             type="button"
             class="apphub-draft-store__publisher-docs-btn"
-            @click.stop="copyIntegrationDocsUrl"
+            @click.stop="copyPublisherAiPrompt"
           >
-            {{ copyDocsLabel }}
+            {{ copyPromptLabel }}
+          </button>
+          <button
+            type="button"
+            class="apphub-draft-store__publisher-docs-btn"
+            :disabled="!sessionToken"
+            :title="sessionToken ? labels.publisher_hub_docs_copy_token : labels.publisher_hub_docs_no_token"
+            @click.stop="copyPublisherAiTokenRules"
+          >
+            {{ copyTokenLabel }}
           </button>
           <a
             class="apphub-draft-store__publisher-docs-link"
@@ -169,6 +216,8 @@ import { useCatalogInfiniteScroll } from '../composables/useCatalogInfiniteScrol
 import { useAppStore } from '../composables/useAppStore.js'
 import { isAwaitingDevReview, isRejectedDraftSubmission } from '../../../utils/publisherTestVersion.js'
 import { resolveRuntimeApiBase } from '../../../utils/originSafety.js'
+import { buildPublisherAiPrompt } from '../../../utils/buildPublisherAiPrompt.js'
+import { buildPublisherAiTokenPrompt } from '../../../utils/buildPublisherAiTokenPrompt.js'
 import AppHubDraftStoreCard from './AppHubDraftStoreCard.vue'
 
 const props = defineProps({
@@ -188,22 +237,46 @@ const moduleOptions = inject('apphubOptions', {})
 const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))
 const pingingSlug = ref('')
 const pingResults = reactive({})
-const docsUrlCopied = ref(false)
+const docsLinkCopied = ref(false)
+const promptCopied = ref(false)
+const tokenCopied = ref(false)
 const publisherDocsOpen = ref(false)
 
-const integrationDocsUrl = computed(() => {
-  const base = resolveRuntimeApiBase({
+const sessionToken = computed(() => {
+  const fromStore = String(hubStore?.credentials?.token ?? '').trim()
+  if (fromStore) return fromStore
+  return String(moduleOptions?.token ?? '').trim()
+})
+
+const hubApiBase = computed(() =>
+  resolveRuntimeApiBase({
     backendUrl: hubStore?.credentials?.backendUrl || moduleOptions?.backendUrl,
     runtimePublicUrl: moduleOptions?.runtimePublicUrl,
-  })
+  }),
+)
+
+const integrationDocsUrl = computed(() => {
+  const base = hubApiBase.value
   if (!base) return ''
   return `${base.replace(/\/$/, '')}/integration-docs`
 })
 
-const copyDocsLabel = computed(() =>
-  docsUrlCopied.value
+const copyTokenLabel = computed(() =>
+  tokenCopied.value
     ? t('publisher_hub_docs_copied', lang.value)
-    : t('publisher_hub_docs_copy', lang.value),
+    : t('publisher_hub_docs_copy_token', lang.value),
+)
+
+const copyUrlLabel = computed(() =>
+  docsLinkCopied.value
+    ? t('publisher_hub_docs_copied', lang.value)
+    : t('publisher_hub_docs_copy_url', lang.value),
+)
+
+const copyPromptLabel = computed(() =>
+  promptCopied.value
+    ? t('publisher_hub_docs_copied', lang.value)
+    : t('publisher_hub_docs_copy_prompt', lang.value),
 )
 
 async function copyIntegrationDocsUrl() {
@@ -211,9 +284,48 @@ async function copyIntegrationDocsUrl() {
   if (!url) return
   try {
     await navigator.clipboard.writeText(url)
-    docsUrlCopied.value = true
+    docsLinkCopied.value = true
     window.setTimeout(() => {
-      docsUrlCopied.value = false
+      docsLinkCopied.value = false
+    }, 2000)
+  } catch {
+    /* ignore */
+  }
+}
+
+async function copyPublisherAiPrompt() {
+  const url = integrationDocsUrl.value
+  if (!url) return
+  const prompt = buildPublisherAiPrompt({
+    integrationDocsUrl: url,
+    apiBase: hubApiBase.value,
+    lang: lang.value,
+  })
+  try {
+    await navigator.clipboard.writeText(prompt)
+    promptCopied.value = true
+    window.setTimeout(() => {
+      promptCopied.value = false
+    }, 2000)
+  } catch {
+    /* ignore */
+  }
+}
+
+async function copyPublisherAiTokenRules() {
+  const token = sessionToken.value
+  if (!token) return
+  const prompt = buildPublisherAiTokenPrompt({
+    token,
+    apiBase: hubApiBase.value,
+    integrationDocsUrl: integrationDocsUrl.value,
+    lang: lang.value,
+  })
+  try {
+    await navigator.clipboard.writeText(prompt)
+    tokenCopied.value = true
+    window.setTimeout(() => {
+      tokenCopied.value = false
     }, 2000)
   } catch {
     /* ignore */
@@ -229,6 +341,7 @@ const labels = computed(() => ({
   publisher_hub_docs_path: t('publisher_hub_docs_path', lang.value),
   publisher_hub_docs_open: t('publisher_hub_docs_open', lang.value),
   publisher_hub_docs_no_api: t('publisher_hub_docs_no_api', lang.value),
+  publisher_hub_docs_no_token: t('publisher_hub_docs_no_token', lang.value),
   publisher_hub_docs_expand: t('publisher_hub_docs_expand', lang.value),
   publisher_hub_docs_collapse: t('publisher_hub_docs_collapse', lang.value),
   app_store_search: t('app_store_search', lang.value),

@@ -39,7 +39,7 @@ Minimal **self-hosted** app for testing iframe register (`runtime_type: iframe`,
 
 ## Security (iframe sandbox)
 
-Hub loads **approved** iframe apps (`apps.entry_url` + DEV review) with `allow-same-origin` so real publisher sites (Vue/React on `oz.reg.vn`, etc.) can load JS/CSS and use storage **on their own origin**.
+Hub loads **approved** iframe apps (`apps.entry_url` + DEV review) with `allow-same-origin` so publisher SPAs (Vue/React on **your** HTTPS origin) can load JS/CSS and use storage **on their own origin**.
 
 That does **not** allow reading App Hub `localStorage` — Hub runs on a different origin (`:5173` vs publisher host). Trust gate = DEV approves each `entry_url`.
 

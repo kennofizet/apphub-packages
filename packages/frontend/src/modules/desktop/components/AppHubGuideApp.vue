@@ -152,6 +152,7 @@ const refLabels = computed(() => ({
   uiOnly: t('guide_ref_ui_only', lang.value),
   uiDoNot: t('guide_ref_ui_do_not', lang.value),
   trustedBackend: t('guide_ref_trusted_backend', lang.value),
+  hostedTroubleshootingTitle: t('guide_ref_hosted_troubleshooting_title', lang.value),
 }))
 
 const publisherGuideSections = computed(() => {
