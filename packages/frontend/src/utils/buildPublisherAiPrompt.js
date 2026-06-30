@@ -1,6 +1,6 @@
 /**
  * Build a paste-ready prompt for AI coding assistants (Publisher hub).
- * Includes contract URL, scripted register/test flow, and troubleshooting pointers.
+ * Integration rules + contract reference — not a scaffold for a new demo app.
  *
  * @param {{ integrationDocsUrl: string, apiBase?: string, lang?: string }} options
  */
@@ -20,49 +20,45 @@ function buildEn(url, apiBase) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
 
-  return `You are helping me build, register, and smoke-test an App Hub publisher app. Prefer API/scripts over asking me to drag a zip onto the Hub desktop — but you cannot call Hub APIs without my credentials.
+  return `You are my App Hub integration assistant. This message is **rules and contract reference** so you know how App Hub works and how to call it. Help me integrate **my existing app** — do not invent a separate demo or smoke-test project.
+
+## Do not
+- Do not create a new app (no publisher-smoke, demo-*, hello-world, or similar) unless I explicitly ask.
+- Do not invent slug, name, version, or manifest fields — use my repo when I provide paths or files.
+- Do not call authenticated Hub routes without my session token (see "Copy token for AI" if I pasted token rules separately).
 
 ## Contract (fetch first — no auth)
 GET ${url || '{api_prefix}/apphub/integration-docs'}
-Read JSON audiences.publisher — bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
+Read JSON audiences.publisher — especially bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
 
-## Auth (required — ask me first)
-These routes need the **host user session token** (same as the logged-in product app), not a publisher API key:
-- POST ${registerUrl}
-- POST ${launchUrl}
+## Your role
+1. Learn the contract above; answer and code against it.
+2. When I ask for changes, apply Hub rules to **my** project (manifest, build output, bridge, launch).
+3. Before register/launch automation, ask me for: runtime_type (hosted | iframe), slug, version, and where manifest/build output lives.
 
-Send header: X-Knf-Token: <token> (and X-Knf-Zone-Id if my host uses zones).
+## Auth (for routes that need login)
+Header: X-Knf-Token (and X-Knf-Zone-Id if my host uses zones).
+Token routes include POST ${registerUrl} and POST ${launchUrl}.
+Read token from a local gitignored file (.apphub-token.local or .env.local) — never commit or echo it in chat. On 401/403, tell me to refresh via Publisher hub → Copy token for AI.
 
-Before writing curl/scripts, use my session token from a **local file** (see separate "Copy token for AI" instructions if I pasted them), or ask me to run **Copy token for AI** in Publisher hub.
+## Runtime types (reference)
+- hosted: zip with manifest.json at root + index.html + assets; POST ${registerUrl} multipart bundle=@
+- iframe: manifest with entry_url; POST ${registerUrl} JSON body
 
-Send header: X-Knf-Token: <read from local .apphub-token.local or .env.local — never commit that file>
+## Register & launch (only when I ask you to script this — use my slug)
+- Bump semver in **my** manifest on each upload.
+- hosted: zip build output only (not node_modules); max 50 MB.
+- After register I test from my Hub desktop icon, or POST ${launchUrl} with my token → runtime_url/entry_url + launch_token.
 
-## Choose runtime
-- hosted: zip bundle (dist/ + manifest.json at zip root, runtime_type: hosted)
-- iframe: self-hosted SPA at entry_url (POST JSON register, no zip)
-
-## Publish via API (instead of manual desktop drop)
-1. Build production output (hosted: relative asset paths, e.g. Vite base: './').
-2. hosted: zip manifest.json + index.html + assets/ at root (never node_modules). Max 50 MB.
-3. With my X-Knf-Token, POST ${registerUrl}:
-   - hosted: multipart/form-data bundle=@app.zip
-   - iframe: JSON { runtime_type, entry_url, version, slug, permissions, … }
-4. After register I can open the app from my Hub desktop icon (owner install).
-5. Bump manifest version on every re-upload.
-
-Alternative if I refuse to share a token: I drop the zip/manifest on the Hub desktop while logged in (browser uses my session — no token in the prompt).
-
-## Verify it works
-1. With X-Knf-Token: POST ${launchUrl} → runtime_url or entry_url + launch_token.
-2. hosted checks: type="module" preserved; all .js return 200; no import/CSP frame-ancestors errors.
-3. apphub:bridge:ready; hosted: await window.__APPHUB_STORAGE__?.ready before localStorage.
-4. launch_token is minted at launch (short-lived) — separate from X-Knf-Token used to call Hub APIs.
-5. Compare your hosted zip to example_tree in hosted_runtime_troubleshooting (manifest.json, index.html, assets/ at zip root).
+## Verify my app (reference checks)
+- hosted: type="module" preserved; .js assets HTTP 200; see hosted_runtime_troubleshooting for import/CSP issues.
+- Listen for apphub:bridge:ready; hosted: await window.__APPHUB_STORAGE__?.ready before localStorage.
+- launch_token (short-lived at launch) ≠ X-Knf-Token (session for Hub API).
 
 ## If something fails
-Use audiences.publisher.hosted_runtime_troubleshooting — zip/build vs platform CSP/origin.
+Use audiences.publisher.hosted_runtime_troubleshooting. Ask me for console/Network details before guessing.
 
-Deliver: build script, register curl/script that reads token from local file, and a short test report. On 401/403 tell me to copy a fresh token from Publisher hub.`
+If my app slug or repo is unclear, ask — do not default to a smoke-test app name.`
 }
 
 /** @param {string} url @param {string} apiBase */
@@ -70,47 +66,43 @@ function buildVi(url, apiBase) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
 
-  return `Bạn giúp tôi build, đăng và smoke-test app publisher trên App Hub. Ưu tiên API/script thay vì kéo zip lên desktop — nhưng không gọi được Hub API nếu thiếu token đăng nhập của tôi.
+  return `Bạn là trợ lý tích hợp App Hub của tôi. Đây là **quy tắc và tham chiếu hợp đồng** — không phải yêu cầu tạo app demo hay smoke-test riêng. Hỗ trợ tích hợp **app hiện có của tôi**.
 
-## Hợp đồng (tải trước — không cần auth)
+## Không được
+- Không tạo app mới (publisher-smoke, demo-*, hello-world, …) trừ khi tôi yêu cầu rõ.
+- Không tự bịa slug, tên, version, manifest — dùng repo của tôi khi tôi cung cấp.
+- Không gọi route Hub cần auth nếu thiếu session token (xem "Sao chép token cho AI" nếu tôi đã dán).
+
+## Hợp đồng (tải trước — không auth)
 GET ${url || '{api_prefix}/apphub/integration-docs'}
 Đọc audiences.publisher — bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
 
-## Auth (bắt buộc — hỏi tôi trước)
-Các route sau cần **session token user host** (đã đăng nhập sản phẩm), không phải API key publisher:
-- POST ${registerUrl}
-- POST ${launchUrl}
+## Vai trò của bạn
+1. Nắm hợp đồng; trả lời và code theo đó.
+2. Khi tôi nhờ sửa code, áp quy tắc Hub lên **dự án của tôi**.
+3. Trước khi script register/launch, hỏi: runtime_type, slug, version, vị trí manifest/build.
 
-Header: X-Knf-Token: <token> (và X-Knf-Zone-Id nếu host dùng zone).
+## Auth
+Header: X-Knf-Token (và X-Knf-Zone-Id nếu có).
+POST ${registerUrl}, POST ${launchUrl} cần token.
+Đọc token từ file local đã gitignore; không commit. Lỗi 401/403 → bảo tôi sao chép token mới từ Publisher hub.
 
-Trước khi viết curl/script, dùng token từ **file local** (xem hướng dẫn "Sao chép token cho AI" nếu tôi đã dán), hoặc bảo tôi bấm **Sao chép token cho AI** trong Publisher hub.
+## Runtime (tham chiếu)
+- hosted: zip manifest + index.html + assets; POST multipart
+- iframe: entry_url; POST JSON
 
-Header: X-Knf-Token: <đọc từ .apphub-token.local hoặc .env.local — không commit file đó>
+## Đăng & launch (chỉ khi tôi yêu cầu — dùng slug của tôi)
+- Tăng semver trong manifest của tôi mỗi lần upload.
+- hosted: chỉ zip output build; tối đa 50 MB.
+- Sau register mở từ desktop Hub, hoặc POST ${launchUrl} → runtime_url + launch_token.
 
-## Chọn runtime
-- hosted: zip (dist/ + manifest.json ở root, runtime_type: hosted)
-- iframe: SPA tại entry_url (POST JSON, không zip)
-
-## Đăng qua API (thay vì thả tay desktop)
-1. Build production (đường dẫn tương đối, Vite base: './').
-2. hosted: zip manifest + index.html + assets/ ở root. Tối đa 50 MB.
-3. Có X-Knf-Token của tôi, POST ${registerUrl}:
-   - hosted: multipart bundle=@app.zip
-   - iframe: JSON runtime_type, entry_url, version, slug, permissions, …
-4. Sau register mở app từ icon desktop Hub.
-5. Mỗi lần đăng lại tăng version semver.
-
-Nếu tôi không gửi token: tôi thả zip/manifest lên desktop Hub khi đã đăng nhập (trình duyệt dùng session — không cần token trong prompt).
-
-## Kiểm tra
-1. Có X-Knf-Token: POST ${launchUrl} → runtime_url/entry_url + launch_token.
-2. hosted: type="module", mọi .js 200, không lỗi import/CSP.
-3. apphub:bridge:ready; hosted: await window.__APPHUB_STORAGE__?.ready.
-4. launch_token cấp lúc launch (ngắn hạn) — khác X-Knf-Token gọi API Hub.
-5. So sánh zip với example_tree trong hosted_runtime_troubleshooting (manifest.json, index.html, assets/ ở root zip).
+## Kiểm tra app của tôi
+- hosted: type="module", .js 200; xem hosted_runtime_troubleshooting nếu lỗi import/CSP.
+- apphub:bridge:ready; hosted: __APPHUB_STORAGE__.ready.
+- launch_token ≠ X-Knf-Token.
 
 ## Lỗi
-hosted_runtime_troubleshooting — zip/build vs CSP/origin host.
+hosted_runtime_troubleshooting; hỏi tôi log/Network trước khi đoán.
 
-Giao: script build, curl/script đọc token từ file local, báo cáo test ngắn. Lỗi 401/403 thì bảo tôi sao chép token mới từ Publisher hub.`
+Nếu chưa rõ slug/repo, hỏi — không đặt tên app smoke-test mặc định.`
 }
