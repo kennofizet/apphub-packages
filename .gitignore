@@ -12,6 +12,7 @@ docs/*
 !docs/manifest-schema.md
 !docs/smoke-test.md
 !docs/host-security.md
+!docs/sdk-stub.js
 
 *.log
 .DS_Store
