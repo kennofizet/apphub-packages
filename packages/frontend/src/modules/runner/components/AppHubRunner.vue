@@ -108,6 +108,7 @@ import { getAppHubStore } from '../../../moduleStore.js'
 import { useAppHubHostApi, useAppHubModuleStore } from '../../../composables/useAppHubHostApi.js'
 import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
+import { resolveTheme } from '../../../i18n/resolveTheme.js'
 import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
 import { useDesktopNotifications } from '../../notifications/index.js'
 import { useUserNotificationCenter } from '../../user-notifications/index.js'
@@ -159,6 +160,11 @@ const backendUrl = computed(() => {
 })
 
 const lang = computed(() => resolveLang(moduleOptions?.language, props.language))
+
+const colorScheme = computed(() => {
+  const theme = resolveTheme(moduleOptions?.theme)
+  return theme ?? 'auto'
+})
 
 const isHosted = computed(() => props.runtimeType === RUNTIME_HOSTED || props.runtimeType === 'hosted')
 
@@ -249,6 +255,8 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   getPublisherApiBase: () => resolveAppApiUrls({ api_urls: props.apiUrls })[0] ?? null,
   getManifestPermissions: () => manifestPermissions.value,
   getAppVersion: () => props.installedVersion || null,
+  getHubLocale: () => lang.value,
+  getColorScheme: () => colorScheme.value,
   getRuntimeType: () => props.runtimeType,
   requestScopeConsent: scopeConsent.requestScopeConsent,
   onSessionScopeGranted: onRuntimeScopeGranted,
@@ -278,7 +286,10 @@ const isDraft = computed(() => props.status === 'draft')
 const showPreflight = computed(() => isDraft.value && !launched.value)
 
 const iframeSandbox = computed(() =>
-  iframeSandboxAttrs(isHosted.value ? RUNTIME_HOSTED : props.runtimeType),
+  iframeSandboxAttrs(
+    isHosted.value ? RUNTIME_HOSTED : props.runtimeType,
+    manifestPermissions.value,
+  ),
 )
 
 const loading = ref(false)

@@ -33,6 +33,7 @@ export function normalizeCatalogApp(row) {
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : slug,
     description: typeof row.description === 'string' ? row.description : '',
     icon: typeof row.icon === 'string' && row.icon ? row.icon : '📦',
+    icon_url: typeof row.icon_url === 'string' && row.icon_url.trim() ? row.icon_url.trim() : null,
     status: typeof row.status === 'string' ? row.status : 'active',
     runtime_type: typeof row.runtime_type === 'string' ? row.runtime_type : 'iframe',
     entry_url: entryUrl || null,

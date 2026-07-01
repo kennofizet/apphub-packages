@@ -202,6 +202,7 @@ export default {
   bridge_perm_desktop_notify: 'Allow {app} to send notifications?',
   bridge_perm_desktop_message: 'Allow {app} to show messages on your desktop?',
   bridge_perm_desktop_badge: 'Allow {app} to update its taskbar badge?',
+  bridge_perm_desktop_download: 'Allow {app} to save files to your device?',
   bridge_perm_default: 'Allow {app} to use "{scope}"?',
   bridge_perm_runtime_hint: 'Accept to allow this app to continue, or refuse to deny access.',
   bridge_perm_runtime_message: '"{app}" is requesting permission to:',

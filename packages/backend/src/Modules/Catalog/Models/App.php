@@ -24,6 +24,7 @@ class App extends Model
         'name',
         'short_description',
         'icon',
+        'icon_asset_path',
         'status',
         'runtime_type',
         'entry_url',

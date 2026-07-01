@@ -71,7 +71,11 @@
           @contextmenu.prevent.stop="onIconContextMenu(item.app, $event)"
         >
           <span class="apphub-desktop__icon-img-wrap">
-            <span class="apphub-desktop__icon-img">{{ item.app.icon }}</span>
+            <AppHubCatalogIcon
+              :app="item.app"
+              emoji-class="apphub-desktop__icon-img"
+              img-class="apphub-desktop__icon-img apphub-desktop__icon-img--image"
+            />
             <span
               v-if="iconShowsDraftStatus(item.app)"
               class="apphub-desktop__icon-flag"
@@ -394,6 +398,7 @@ import {
   resolveSuggestedApps,
 } from '../utils/recentApps.js'
 import { nextDuplicateName } from '../utils/duplicateAppUtils.js'
+import AppHubCatalogIcon from '../../../components/AppHubCatalogIcon.vue'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 

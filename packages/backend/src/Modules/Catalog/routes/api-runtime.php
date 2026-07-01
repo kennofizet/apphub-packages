@@ -7,3 +7,6 @@ Route::match(['GET', 'HEAD', 'OPTIONS'], 'apps/{slug}/runtime/{path}', [RuntimeC
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}')
     ->where('path', '.*')
     ->defaults('path', 'index.html');
+
+Route::match(['GET', 'HEAD', 'OPTIONS'], 'apps/{slug}/icon', [\Kennofizet\AppHub\Modules\Catalog\Http\Controllers\CatalogIconController::class, 'show'])
+    ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');

@@ -323,8 +323,42 @@ final class AppManifestParser
         }
 
         $value = trim((string) $icon);
+        if ($value === '') {
+            return '📦';
+        }
 
-        return $value !== '' ? mb_substr($value, 0, 32) : '📦';
+        if (self::iconBundleRelative($value) !== null || str_starts_with($value, 'data:image/')) {
+            return '📦';
+        }
+
+        return mb_substr($value, 0, 32);
+    }
+
+    public static function iconBundleRelative(mixed $icon): ?string
+    {
+        if (!is_string($icon) || trim($icon) === '') {
+            return null;
+        }
+
+        $value = ltrim(str_replace('\\', '/', trim($icon)), './');
+        if ($value === '' || str_contains($value, '..')) {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            return null;
+        }
+
+        if (!preg_match('#\.(png|svg|jpe?g|webp)$#i', $value)) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    public static function isRemoteIconUrl(mixed $icon): bool
+    {
+        return is_string($icon) && preg_match('#^https?://#i', trim($icon)) === 1;
     }
 
     private function normalizeType(mixed $type): ?string

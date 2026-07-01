@@ -26,7 +26,7 @@ Local-only install (no server listing): drop a manifest with `"type": "apphub-lo
 | `version` | string | yes | Semver e.g. `1.0.0`; must increase on re-publish by same owner |
 | `runtime_type` | string | yes | `hosted` or `iframe` |
 | `description` | string | no | Alias: `short_description`, max 500 |
-| `icon` | string | no | Emoji or short label, max 32 (default 📦) |
+| `icon` | string | no | Emoji/short label (max 32), **or** bundle-relative image path (`icon.png`, `assets/icon.svg`) — Hub extracts at register and serves `GET /apps/{slug}/icon` (public). **Or** HTTPS URL (iframe). Optional multipart `icon` file on hosted `POST /apps/register`. Recommended: PNG 256×256 or 512×512; SVG/WebP supported. Default 📦 |
 | `permissions` | string[] | recommended | Bridge scopes — see below |
 | `api_urls` | string[] | no | Publisher tool backend URLs; required for server-side `bridge/user` or `verify-launch-token` |
 | `api_base_url` | string | no | Legacy single URL; merged into `api_urls` |

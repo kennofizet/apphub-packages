@@ -132,6 +132,28 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
 
+.apphub-desktop__icon-img--image,
+.apphub-catalog-icon--img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  display: block;
+}
+
+.apphub-store__icon-img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+  display: block;
+}
+
+.apphub-win__icon-img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  display: block;
+}
+
 .apphub-desktop__icon-flag {
   position: absolute;
   right: -6px;

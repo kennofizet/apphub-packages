@@ -5,6 +5,7 @@ export const APP_BRIDGE_SCOPES = Object.freeze([
   'desktop.notify',
   'desktop.message',
   'desktop.badge',
+  'desktop.download',
 ])
 
 const SCOPE_SET = new Set(APP_BRIDGE_SCOPES)
@@ -19,6 +20,7 @@ const BRIDGE_SCOPE_LABEL_KEYS = {
   'desktop.notify': 'bridge_perm_desktop_notify',
   'desktop.message': 'bridge_perm_desktop_message',
   'desktop.badge': 'bridge_perm_desktop_badge',
+  'desktop.download': 'bridge_perm_desktop_download',
 }
 
 /**

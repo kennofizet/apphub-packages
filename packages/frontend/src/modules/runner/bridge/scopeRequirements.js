@@ -3,6 +3,7 @@ export const BRIDGE_METHOD_SCOPE = Object.freeze({
   sendDesktopMessage: 'desktop.message',
   setTaskbarBadge: 'desktop.badge',
   reportError: 'user.read',
+  saveFile: 'desktop.download',
 })
 
 /**

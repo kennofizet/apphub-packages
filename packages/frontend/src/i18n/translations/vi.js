@@ -202,6 +202,7 @@ export default {
   bridge_perm_desktop_notify: 'Cho phép {app} gửi thông báo?',
   bridge_perm_desktop_message: 'Cho phép {app} hiển thị tin nhắn trên desktop?',
   bridge_perm_desktop_badge: 'Cho phép {app} cập nhật badge trên taskbar?',
+  bridge_perm_desktop_download: 'Cho phép {app} lưu file về máy của bạn?',
   bridge_perm_default: 'Cho phép {app} dùng "{scope}"?',
   bridge_perm_runtime_hint: 'Chấp nhận để ứng dụng tiếp tục, hoặc từ chối để từ chối quyền truy cập.',
   bridge_perm_runtime_message: '"{app}" đang yêu cầu quyền:',

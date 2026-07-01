@@ -138,14 +138,20 @@ export function resolveLaunchUrl(responseData) {
  * Does not grant Hub localStorage — parent Hub is a different origin.
  * @param {string} runtimeType
  */
-export function iframeSandboxAttrs(runtimeType) {
+/**
+ * @param {string} runtimeType
+ * @param {string[]} [permissions]
+ */
+export function iframeSandboxAttrs(runtimeType, permissions = []) {
+  const perms = Array.isArray(permissions) ? permissions : []
+  const downloads = perms.includes('desktop.download') ? ' allow-downloads' : ''
   if (runtimeType === RUNTIME_HOSTED) {
-    return 'allow-scripts allow-forms allow-popups'
+    return `allow-scripts allow-forms allow-popups${downloads}`
   }
   if (runtimeType === RUNTIME_IFRAME) {
-    return 'allow-scripts allow-forms allow-popups allow-same-origin'
+    return `allow-scripts allow-forms allow-popups allow-same-origin${downloads}`
   }
-  return 'allow-scripts allow-forms allow-popups'
+  return `allow-scripts allow-forms allow-popups${downloads}`
 }
 
 /** Opaque sandbox only for Hub-hosted bundles. */

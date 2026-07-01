@@ -39,6 +39,8 @@ function isBridgeMessage(data) {
  *   getPublisherApiBase?: () => string | null,
  *   getManifestPermissions?: () => string[],
  *   getAppVersion?: () => string | null,
+ *   getHubLocale?: () => string | null,
+ *   getColorScheme?: () => string | null,
  *   isOpaqueHostedSandbox?: () => boolean,
  * }} options
  */
@@ -120,6 +122,8 @@ export function createRunnerBridgeHost(options) {
         publisher_api_base: publisherApiBase,
         caller_origin: options.getEntryOrigin?.() ?? null,
         app_version: options.getAppVersion?.() ?? null,
+        hub_locale: options.getHubLocale?.() ?? null,
+        color_scheme: options.getColorScheme?.() ?? null,
         ...(tokenScopes.has('user.read') && displayUser ? { display_user: displayUser } : {}),
       },
     })
@@ -236,6 +240,47 @@ export function createRunnerBridgeHost(options) {
           : { message: String(raw ?? 'Unknown error') }
         await options.reportUsageError?.(metadata)
         reply(id, true, undefined)
+        return
+      }
+
+      if (method === 'saveFile') {
+        if (!await ensureMethodScopeGranted(method)) {
+          reply(id, false, null, 'Scope not granted')
+          return
+        }
+        const payload = args?.[0] ?? {}
+        const filename = String(payload?.filename ?? 'download').trim().slice(0, 255) || 'download'
+        const mime = String(payload?.mime ?? 'application/octet-stream').trim().slice(0, 127)
+        const data = payload?.data
+        let bytes = null
+        if (data instanceof ArrayBuffer) {
+          bytes = new Uint8Array(data)
+        } else if (ArrayBuffer.isView(data)) {
+          bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+        } else if (typeof data === 'string') {
+          try {
+            const normalized = data.replace(/^data:[^;]+;base64,/, '')
+            const binary = atob(normalized)
+            bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+          } catch {
+            reply(id, false, null, 'Invalid base64 data')
+            return
+          }
+        } else {
+          reply(id, false, null, 'data required (base64 string or ArrayBuffer)')
+          return
+        }
+        const blob = new Blob([bytes], { type: mime || 'application/octet-stream' })
+        const objectUrl = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = objectUrl
+        anchor.download = filename
+        anchor.style.display = 'none'
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+        reply(id, true, { saved: true, filename })
         return
       }
 

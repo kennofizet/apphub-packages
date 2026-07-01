@@ -101,6 +101,7 @@ export function createDesktopShell(options = {}) {
         entryUrl: app.entry_url ?? null,
         healthcheckUrl: app.healthcheck_url ?? null,
         icon: app.icon ?? '📦',
+      icon_url: app.icon_url ?? null,
         language: resolveShellLanguage(options),
         runtimeType: app.runtime_type ?? 'iframe',
       }
@@ -119,6 +120,7 @@ export function createDesktopShell(options = {}) {
       id: `win-${app.id}`,
       title: app.windowTitle ?? app.name,
       icon: app.icon,
+      icon_url: app.icon_url ?? null,
       component: resolveWindowComponent(app),
       props: resolveWindowProps(app),
       layoutKey: app.layoutKey,
@@ -217,6 +219,7 @@ export function createDesktopShell(options = {}) {
       version: installedVersion,
       name: app.name,
       icon: app.icon ?? '📦',
+      icon_url: app.icon_url ?? null,
       hint: app.description ?? '',
       status,
       runtime_type: typeof app.runtime_type === 'string' ? app.runtime_type : 'iframe',

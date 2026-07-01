@@ -38,8 +38,19 @@ class BridgeController extends Controller
         $data = $this->resolveBridgeUser($launch);
 
         if ($this->launchTokens->hasScope($launch, 'user.profile')) {
+            $locale = trim((string) $request->header('X-AppHub-Hub-Locale', ''));
+            if ($locale === '') {
+                $locale = trim((string) ($launch['hub_locale'] ?? ''));
+            }
+            if ($locale === '') {
+                $locale = trim((string) $request->header('Accept-Language', ''));
+                if (str_contains($locale, ',')) {
+                    $locale = trim(explode(',', $locale)[0]);
+                }
+            }
+
             $data['profile'] = [
-                'locale' => 'vi',
+                'locale' => $locale !== '' ? mb_substr($locale, 0, 32) : 'en',
                 'avatar' => null,
             ];
         }

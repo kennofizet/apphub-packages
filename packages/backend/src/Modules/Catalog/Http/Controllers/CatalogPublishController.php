@@ -33,6 +33,7 @@ class CatalogPublishController extends Controller
             if ($request->hasFile('bundle')) {
                 $request->validate([
                     'bundle' => 'required|file|mimes:zip|max:51200',
+                    'icon' => 'nullable|file|mimes:png,jpg,jpeg,svg,webp|max:512',
                 ]);
 
                 $zip = $request->file('bundle');
@@ -41,7 +42,8 @@ class CatalogPublishController extends Controller
                 }
 
                 $meta = $this->manifests->fromZip($zip);
-                $app = $this->publish->registerHosted($userId, $meta, $zip);
+                $iconFile = $request->file('icon');
+                $app = $this->publish->registerHosted($userId, $meta, $zip, $iconFile);
             } else {
                 $payload = $request->all();
                 if (!is_array($payload) || $payload === []) {

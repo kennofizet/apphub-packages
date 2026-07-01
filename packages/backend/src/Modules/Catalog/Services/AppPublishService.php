@@ -10,6 +10,7 @@ use Kennofizet\AppHub\Modules\Catalog\Support\AppPermissionType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppRuntimeType;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestParser;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
 use RuntimeException;
 
@@ -18,8 +19,10 @@ final class AppPublishService
     private const IFRAME_BUNDLE_PREFIX = 'iframe:';
     private const IFRAME_BUNDLE_ENTRY = 'iframe';
 
-    public function __construct(private readonly AppBundleStorageService $bundles)
-    {
+    public function __construct(
+        private readonly AppBundleStorageService $bundles,
+        private readonly AppIconStorageService $icons,
+    ) {
     }
 
     /**
@@ -37,13 +40,13 @@ final class AppPublishService
      *     manifest: array<string, mixed>
      * } $meta
      */
-    public function registerHosted(int $ownerUserId, array $meta, UploadedFile $zip): App
+    public function registerHosted(int $ownerUserId, array $meta, UploadedFile $zip, ?UploadedFile $iconUpload = null): App
     {
         $slug = $this->normalizeSlug($meta['slug']);
         $existing = App::query()->where('slug', $slug)->first();
 
         if ($existing === null) {
-            return $this->createHostedApp($ownerUserId, $meta, $zip);
+            return $this->createHostedApp($ownerUserId, $meta, $zip, $iconUpload);
         }
 
         if ((int) $existing->owner_user_id !== $ownerUserId) {
@@ -61,7 +64,7 @@ final class AppPublishService
             throw new RuntimeException('Version ' . $nextVersion . ' was already uploaded');
         }
 
-        return $this->upgradeHostedApp($existing, $ownerUserId, $meta, $zip);
+        return $this->upgradeHostedApp($existing, $ownerUserId, $meta, $zip, $iconUpload);
     }
 
     /**
@@ -176,7 +179,7 @@ final class AppPublishService
     /**
      * @param array<string, mixed> $meta
      */
-    private function createHostedApp(int $ownerUserId, array $meta, UploadedFile $zip): App
+    private function createHostedApp(int $ownerUserId, array $meta, UploadedFile $zip, ?UploadedFile $iconUpload = null): App
     {
         $slug = $this->normalizeSlug($meta['slug']);
         $entry = $this->resolveEntry($meta);
@@ -203,13 +206,13 @@ final class AppPublishService
         $this->recordVersion($app, $ownerUserId, $meta['version'], $stored, $manifest);
         $this->ensureOwnerPermissions($app, $ownerUserId);
 
-        return $app;
+        return $this->persistHostedIcon($app, $meta, $stored['path'], $iconUpload);
     }
 
     /**
      * @param array<string, mixed> $meta
      */
-    private function upgradeHostedApp(App $app, int $ownerUserId, array $meta, UploadedFile $zip): App
+    private function upgradeHostedApp(App $app, int $ownerUserId, array $meta, UploadedFile $zip, ?UploadedFile $iconUpload = null): App
     {
         if ($app->runtime_type !== AppRuntimeType::HOSTED) {
             throw new RuntimeException('App is not a hosted runtime app');
@@ -241,7 +244,7 @@ final class AppPublishService
 
         $this->skipOtherPendingVersions($app->id, $nextVersion);
 
-        return $app;
+        return $this->persistHostedIcon($app, $meta, $stored['path'], $iconUpload);
     }
 
     /**
@@ -672,5 +675,36 @@ final class AppPublishService
         }
 
         return $slug;
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    private function persistHostedIcon(App $app, array $meta, string $bundlePath, ?UploadedFile $iconUpload): App
+    {
+        $rawIcon = is_string($meta['icon'] ?? null) ? trim($meta['icon']) : '';
+        $newPath = null;
+
+        if ($iconUpload !== null) {
+            $newPath = $this->icons->storeFromUpload($app->slug, $iconUpload);
+        } elseif ($rawIcon !== '' && str_starts_with($rawIcon, 'data:image/')) {
+            $newPath = $this->icons->storeFromDataUrl($app->slug, $rawIcon);
+        } elseif ($rawIcon !== '' && $bundlePath !== '') {
+            $relative = AppManifestParser::iconBundleRelative($rawIcon);
+            if ($relative !== null) {
+                $newPath = $this->icons->storeFromBundleFile($app->slug, $bundlePath, $relative);
+            }
+        }
+
+        if ($newPath === null) {
+            return $app;
+        }
+
+        $this->icons->deleteIcon($app->icon_asset_path);
+        $app->icon_asset_path = $newPath;
+        $app->icon = '📦';
+        $app->save();
+
+        return $app;
     }
 }

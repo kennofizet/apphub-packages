@@ -155,6 +155,7 @@ export function createWindowManagerState() {
       title: definition.title,
 
       icon: definition.icon ?? '📦',
+      icon_url: definition.icon_url ?? null,
 
       component: definition.component ? markRaw(definition.component) : null,
 

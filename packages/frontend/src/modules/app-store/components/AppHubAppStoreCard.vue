@@ -1,5 +1,7 @@
 <template>
-  <span class="apphub-store__icon">{{ app.icon }}</span>
+  <span class="apphub-store__icon">
+    <AppHubCatalogIcon :app="app" emoji-class="apphub-store__icon-emoji" img-class="apphub-store__icon-img" />
+  </span>
   <div class="apphub-store__meta">
     <div class="apphub-store__title-row">
       <strong>{{ app.name }}</strong>
@@ -57,6 +59,7 @@
 <script setup>
 import { computed } from 'vue'
 import { isSemverGreaterThan } from '../../../utils/semver.js'
+import AppHubCatalogIcon from '../../../components/AppHubCatalogIcon.vue'
 
 const props = defineProps({
   app: { type: Object, required: true },

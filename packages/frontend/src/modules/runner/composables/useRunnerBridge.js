@@ -55,6 +55,8 @@ export function useRunnerBridge(options) {
       getPublisherApiBase: options.getPublisherApiBase,
       getManifestPermissions: options.getManifestPermissions,
       getAppVersion: options.getAppVersion,
+      getHubLocale: options.getHubLocale,
+      getColorScheme: options.getColorScheme,
       getRuntimeType: options.getRuntimeType,
       isOpaqueHostedSandbox,
     })

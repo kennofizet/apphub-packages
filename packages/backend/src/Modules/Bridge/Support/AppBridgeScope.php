@@ -14,6 +14,8 @@ final class AppBridgeScope
 
     public const DESKTOP_BADGE = 'desktop.badge';
 
+    public const DESKTOP_DOWNLOAD = 'desktop.download';
+
     /** @var list<string> */
     public const ALL = [
         self::USER_READ,
@@ -21,6 +23,7 @@ final class AppBridgeScope
         self::DESKTOP_NOTIFY,
         self::DESKTOP_MESSAGE,
         self::DESKTOP_BADGE,
+        self::DESKTOP_DOWNLOAD,
     ];
 
     public static function isValid(string $scope): bool

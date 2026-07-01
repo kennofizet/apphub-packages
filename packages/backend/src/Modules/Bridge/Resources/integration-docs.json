@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.11.1",
+  "schema_version": "1.12.0",
   "package": {
     "name": "apphub",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
   },
   "meta": {
@@ -100,7 +100,7 @@
             "'self' (API origin, e.g. https://backend.example.com)",
             "APPHUB_ALLOWED_HUB_ORIGINS — Hub SPA that embeds the runner",
             "APPHUB_ALLOWED_PRODUCT_ORIGINS — product page that embeds Hub in an iframe",
-            "hub_origin and product_origin query params added by Hub frontend after POST …/launch (must match allowlist or loopback in local dev)",
+            "hub_origin and product_origin query params added by Hub frontend after POST …/launch (must already match APPHUB_ALLOWED_HUB_ORIGINS or APPHUB_ALLOWED_PRODUCT_ORIGINS — query params alone do not bypass the allowlist; loopback allowed in local dev)",
             "Referer origin when it matches hub/product allowlists"
           ],
           "hub_launch_url": "After POST …/launch, Hub appends hub_origin (Hub window origin) and product_origin (product shell embedding Hub) as query params on the hosted runtime URL.",
@@ -182,12 +182,16 @@
             "publisher_api_base",
             "caller_origin",
             "app_version",
+            "hub_locale",
+            "color_scheme",
             "display_user"
           ],
           "launch_token": "Short-lived secret minted at launch. Treat like a password — never log, expose in UI, or send to third parties. Publisher backend passes it to GET bridge/user. scopes_granted on token mirror server install consent only.",
           "bridge_api_base": "App Hub API base URL for bridge HTTP routes (from Hub install).",
           "publisher_api_base": "First manifest api_urls entry — convenience for calling your tool backend.",
           "app_version": "Installed/catalog version string when available.",
+          "hub_locale": "Hub UI language code (e.g. en, vi) — default for app copy; apps may still offer their own locale picker.",
+          "color_scheme": "Hub theme preference: dark | light | auto (follow system when auto).",
           "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use GET bridge/user from your publisher backend for authoritative identity."
         },
         "discovery": {
@@ -210,12 +214,14 @@
                 "publisher_api_base": "string|null — first manifest api_urls entry",
                 "caller_origin": "string|null — publisher entry origin when iframe",
                 "app_version": "string|null — installed version",
+                "hub_locale": "string|null — Hub UI language (en, vi, …)",
+                "color_scheme": "string|null — dark | light | auto",
                 "display_user": "{ id: number, name: string } optional — UI only from Hub bootstrap"
               }
             },
             "child_to_parent_call": {
               "event": "apphub:bridge:call",
-              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError", "args": "array" }
+              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError|saveFile", "args": "array" }
             },
             "parent_to_child_result": {
               "event": "apphub:bridge:result",
@@ -248,13 +254,19 @@
             "scope": "desktop.badge",
             "description": "Show a count or dot on your app icon in the taskbar.",
             "user_prompt": "Allow {app} to update its taskbar badge?"
+          },
+          {
+            "scope": "desktop.download",
+            "description": "Save exported files from hosted apps (opaque sandbox blocks blob downloads without this). Enables allow-downloads sandbox and AppHubBridge.saveFile().",
+            "user_prompt": "Allow {app} to save files to your device?"
           }
         ],
         "manifest": {
           "runtime_type": "hosted | iframe — required",
           "entry_url": "string — required for iframe (HTTPS publisher SPA URL); omitted for hosted zip",
           "healthcheck_url": "string optional — iframe draft preflight ping target",
-          "permissions": "string[] — bridge scopes (user.read, desktop.notify, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
+          "icon": "string optional — emoji/short label (max 32) OR bundle-relative image path (icon.png, assets/icon.svg). Hub extracts image files at register and serves GET /apps/{slug}/icon (no launch token). HTTPS icon URL supported for iframe manifests. Optional multipart icon=@file on hosted POST /apps/register.",
+          "permissions": "string[] — bridge scopes (user.read, desktop.notify, desktop.download, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
           "api_urls": "string[] optional — publisher tool backend URL(s) for bridge HTTP. Caller TCP IP must match DNS-pinned IPs at publish (production) or resolve live DNS (local dev). Optional APPHUB_BRIDGE_PROXY_SECRET for loopback port hardening. localhost rejected on publish in production.",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
         },
@@ -298,6 +310,16 @@
             "requires": ["desktop.badge"],
             "description": "Set or clear taskbar badge on your app button."
           },
+          "saveFile": {
+            "signature": "saveFile({ filename, mime, data }): Promise<{ saved: boolean, filename: string }>",
+            "requires": ["desktop.download"],
+            "description": "Trigger a browser download from the Hub parent (hosted opaque sandbox). data: base64 string or ArrayBuffer.",
+            "payload_shape": {
+              "filename": "string — e.g. export.png",
+              "mime": "string — e.g. image/png",
+              "data": "base64 string or ArrayBuffer"
+            }
+          },
           "reportError": {
             "signature": "reportError(error: Error | string | { message?: string, name?: string, stack?: string }): Promise<void>",
             "requires": [],
@@ -325,7 +347,7 @@
         "Listen for apphub:bridge:ready in your app.",
         "For hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads on load.",
         "Call requestPermission for desktop scopes as needed.",
-        "Use sendDesktopMessage, setTaskbarBadge when granted.",
+        "Use sendDesktopMessage, setTaskbarBadge, saveFile (desktop.download) when granted.",
         "For notifications: POST bridge/notify from your publisher backend (see http_companion).",
         "Handle denied permissions gracefully in your UI."
       ],
@@ -624,7 +646,14 @@
         "path": "apps/register",
         "auth": "token",
         "audience": ["publisher"],
-        "description": "Publish: hosted = multipart bundle zip (manifest.json inside); iframe = JSON body with runtime_type iframe + entry_url (no zip). Creates or upgrades draft app."
+        "description": "Publish: hosted = multipart bundle zip (manifest.json inside) + optional icon file; iframe = JSON body with runtime_type iframe + entry_url (no zip). Creates or upgrades draft app."
+      },
+      {
+        "method": "GET",
+        "path": "apps/{slug}/icon",
+        "auth": "none",
+        "audience": ["publisher", "end_user"],
+        "description": "Public app icon image (PNG/SVG/WebP) persisted at register. Catalog returns icon_url. No launch token."
       },
       {
         "method": "GET",

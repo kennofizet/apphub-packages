@@ -95,5 +95,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme)
 - **Major**: breaking bridge or launch contract

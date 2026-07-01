@@ -16,7 +16,13 @@
       @mousedown.stop="onDragStart"
       @dblclick.stop="onTitlebarDblClick"
     >
-      <span class="apphub-win__icon">{{ window.icon }}</span>
+      <span class="apphub-win__icon">
+        <AppHubCatalogIcon
+          :app="{ name: window.title, icon: window.icon, icon_url: window.icon_url }"
+          emoji-class="apphub-win__icon-emoji"
+          img-class="apphub-win__icon-img"
+        />
+      </span>
       <span class="apphub-win__title">{{ window.title }}</span>
       <div class="apphub-win__controls" @mousedown.stop @dblclick.stop>
         <button
@@ -56,6 +62,7 @@
 
 <script setup>
 import { computed, inject, onBeforeUnmount, provide, ref } from 'vue'
+import AppHubCatalogIcon from '../../../components/AppHubCatalogIcon.vue'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { t } from '../../../i18n/index.js'
 import { useWindowManager } from '../composables/useWindowManager.js'

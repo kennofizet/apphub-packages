@@ -245,7 +245,8 @@ final class AppCatalogService
             'current_version_review_status' => $showReviewFields ? $this->currentVersionReviewStatus($app) : null,
             'name' => $app->name,
             'description' => $app->short_description,
-            'icon' => $app->icon,
+            'icon' => $this->catalogIconLabel($app),
+            'icon_url' => $this->catalogIconUrl($app),
             'status' => $app->status,
             'runtime_type' => $app->runtime_type,
             'entry_url' => $app->entry_url,
@@ -544,5 +545,35 @@ final class AppCatalogService
         return collect($paginator->items())
             ->map(fn (App $app): array => $this->toCatalogItem($app))
             ->all();
+    }
+
+    private function catalogIconLabel(App $app): string
+    {
+        $label = trim((string) ($app->icon ?? ''));
+        if ($label !== '' && !$this->looksLikeImageFilename($label)) {
+            return $label;
+        }
+
+        return '📦';
+    }
+
+    private function catalogIconUrl(App $app): ?string
+    {
+        if (trim((string) ($app->icon_asset_path ?? '')) !== '') {
+            return 'apps/' . $app->slug . '/icon';
+        }
+
+        $manifest = is_array($app->manifest) ? $app->manifest : [];
+        $manifestIcon = $manifest['icon'] ?? null;
+        if (is_string($manifestIcon) && preg_match('#^https?://#i', trim($manifestIcon))) {
+            return trim($manifestIcon);
+        }
+
+        return null;
+    }
+
+    private function looksLikeImageFilename(string $value): bool
+    {
+        return preg_match('#\.(png|svg|jpe?g|webp)$#i', $value) === 1;
     }
 }
