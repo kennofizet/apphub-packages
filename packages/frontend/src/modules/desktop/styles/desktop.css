@@ -1332,6 +1332,11 @@
   cursor: not-allowed;
 }
 
+.apphub-draft-store__publisher-docs-btn--secondary {
+  font-weight: 500;
+  opacity: 0.92;
+}
+
 .apphub-draft-store__publisher-docs-link {
   padding: 5px 10px;
   text-decoration: none;

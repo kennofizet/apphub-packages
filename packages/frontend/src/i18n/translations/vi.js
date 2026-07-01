@@ -61,7 +61,7 @@ export default {
   draft_store_intro: 'Thả .zip lên desktop để gửi phiên bản mới. App chờ duyệt cần DEV; app đã duyệt hiện trên App Store theo zone.',
   draft_store_empty: 'Chưa có app. Thả file .zip hosted lên desktop để bắt đầu.',
   publisher_hub_docs_title: 'Mới làm publisher?',
-  publisher_hub_docs_lead: 'Sao chép quy tắc tích hợp AI (hợp đồng + cách gọi Hub), xử lý token session, hoặc URL tài liệu công khai.',
+  publisher_hub_docs_lead: 'Sao chép quy tắc AI (hợp đồng, token, bootstrap kit) — một lần dán. Nếu gọi API lỗi auth, dùng Sao chép token cho AI.',
   publisher_hub_docs_path: 'Trong JSON: audiences.publisher.bridge và hosted_runtime_troubleshooting.',
   publisher_hub_docs_copy_prompt: 'Sao chép quy tắc AI',
   publisher_hub_docs_copy_token: 'Sao chép token cho AI',

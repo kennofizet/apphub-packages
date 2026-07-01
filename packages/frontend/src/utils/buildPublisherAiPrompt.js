@@ -1,124 +1,169 @@
 /**
- * Build a paste-ready prompt for AI coding assistants (Publisher hub).
- * Integration rules + contract reference for existing apps or the publisher kit.
+ * Paste-ready prompt for AI coding assistants (Publisher hub).
+ * Integration rules + contract + optional session token (save locally first).
  *
- * @param {{ integrationDocsUrl: string, apiBase?: string, lang?: string }} options
+ * @param {{
+ *   integrationDocsUrl: string,
+ *   apiBase?: string,
+ *   lang?: string,
+ *   token?: string,
+ * }} options
  */
 
 const PUBLISHER_KIT_REPO = 'https://github.com/kennofizet/apphub-apps-ai-builder'
+const PACKAGES_REPO = 'https://github.com/kennofizet/apphub-packages'
+const COPY_TOKEN_BTN = { en: 'Copy token for AI', vi: 'Sao chép token cho AI' }
+
+export { COPY_TOKEN_BTN }
+
 export function buildPublisherAiPrompt(options) {
   const url = String(options.integrationDocsUrl ?? '').trim()
   const apiBase = String(options.apiBase ?? '').trim().replace(/\/$/, '')
+  const token = String(options.token ?? '').trim()
   const lang = String(options.lang ?? 'en').split('-')[0].toLowerCase()
 
   if (lang === 'vi') {
-    return buildVi(url, apiBase)
+    return buildVi(url, apiBase, token)
   }
-  return buildEn(url, apiBase)
+  return buildEn(url, apiBase, token)
 }
 
-/** @param {string} url @param {string} apiBase */
-function buildEn(url, apiBase) {
+/** @param {string} token @param {string} apiBase @param {string} url @param {string} lang */
+export function buildPublisherTokenBlock(token, apiBase, url, lang = 'en') {
+  if (!token) {
+    return lang === 'vi'
+      ? '(Chưa có token — đăng nhập host app, mở Publisher hub, bấm Sao chép quy tắc AI lại.)'
+      : '(No token in this paste — sign in to the host app, open Publisher hub, copy AI rules again.)'
+  }
+
+  const apiLine = apiBase
+    ? (lang === 'vi' ? `API App Hub: ${apiBase}` : `App Hub API base: ${apiBase}`)
+    : (lang === 'vi' ? 'API App Hub: đặt APPHUB_API_BASE trong file local' : 'App Hub API base: set APPHUB_API_BASE in local env file')
+
+  if (lang === 'vi') {
+    return `## Token session (lưu file local TRƯỚC — bí mật)
+Header: X-Knf-Token
+${apiLine}
+
+Token (ghi vào file local ngay, không commit):
+${token}
+
+1. Tạo .apphub-token.local (một dòng) hoặc .env.local với APPHUB_TOKEN=…
+2. Thêm file đó vào .gitignore ngay.
+3. Không commit, push, hoặc đăng token lên git/PR/CI.
+4. Gọi API Hub (register, launch, …) đọc token từ file local.
+5. Lỗi 401/403 (auth) → bảo tôi mở Publisher hub → bấm **${COPY_TOKEN_BTN.vi}**, dán token mới vào file local, thử lại.
+
+Hợp đồng (công khai): ${url || 'GET …/integration-docs'}`
+  }
+
+  return `## Session token (save to local file FIRST — secret)
+Header: X-Knf-Token
+${apiLine}
+
+Token (write to a local file now — do not commit):
+${token}
+
+1. Create .apphub-token.local (one line) or .env.local with APPHUB_TOKEN=…
+2. Add that file to .gitignore immediately.
+3. Never commit, push, or publish the token.
+4. Hub API calls (register, launch, …) read the token from that local file only.
+5. On 401/403 (auth fail) → tell me to open Publisher hub → click **${COPY_TOKEN_BTN.en}**, paste the new token into the local file, retry.
+
+Contract (public): ${url || 'GET …/integration-docs'}`
+}
+
+/** @param {string} url @param {string} apiBase @param {string} token */
+function buildEn(url, apiBase, token) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
+  const tokenBlock = buildPublisherTokenBlock(token, apiBase, url, 'en')
 
-  return `You are my App Hub integration assistant. This message is **rules and contract reference** so you know how App Hub works and how to call it. Help me integrate **my app** — use my repo when I have one; do not invent a random demo or smoke-test project.
+  return `You are my App Hub integration assistant. This is **rules + contract reference** for how App Hub works. I may be non-technical — proceed step by step with minimal jargon.
 
-## Do not
-- Do not invent slug, name, version, or manifest fields — use my repo or the publisher kit layout below.
-- Do not call authenticated Hub routes without my session token (see "Copy token for AI" if I pasted token rules separately).
+${tokenBlock}
 
-## No app yet (use the official publisher kit)
-If I have **no app** in the workspace (empty project, no apps/<slug>/, or I say I am starting from zero):
-1. Clone ${PUBLISHER_KIT_REPO} (or ask me to clone it into my workspace).
-2. Read **AGENTS.md** and **.cursor/rules/apphub-publisher.mdc** in that repo.
-3. Copy apphub.publisher.example.json → apphub.publisher.json (gitignored); set integration_docs_url to the contract URL below and hub_portal_url from me.
-4. Create the app under **apps/<slug>/** using that kit's structure and **tools/apphub.mjs** for build/zip — not a one-off folder you invent.
-5. Fetch integration docs from integration_docs_url (or GET below) before coding.
+## Do not (git & repo)
+- **Never** delete, replace, or re-init my **.git** folder.
+- **Never** run \`git clone ${PUBLISHER_KIT_REPO} .\` inside my existing project (that steals the kit's git history and breaks my repo).
+- **Never** invent slug/name/version or a random demo app (publisher-smoke, hello-world, etc.).
 
-## Contract (fetch first — no auth)
+## Empty or no app yet — bootstrap publisher kit (auto, no confirmation)
+If the workspace has **no apps/<slug>/** (empty folder, new vibe-code project, or I say "start from zero"):
+**Proceed automatically** — do not ask "should I clone?" I want plug-and-play.
+
+1. **Keep my git:** If \`.git\` exists, keep it and my remote unchanged. Copy **the entire publisher kit** from ${PUBLISHER_KIT_REPO} into this workspace — **all** kit files and folders **except** the kit's \`.git\` (no kennofizet remote/history).
+   - Use degit, GitHub archive/tarball, or fork + copy the full tree — **not** \`git clone … .\` inside my project.
+2. **Truly empty (no .git):** Fork ${PUBLISHER_KIT_REPO} to **my** GitHub account (or init **my** git here), copy the **full kit** into the repo — **my** remote, not kennofizet's.
+3. \`cp apphub.publisher.example.json apphub.publisher.json\` — set integration_docs_url to the contract URL below; set hub_portal_url if you know it.
+4. \`npm install\`, read **AGENTS.md**, create the app under **apps/<slug>/**, use **tools/apphub.mjs** for build/zip.
+5. Pick a friendly slug from my app idea; only ask me if the name is unclear.
+
+## Contract (fetch — no auth)
 GET ${url || '{api_prefix}/apphub/integration-docs'}
-Read JSON audiences.publisher — especially bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
+Read audiences.publisher — bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
 
 ## Your role
-1. Learn the contract above; answer and code against it.
-2. When I ask for changes, apply Hub rules to **my** project or **apps/<slug>/** in the publisher kit.
-3. Before register/launch automation, ask me for: runtime_type (hosted | iframe), slug, version, and where manifest/build output lives.
+1. Follow the contract; help **my** app in **my** repo (or apps/<slug>/ after kit bootstrap).
+2. Auth: read X-Knf-Token from .apphub-token.local / .env.local (see above). On auth errors, ask me to use Publisher hub → **${COPY_TOKEN_BTN.en}**.
+3. Register/launch (when I ask): POST ${registerUrl}, POST ${launchUrl} — use **my** slug.
 
-## Auth (for routes that need login)
-Header: X-Knf-Token (and X-Knf-Zone-Id if my host uses zones).
-Token routes include POST ${registerUrl} and POST ${launchUrl}.
-Read token from a local gitignored file (.apphub-token.local or .env.local) — never commit or echo it in chat. On 401/403, tell me to refresh via Publisher hub → Copy token for AI.
+## Runtime (reference)
+- hosted: zip manifest.json + index.html + assets → POST ${registerUrl} multipart
+- iframe: entry_url → POST ${registerUrl} JSON
 
-## Runtime types (reference)
-- hosted: zip with manifest.json at root + index.html + assets; POST ${registerUrl} multipart bundle=@
-- iframe: manifest with entry_url; POST ${registerUrl} JSON body
+## Verify (reference)
+- hosted: type="module", .js 200; hosted_runtime_troubleshooting for import/CSP
+- apphub:bridge:ready; hosted: await window.__APPHUB_STORAGE__?.ready
+- launch_token ≠ X-Knf-Token
 
-## Register & launch (only when I ask you to script this — use my slug)
-- Bump semver in **my** manifest on each upload.
-- hosted: zip build output only (not node_modules); max 50 MB.
-- After register I test from my Hub desktop icon, or POST ${launchUrl} with my token → runtime_url/entry_url + launch_token.
-
-## Verify my app (reference checks)
-- hosted: type="module" preserved; .js assets HTTP 200; see hosted_runtime_troubleshooting for import/CSP issues.
-- Listen for apphub:bridge:ready; hosted: await window.__APPHUB_STORAGE__?.ready before localStorage.
-- launch_token (short-lived at launch) ≠ X-Knf-Token (session for Hub API).
-
-## If something fails
-Use audiences.publisher.hosted_runtime_troubleshooting. Ask me for console/Network details before guessing.
-
-If my app slug or repo is unclear, ask. If I have no app yet, use ${PUBLISHER_KIT_REPO} — do not default to a made-up smoke-test name.`
+## Upstream (only for Hub/kit bugs — not my app code)
+If you find a **core** bug or missing feature in App Hub packages or publisher kit, open an Issue or PR:
+- Packages (backend/frontend): ${PACKAGES_REPO}
+- Publisher kit: ${PUBLISHER_KIT_REPO}`
 }
 
-/** @param {string} url @param {string} apiBase */
-function buildVi(url, apiBase) {
+/** @param {string} url @param {string} apiBase @param {string} token */
+function buildVi(url, apiBase, token) {
   const registerUrl = apiBase ? `${apiBase}/apps/register` : '{api_base}/apps/register'
   const launchUrl = apiBase ? `${apiBase}/apps/{slug}/launch` : '{api_base}/apps/{slug}/launch'
+  const tokenBlock = buildPublisherTokenBlock(token, apiBase, url, 'vi')
 
-  return `Bạn là trợ lý tích hợp App Hub của tôi. Đây là **quy tắc và tham chiếu hợp đồng** — hỗ trợ **app của tôi**; không tự tạo project demo/smoke-test ngẫu nhiên.
+  return `Bạn là trợ lý tích hợp App Hub. Đây là **quy tắc + hợp đồng**. Tôi có thể không rành kỹ thuật — làm từng bước, ít thuật ngữ.
 
-## Không được
-- Không tự bịa slug, tên, version, manifest — dùng repo của tôi hoặc bộ publisher kit bên dưới.
-- Không gọi route Hub cần auth nếu thiếu session token (xem "Sao chép token cho AI" nếu tôi đã dán).
+${tokenBlock}
 
-## Chưa có app (dùng publisher kit chính thức)
-Nếu tôi **chưa có app** (project trống, không có apps/<slug>/, hoặc tôi nói bắt đầu từ đầu):
-1. Clone ${PUBLISHER_KIT_REPO} (hoặc bảo tôi clone vào workspace).
-2. Đọc **AGENTS.md** và **.cursor/rules/apphub-publisher.mdc** trong repo đó.
-3. Copy apphub.publisher.example.json → apphub.publisher.json (gitignored); điền integration_docs_url (URL hợp đồng bên dưới) và hub_portal_url (tôi cung cấp).
-4. Tạo app trong **apps/<slug>/** theo cấu trúc kit và **tools/apphub.mjs** — không tự nghĩ folder lẻ.
-5. Tải integration docs trước khi code.
+## Không được (git & repo)
+- **Không** xóa hoặc thay **.git** của tôi.
+- **Không** chạy \`git clone ${PUBLISHER_KIT_REPO} .\` trong project đang có (mất git của tôi, remote thành kit).
+- **Không** tự bịa slug/demo app.
 
-## Hợp đồng (tải trước — không auth)
+## Chưa có app — bootstrap kit (tự động, không hỏi xác nhận)
+Nếu **không có apps/<slug>/** (project trống, vibe-code mới, hoặc tôi nói bắt đầu từ đầu):
+**Làm ngay** — không hỏi "có clone không?".
+
+1. **Giữ git của tôi:** Nếu đã có \`.git\`, giữ nguyên remote. Copy **toàn bộ publisher kit** từ ${PUBLISHER_KIT_REPO} vào workspace — **mọi** file và thư mục của kit **trừ** \`.git\` của kit (không mang remote/lịch sử kennofizet).
+   - Dùng degit, archive/tarball GitHub, hoặc fork + copy cả cây thư mục — **không** \`git clone … .\` trong project của tôi.
+2. **Trống hẳn (chưa .git):** Fork ${PUBLISHER_KIT_REPO} về **GitHub của tôi** (hoặc init git của tôi), copy **cả kit** vào repo — remote là của tôi, không phải kennofizet.
+3. Tạo apphub.publisher.json; integration_docs_url = URL hợp đồng bên dưới.
+4. npm install, đọc AGENTS.md, tạo app trong apps/<slug>/, dùng tools/apphub.mjs.
+5. Đặt slug thân thiện từ ý tưởng app; chỉ hỏi tên nếu chưa rõ.
+
+## Hợp đồng
 GET ${url || '{api_prefix}/apphub/integration-docs'}
-Đọc audiences.publisher — bridge, runtime_types, deploy, hosted_runtime_troubleshooting.
+Đọc audiences.publisher.
 
-## Vai trò của bạn
-1. Nắm hợp đồng; trả lời và code theo đó.
-2. Khi tôi nhờ sửa code, áp quy tắc Hub lên dự án của tôi hoặc **apps/<slug>/** trong publisher kit.
-3. Trước khi script register/launch, hỏi: runtime_type, slug, version, vị trí manifest/build.
+## Vai trò
+1. Theo hợp đồng; app của tôi trong repo của tôi.
+2. Auth: đọc token từ file local (ở trên). Lỗi auth → bảo tôi dùng Publisher hub → **${COPY_TOKEN_BTN.vi}**.
+3. Register/launch khi tôi nhờ: POST ${registerUrl}, POST ${launchUrl}.
 
-## Auth
-Header: X-Knf-Token (và X-Knf-Zone-Id nếu có).
-POST ${registerUrl}, POST ${launchUrl} cần token.
-Đọc token từ file local đã gitignore; không commit. Lỗi 401/403 → bảo tôi sao chép token mới từ Publisher hub.
+## Runtime / kiểm tra
+- hosted: zip + multipart; iframe: entry_url + JSON
+- apphub:bridge:ready; hosted: __APPHUB_STORAGE__.ready
 
-## Runtime (tham chiếu)
-- hosted: zip manifest + index.html + assets; POST multipart
-- iframe: entry_url; POST JSON
-
-## Đăng & launch (chỉ khi tôi yêu cầu — dùng slug của tôi)
-- Tăng semver trong manifest của tôi mỗi lần upload.
-- hosted: chỉ zip output build; tối đa 50 MB.
-- Sau register mở từ desktop Hub, hoặc POST ${launchUrl} → runtime_url + launch_token.
-
-## Kiểm tra app của tôi
-- hosted: type="module", .js 200; xem hosted_runtime_troubleshooting nếu lỗi import/CSP.
-- apphub:bridge:ready; hosted: __APPHUB_STORAGE__.ready.
-- launch_token ≠ X-Knf-Token.
-
-## Lỗi
-hosted_runtime_troubleshooting; hỏi tôi log/Network trước khi đoán.
-
-Nếu chưa rõ slug/repo, hỏi. Nếu chưa có app, dùng ${PUBLISHER_KIT_REPO} — không đặt tên smoke-test tự bịa.`
+## Upstream (lỗi Hub/kit — không phải code app của tôi)
+Issue hoặc PR:
+- Packages: ${PACKAGES_REPO}
+- Publisher kit: ${PUBLISHER_KIT_REPO}`
 }

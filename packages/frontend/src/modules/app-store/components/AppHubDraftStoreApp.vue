@@ -70,6 +70,8 @@
           <button
             type="button"
             class="apphub-draft-store__publisher-docs-btn"
+            :disabled="!sessionToken"
+            :title="sessionToken ? '' : labels.publisher_hub_docs_no_token"
             @click.stop="copyPublisherAiPrompt"
           >
             {{ copyPromptLabel }}
@@ -300,6 +302,7 @@ async function copyPublisherAiPrompt() {
     integrationDocsUrl: url,
     apiBase: hubApiBase.value,
     lang: lang.value,
+    token: sessionToken.value,
   })
   try {
     await navigator.clipboard.writeText(prompt)

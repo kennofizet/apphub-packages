@@ -61,7 +61,7 @@ export default {
   draft_store_intro: 'Drop a .zip on the desktop to submit a new version. Pending apps await DEV review; published apps are live in the zone App Store.',
   draft_store_empty: 'You have no apps yet. Drop a hosted .zip on the desktop to publish.',
   publisher_hub_docs_title: 'New to publishing?',
-  publisher_hub_docs_lead: 'Copy AI integration rules (contract + how to call Hub), session token handling, or the public docs URL.',
+  publisher_hub_docs_lead: 'Copy AI rules (contract, token, kit bootstrap) for your agent — one paste. If API auth fails, use Copy token for AI.',
   publisher_hub_docs_path: 'Contract JSON path: audiences.publisher.bridge and hosted_runtime_troubleshooting.',
   publisher_hub_docs_copy_prompt: 'Copy AI rules',
   publisher_hub_docs_copy_token: 'Copy token for AI',
