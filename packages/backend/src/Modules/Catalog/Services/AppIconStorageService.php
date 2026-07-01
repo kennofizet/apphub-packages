@@ -144,8 +144,13 @@ final class AppIconStorageService
             throw new RuntimeException('Icon file is empty');
         }
 
-        if ($ext === 'svg' && !str_contains($contents, '<svg')) {
-            throw new RuntimeException('Invalid SVG icon');
+        if ($ext === 'svg') {
+            if (!str_contains($contents, '<svg')) {
+                throw new RuntimeException('Invalid SVG icon');
+            }
+            if (preg_match('/<(script|foreignObject)\b/i', $contents)) {
+                throw new RuntimeException('SVG icon must not contain script or foreignObject');
+            }
         }
     }
 

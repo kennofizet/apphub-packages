@@ -285,10 +285,18 @@ const preflightTargetLabel = computed(() => {
 const isDraft = computed(() => props.status === 'draft')
 const showPreflight = computed(() => isDraft.value && !launched.value)
 
+const sandboxDownloadScopes = computed(() => {
+  const granted = launchContext.value?.scopes_granted ?? []
+  if (!Array.isArray(granted) || !granted.includes('desktop.download')) {
+    return []
+  }
+  return manifestPermissions.value.includes('desktop.download') ? ['desktop.download'] : []
+})
+
 const iframeSandbox = computed(() =>
   iframeSandboxAttrs(
     isHosted.value ? RUNTIME_HOSTED : props.runtimeType,
-    manifestPermissions.value,
+    sandboxDownloadScopes.value,
   ),
 )
 

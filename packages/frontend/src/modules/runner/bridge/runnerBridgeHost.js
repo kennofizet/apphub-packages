@@ -175,6 +175,14 @@ export function createRunnerBridgeHost(options) {
     return ensureSessionScopeGranted(scope)
   }
 
+const SAVE_FILE_MAX_BYTES = 52_428_800
+
+  function sanitizeDownloadFilename(raw) {
+    const base = String(raw ?? 'download').replace(/\\/g, '/').split('/').pop() ?? 'download'
+    const trimmed = base.trim().slice(0, 255)
+    return trimmed || 'download'
+  }
+
   async function handleCall(id, method, args) {
     const ctx = options.getLaunchContext?.() ?? {}
     const token = ctx.launch_token
@@ -249,7 +257,7 @@ export function createRunnerBridgeHost(options) {
           return
         }
         const payload = args?.[0] ?? {}
-        const filename = String(payload?.filename ?? 'download').trim().slice(0, 255) || 'download'
+        const filename = sanitizeDownloadFilename(payload?.filename)
         const mime = String(payload?.mime ?? 'application/octet-stream').trim().slice(0, 127)
         const data = payload?.data
         let bytes = null
@@ -268,6 +276,10 @@ export function createRunnerBridgeHost(options) {
           }
         } else {
           reply(id, false, null, 'data required (base64 string or ArrayBuffer)')
+          return
+        }
+        if (bytes.byteLength > SAVE_FILE_MAX_BYTES) {
+          reply(id, false, null, 'File exceeds maximum size (50 MB)')
           return
         }
         const blob = new Blob([bytes], { type: mime || 'application/octet-stream' })
