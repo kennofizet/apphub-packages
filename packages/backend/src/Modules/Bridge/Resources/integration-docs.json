@@ -1,23 +1,11 @@
 {
-  "schema_version": "1.12.0",
+  "schema_version": "1.14.0",
   "package": {
     "name": "apphub",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
   },
-  "meta": {
-    "ide_agnostic": true,
-    "doc_split": {
-      "publisher": "Usage only — bridge API, permissions, launch. No package, production, or security architecture.",
-      "host_dev": "Host embedding + backend endpoint security (internal).",
-      "agent_internal": "When writing publisher docs, never mention production, host_dev, or package install."
-    }
-  },
   "audiences": {
-    "end_user": {
-      "summary": "Uses the App Hub desktop, App Store, and installed apps.",
-      "human_doc": "App Hub Guide → For users"
-    },
     "publisher": {
       "summary": "Build an app that runs in App Hub and uses the bridge to request permissions, read user info, and send desktop messages.",
       "human_doc": "App Hub Guide → App bridge tab (friendly summary; this JSON is the machine-readable contract for AI tools)",
@@ -69,8 +57,8 @@
           "hub_html_changes": [
             "Hub does not inject app-{id}.js or remove type=\"module\".",
             "Rewrites every src= and href= in HTML to append launch_token query param (including Vite ./assets/*.js with crossorigin).",
-            "Injects one inline classic script id=\"apphub-hosted-storage-shim\" immediately after <head> (localStorage proxy).",
-            "Injects style id=\"apphub-runtime-scrollbars\" after <head>.",
+            "Injects one inline classic script id=\"apphub-hosted-storage-shim\" immediately after (localStorage proxy).",
+            "Injects style id=\"apphub-runtime-scrollbars\" after.",
             "Non-HTML files (.js, .css, images) are served unchanged with correct MIME type."
           ],
           "asset_auth": "First request: launch_token on index.html URL. Hub sets HttpOnly cookie apphub_rt_{slug} for follow-up requests. Chunk script tags also get launch_token on src because HTML is rewritten. Missing token → 401 on assets.",
@@ -84,7 +72,7 @@
               "Broken relative paths so chunks 404."
             ],
             "publisher_checks": [
-              "DevTools Elements: served index.html still has <script type=\"module\" …>.",
+              "DevTools Elements: served index.html still has.",
               "DevTools Network: every .js is 200 with Content-Type application/javascript.",
               "Compare your zip tree to example_tree (manifest.json, index.html, assets/ at zip root).",
               "Optional test: Vite IIFE build (no import/export) — if that works, fix ESM entry wiring in index.html; Hub supports type=\"module\"."
@@ -153,13 +141,37 @@
             "likely_cause": "Silent CSP frame block or wrong bundle entry",
             "publisher_action": "Check console for CSP; verify manifest main points to existing file",
             "platform_action": "Fix frame-ancestors allowlist; verify bundle entry file exists on server"
+          },
+          {
+            "symptom": "Locale not found / 401 on locales/*.json",
+            "likely_cause": "fetch() from hosted JS without launch_token; HttpOnly cookie not sent in opaque sandbox",
+            "publisher_action": "Bundle locale JSON into JS (import at build time). Do not fetch ./locales/ at runtime.",
+            "platform_action": "—"
+          },
+          {
+            "symptom": "Export / Download does nothing in hosted app",
+            "likely_cause": "Opaque sandbox blocks blob downloads without bridge",
+            "publisher_action": "Add desktop.download to manifest; use bridge.saveFile; re-install app; provide clipboard/tab fallbacks",
+            "platform_action": "Confirm Hub implements saveFile bridge handler"
+          },
+          {
+            "symptom": "Locale not found / 401 on locales/*.json",
+            "likely_cause": "fetch() from hosted JS without launch_token; HttpOnly cookie not sent in opaque sandbox",
+            "publisher_action": "Bundle locale JSON into JS (import at build time). Do not fetch ./locales/ at runtime.",
+            "platform_action": "—"
+          },
+          {
+            "symptom": "Export / Download does nothing in hosted app",
+            "likely_cause": "Opaque sandbox blocks blob downloads without bridge",
+            "publisher_action": "Add desktop.download to manifest; use bridge.saveFile; re-install app; provide clipboard/tab fallbacks",
+            "platform_action": "Confirm Hub implements saveFile bridge handler"
           }
         ],
         "build_tools": {
           "vite": "Default Vite 5/6 dist with type=\"module\" and ./assets/* is the recommended path. base: './' if needed. Zip dist contents + manifest.json at zip root.",
           "vite_iife_test": "Optional: rollup output format iife to confirm ESM vs classic-script wiring — not required for production.",
           "webpack": "Relative publicPath (auto or ./) so chunks resolve under …/runtime/.",
-          "plain_html": "Classic <script src> without import/export — no bundler required; same zip layout as example_tree."
+          "plain_html": "Classic without import/export — no bundler required; same zip layout as example_tree."
         }
       },
       "bridge": {
@@ -221,11 +233,28 @@
             },
             "child_to_parent_call": {
               "event": "apphub:bridge:call",
-              "fields": { "id": "string", "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError|saveFile", "args": "array" }
+              "fields": {
+                "id": "string",
+                "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError|saveFile|listProjects|listProjectMembers|getUserSignature|emitToParent",
+                "args": "array"
+              }
             },
             "parent_to_child_result": {
               "event": "apphub:bridge:result",
-              "fields": { "id": "string", "ok": "boolean", "result": "any", "error": "string optional" }
+              "fields": {
+                "id": "string",
+                "ok": "boolean",
+                "result": "any",
+                "error": "string optional"
+              }
+            },
+            "child_to_parent_app_event": {
+              "event": "apphub:bridge:app-event",
+              "fields": {
+                "type": "string — namespaced event e.g. ai-production-bonus.signature.requested",
+                "payload": "object — app-specific; parent delivers push notifications"
+              },
+              "hub_role": "Forward to parent production app when child is nested in suite shell."
             }
           }
         },
@@ -259,6 +288,21 @@
             "scope": "desktop.download",
             "description": "Save exported files from hosted apps (opaque sandbox blocks blob downloads without this). Enables allow-downloads sandbox and AppHubBridge.saveFile().",
             "user_prompt": "Allow {app} to save files to your device?"
+          },
+          {
+            "scope": "project.list",
+            "description": "Read production project cards from the parent production suite (nested child apps).",
+            "user_prompt": "Allow {app} to list your production projects?"
+          },
+          {
+            "scope": "project.members",
+            "description": "Read full team roster for a project from the parent app.",
+            "user_prompt": "Allow {app} to read project team members?"
+          },
+          {
+            "scope": "signature.user",
+            "description": "Fetch the current user stored signature image (assignee only).",
+            "user_prompt": "Allow {app} to use your signature?"
           }
         ],
         "manifest": {
@@ -273,7 +317,10 @@
         "data_tiers": {
           "display_only": {
             "source": "GET /bootstrap (Hub shell) → display_user on apphub:bridge:ready",
-            "fields": ["id", "name"],
+            "fields": [
+              "id",
+              "name"
+            ],
             "use_for": "Greetings, labels, UI copy inside the app iframe",
             "do_not_use_for": "Authorization, audit, or calling your publisher API as this user"
           },
@@ -290,12 +337,14 @@
             "description": "UI-only user snapshot from bridge:ready context (Hub bootstrap). No HTTP call. Not for auth."
           },
           "requestPermission": {
-            "signature": "requestPermission(scope: string): Promise<boolean>",
+            "signature": "requestPermission(scope: string): Promise ",
             "description": "Hub UI consent for desktop.message and desktop.badge during the session. user.* and desktop.notify are granted at install — not via runtime bridge calls."
           },
           "sendDesktopMessage": {
-            "signature": "sendDesktopMessage(payload: DesktopMessage): Promise<void>",
-            "requires": ["desktop.message"],
+            "signature": "sendDesktopMessage(payload: DesktopMessage): Promise ",
+            "requires": [
+              "desktop.message"
+            ],
             "description": "Show a banner or overlay on the desktop.",
             "payload_shape": {
               "type": "toast | banner | host-hint",
@@ -306,13 +355,17 @@
             }
           },
           "setTaskbarBadge": {
-            "signature": "setTaskbarBadge(count: number | null): Promise<void>",
-            "requires": ["desktop.badge"],
+            "signature": "setTaskbarBadge(count: number | null): Promise ",
+            "requires": [
+              "desktop.badge"
+            ],
             "description": "Set or clear taskbar badge on your app button."
           },
           "saveFile": {
             "signature": "saveFile({ filename, mime, data }): Promise<{ saved: boolean, filename: string }>",
-            "requires": ["desktop.download"],
+            "requires": [
+              "desktop.download"
+            ],
             "description": "Trigger a browser download from the Hub parent (hosted opaque sandbox). data: base64 string or ArrayBuffer.",
             "payload_shape": {
               "filename": "string — e.g. export.png",
@@ -321,9 +374,73 @@
             }
           },
           "reportError": {
-            "signature": "reportError(error: Error | string | { message?: string, name?: string, stack?: string }): Promise<void>",
+            "signature": "reportError(error: Error | string | { message?: string, name?: string, stack?: string }): Promise ",
             "requires": [],
             "description": "Log a runtime error to App Hub usage logs (action error). Hub shell calls POST /apps/{slug}/usage — no extra permission."
+          },
+          "listProjects": {
+            "signature": "listProjects(): Promise<{ projects: ProjectCard[] } | ProjectCard[]>",
+            "requires": [
+              "project.list"
+            ],
+            "description": "Project card grid from parent production app. Hub forwards call when child is nested in a suite.",
+            "response_shape": {
+              "projects": [
+                {
+                  "id": "string",
+                  "code": "string",
+                  "name": "string",
+                  "avatarUrl": "string",
+                  "productionValue": "number",
+                  "progress": "number 0-100",
+                  "memberCount": "number",
+                  "membersPreview": "[{ id, name, avatarUrl }] — first 3",
+                  "documents": "{ acceptance, allocation } status optional"
+                }
+              ]
+            }
+          },
+          "listProjectMembers": {
+            "signature": "listProjectMembers(projectCode: string): Promise<{ members: Member[] } | Member[]>",
+            "requires": [
+              "project.members"
+            ],
+            "description": "Full team roster for one project code from parent app.",
+            "response_shape": {
+              "members": [
+                {
+                  "id": "string",
+                  "name": "string",
+                  "roles": "string[]",
+                  "avatarUrl": "string optional"
+                }
+              ]
+            }
+          },
+          "getUserSignature": {
+            "signature": "getUserSignature({ userId, jobPosition }): Promise<SignatureImage>",
+            "requires": [
+              "signature.user"
+            ],
+            "description": "Stored signature image — call only when current user is the assignee. jobPosition: director | account | company.",
+            "payload_shape": {
+              "userId": "string",
+              "jobPosition": "director | account | company"
+            },
+            "response_shape": {
+              "userId": "string",
+              "name": "string optional",
+              "jobPosition": "string",
+              "imageUrl": "string optional",
+              "imageBase64": "string optional",
+              "signedAt": "ISO string optional"
+            }
+          },
+          "emitToParent": {
+            "signature": "emitToParent(eventType: string, payload: object): Promise<{ delivered: boolean }>",
+            "requires": [],
+            "description": "Emit typed app event to parent host (e.g. signature.requested). Also sent via postMessage apphub:bridge:app-event.",
+            "example_event": "ai-production-bonus.signature.requested"
           }
         },
         "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Authoritative user: GET bridge/user from your publisher backend (see http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${display?.name}`, duration_ms: 5000 })",
@@ -333,6 +450,12 @@
             "GET bridge/user — scoped user snapshot (requires user.read on launch token)",
             "POST bridge/notify — notify launching user by default; set broadcast: true or user_ids for wider fan-out (requires desktop.notify on launch token)"
           ]
+        },
+        "parent_app": {
+          "summary": "Nested child apps launched inside a parent production suite read projects/team via Hub-forwarded bridge calls and emit typed events back to the parent.",
+          "when": "Child manifest declares project.list / project.members / signature.user and runs inside a parent host shell.",
+          "hub_role": "Route listProjects, listProjectMembers, getUserSignature to the parent app; forward apphub:bridge:app-event payloads.",
+          "reference_app": "ai-production-bonus"
         }
       },
       "deploy": {
@@ -342,8 +465,12 @@
       },
       "steps": [
         "Choose runtime_type: hosted (zip on Hub) or iframe (your entry_url SPA).",
+        "Without publisher kit: read audiences.publisher.without_publisher_kit.",
+        "Nested child apps: parent production bridge — see audiences.publisher.bridge.parent_app.",
         "Open App Hub Guide → App bridge, or read audiences.publisher.bridge here.",
         "Hosted zip issues (ES modules, CSP framing): see audiences.publisher.hosted_runtime_troubleshooting.",
+        "Hosted i18n: bundle translations — see audiences.publisher.hosted_i18n (do not fetch ./locales/).",
+        "Hosted export: use saveFile + desktop.download — see audiences.publisher.hosted_file_export.",
         "Listen for apphub:bridge:ready in your app.",
         "For hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads on load.",
         "Call requestPermission for desktop scopes as needed.",
@@ -463,73 +590,58 @@
             "Dùng sendDesktopMessage, setTaskbarBadge khi được cấp.",
             "Thông báo desktop: POST bridge/notify từ backend publisher (xem http_companion).",
             "Xử lý khi user từ chối quyền một cách graceful trong UI."
-          ]
+          ],
+          "hosted_i18n": {
+            "summary": "Sandbox opaque: fetch ./locales/*.json thường 401 — gộp bản dịch vào bundle JS khi build.",
+            "symptom": "Locale not found / 401 trên locales/*.json"
+          },
+          "hosted_file_export": {
+            "summary": "<a download> thường không hoạt động trong sandbox hosted.",
+            "manifest": "Thêm desktop.download vào manifest.permissions[]; có thể cần cài lại app."
+          },
+          "without_publisher_kit": {
+            "summary": "Không bắt buộc dùng publisher kit — JSON integration-docs là hợp đồng chính."
+          },
+          "parent_app_bridge": {
+            "summary": "App con trong suite sản xuất: đọc dự án/team qua bridge, gửi sự kiện về app cha.",
+            "permissions": "project.list, project.members, signature.user"
+          }
         }
-      }
-    },
-    "agent": {
-      "instructions": "Publisher docs = usage only (bridge). Security and package details are host_dev / backend_security — never put those in publisher-facing text.",
-      "publisher_must_use": ["audiences.publisher.bridge"],
-      "publisher_doc_forbidden_phrases": [
-        "production host",
-        "host_dev",
-        "installAppHubModule",
-        "apphub package",
-        "USER-tier",
-        "sandbox security model",
-        "dangerous for host"
-      ],
-      "internal_only": ["backend_security", "audiences.host_dev"]
-    },
-    "host_dev": {
-      "summary": "Host team embeds App Hub in the product. Owns backend endpoint security.",
-      "human_doc": "packages/frontend/README.md, apphub-packages/README.md, docs/integration-docs.md#backend-security",
-      "install": {
-        "backend": "composer require kennofizet/apphub-backend",
-        "frontend": "npm install @kennofizet/apphub-frontend && installAppHubModule(app, options)"
       },
-      "backend_security": {
-        "principle": "Publisher apps are untrusted USER-tier. Endpoint layer enforces isolation — publishers never see this section.",
-        "publisher_isolation": "Apps run in Hub windows. Only bridge routes and scoped launch_token. No host DB, env, or admin APIs.",
-        "endpoint_rules": [
-          "GET integration-docs/internal requires X-AppHub-Host-Access matching APPHUB_HOST_ACCESS_SECRET (not packages-core zone/server manager).",
-          "POST /apps/{slug}/install-intent mints short-lived token when permission dialog opens.",
-          "POST /apps/{slug}/bridge-consents records manifest permissions after Accept (requires intent_token).",
-          "POST /apps/{slug}/launch mints launch_token with scopes_granted from server consent records only.",
-          "Validate launch_token per app slug and session; user_id from auth, not client headers.",
-          "Filter bridge/user fields by granted scopes and packages-core zones.",
-          "Reject bridge calls without matching scope consent record."
+      "hosted_i18n": {
+        "summary": "Hosted opaque sandbox: runtime fetch() to ./locales/*.json often returns 401. Bundle translations at build time.",
+        "do": [
+          "Import locale JSON into your JS bundle (e.g. Vite: import en from \"./locales/en.json\")",
+          "Or embed strings at build time"
         ],
-        "middleware": ["api", "knf.core.token", "knf.core.validator"],
-        "traits_host_only": [
-          "InteractsWithAppHub",
-          "PublishesHubApp",
-          "PublishesHubAppViaPort",
-          "ManagesHubAppAsDev",
-          "HasHubAppCatalog"
+        "do_not": "fetch('./locales/en.json') or other relative fetch for i18n on initial load",
+        "symptom": "Locale not found / HTTP 401 on locales/*.json",
+        "iframe_note": "iframe apps on your publisher origin may fetch locale files normally."
+      },
+      "hosted_file_export": {
+        "summary": "Normal <a download> and programmatic blob URL clicks do not work in the hosted opaque sandbox.",
+        "manifest": "Add desktop.download to manifest.permissions[]. Users may need to re-install after permission changes.",
+        "flow": [
+          "await bridge.requestPermission('desktop.download')",
+          "await bridge.saveFile({ filename, mime, data }) — data as base64 string or ArrayBuffer",
+          "Provide fallbacks: clipboard, open blob in new tab, right-click preview image"
+        ],
+        "do_not": "Rely on URL.createObjectURL + hidden <a download> only",
+        "see_also": "audiences.publisher.bridge.javascript_api.saveFile"
+      },
+      "without_publisher_kit": {
+        "summary": "You do not need the publisher kit repo. This JSON from GET …/integration-docs is the machine-readable contract.",
+        "requirements": [
+          "manifest.json with runtime_type, permissions, and (hosted) zip via POST /apps/register",
+          "Implement bridge methods from audiences.publisher.bridge.javascript_api",
+          "Publisher API auth: X-Knf-Token header (from Hub → Copy token for AI)",
+          "Hosted: await window.__APPHUB_STORAGE__?.ready before localStorage reads"
+        ],
+        "hosted_pitfalls": [
+          "hosted_i18n — do not fetch ./locales at runtime",
+          "hosted_file_export — use saveFile + desktop.download, not browser download only",
+          "hosted_runtime_troubleshooting — ES modules, CSP frame-ancestors, 401 on assets"
         ]
-      },
-      "hosted_runtime_framing": {
-        "summary": "Hosted bundles are served from the API and embedded in a Hub runner iframe. When Hub itself is in a product iframe, the browser checks frame-ancestors for every ancestor origin.",
-        "nested_chain": "product_origin → hub_origin → GET …/apps/{slug}/runtime/…",
-        "laravel_env": {
-          "APPHUB_ALLOWED_HUB_ORIGINS": "Hub SPA origin(s), comma-separated",
-          "APPHUB_ALLOWED_PRODUCT_ORIGINS": "Product shell origin(s) that embed Hub in an iframe"
-        },
-        "parent_post_message": "Include productOrigin: window.location.origin in apphub:host config message",
-        "launch_url_query": "Hub adds hub_origin and product_origin on hosted runtime URL after POST …/launch",
-        "local_dev_defaults": "Hub http://localhost:5173, product http://localhost:3000 when APP_ENV=local",
-        "misconfiguration_symptom": "launch OK, runtime/index.html OK, blank app window, no CSS/JS requests"
-      },
-      "iframe_runtime_policy": {
-        "summary": "Per-app apps.entry_url + DEV approval is the allowlist. Optional enterprise cap via APPHUB_ALLOWED_RUNTIME_ORIGINS.",
-        "production_opt_in": "APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true when enterprise list is empty and catalog+DEV model is intended",
-        "sandbox": "iframe runtime uses allow-same-origin on publisher origin only — does not expose Hub localStorage"
-      },
-      "hosted_storage": {
-        "summary": "Hosted zip apps get localStorage shim injected at serve time; Hub parent persists via apphub:storage postMessage.",
-        "resource": "packages/backend/src/Modules/Catalog/Resources/hosted-storage-shim.js",
-        "hub_key_prefix": "apphub_hosted_store:{userId}:{slug}"
       }
     }
   },
@@ -540,148 +652,96 @@
         "method": "POST",
         "path": "apps/{slug}/launch",
         "auth": "token",
-        "audience": ["publisher", "end_user"],
+        "audience": [
+          "publisher",
+          "end_user"
+        ],
         "description": "Mint short-lived launch token and return entry_url. Body optional: { version? }. scopes_granted on token come from server install consent — never from client."
       },
       {
         "method": "POST",
         "path": "verify-launch-token",
         "auth": "none",
-        "audience": ["publisher"],
+        "audience": [
+          "publisher"
+        ],
         "description": "Tool backend verifies launch_token once. Body: { launch_token, app_slug? }. Caller IP must match manifest api_urls host. Returns user_id + scopes."
-      },
-      {
-        "method": "POST",
-        "path": "apps/{slug}/usage",
-        "auth": "token",
-        "audience": ["host_dev", "end_user"],
-        "description": "Log app usage. Body: { action: app_open|error, metadata? }."
-      },
-      {
-        "method": "POST",
-        "path": "apps/{slug}/ping",
-        "auth": "token",
-        "audience": ["host_dev", "end_user"],
-        "description": "Server-side GET to app healthcheck_url. Requires launch permission. Returns { ok, status, latency_ms, error? }."
       },
       {
         "method": "GET",
         "path": "integration-docs",
         "auth": "none",
-        "audience": ["publisher"],
+        "audience": [
+          "publisher"
+        ],
         "description": "Publisher-safe integration contract (audiences.publisher + bridge routes only). Public JSON for AI tools and Guide."
-      },
-      {
-        "method": "GET",
-        "path": "integration-docs/internal",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "Full contract — host integrator only (X-AppHub-Host-Access + APPHUB_HOST_ACCESS_SECRET)."
       },
       {
         "method": "GET",
         "path": "apps",
         "auth": "token",
-        "audience": ["publisher", "end_user"],
+        "audience": [
+          "publisher",
+          "end_user"
+        ],
         "description": "Catalog. Query: mode=store|draft|publisher (default store). publisher = owner draft+active. cursor?, per_page?. meta: has_more, next_cursor."
-      },
-      {
-        "method": "GET",
-        "path": "bootstrap",
-        "auth": "token",
-        "audience": ["host_dev", "end_user"],
-        "description": "Hub session bootstrap."
-      },
-      {
-        "method": "POST",
-        "path": "apps/{slug}/install-intent",
-        "auth": "token",
-        "audience": ["host_dev", "end_user"],
-        "description": "Mint short-lived install intent when permission dialog opens. Body optional: { version? }."
-      },
-      {
-        "method": "POST",
-        "path": "apps/{slug}/bridge-consents",
-        "auth": "token",
-        "audience": ["host_dev", "end_user"],
-        "description": "Record install consent after Accept. Body: { intent_token, version? }. Server writes manifest permissions — client must not send scope list."
       },
       {
         "method": "GET",
         "path": "bridge/user",
         "auth": "launch_token",
-        "audience": ["publisher"],
+        "audience": [
+          "publisher"
+        ],
         "description": "Scoped user info. Headers: X-AppHub-Launch-Token, X-AppHub-App-Slug."
       },
       {
         "method": "POST",
         "path": "bridge/notify",
         "auth": "launch_token",
-        "audience": ["publisher"],
+        "audience": [
+          "publisher"
+        ],
         "description": "Notify installed users with desktop.notify consent. Defaults to launching user only; broadcast: true or user_ids for wider fan-out (capped). Caller IP must match manifest api_urls."
-      },
-      {
-        "method": "GET",
-        "path": "dev/apps",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "All apps including disabled — APPHUB_DEV_USER_IDS only."
-      },
-      {
-        "method": "POST",
-        "path": "dev/apps/{slug}/status",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "Set app status (draft|active|disabled). Dev users only."
-      },
-      {
-        "method": "POST",
-        "path": "dev/apps/{slug}/disable",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "Emergency disable app. Dev users only."
       },
       {
         "method": "POST",
         "path": "apps/register",
         "auth": "token",
-        "audience": ["publisher"],
+        "audience": [
+          "publisher"
+        ],
         "description": "Publish: hosted = multipart bundle zip (manifest.json inside) + optional icon file; iframe = JSON body with runtime_type iframe + entry_url (no zip). Creates or upgrades draft app."
       },
       {
         "method": "GET",
         "path": "apps/{slug}/icon",
         "auth": "none",
-        "audience": ["publisher", "end_user"],
+        "audience": [
+          "publisher",
+          "end_user"
+        ],
         "description": "Public app icon image (PNG/SVG/WebP) persisted at register. Catalog returns icon_url. No launch token."
       },
       {
         "method": "GET",
         "path": "apps/{slug}/versions",
         "auth": "token",
-        "audience": ["publisher", "end_user"],
+        "audience": [
+          "publisher",
+          "end_user"
+        ],
         "description": "Version history for hosted app (semver, hash, uploaded_at)."
       },
       {
         "method": "GET",
         "path": "apps/{slug}/runtime/{path}",
         "auth": "launch_token",
-        "audience": ["publisher", "end_user"],
+        "audience": [
+          "publisher",
+          "end_user"
+        ],
         "description": "Serve hosted bundle files. launch_token query on index; HttpOnly cookie for assets. CSP frame-ancestors allows APPHUB_ALLOWED_HUB_ORIGINS + APPHUB_ALLOWED_PRODUCT_ORIGINS (+ hub_origin/product_origin query from Hub). Required for nested iframe: product → hub → app."
-      },
-      {
-        "method": "GET",
-        "path": "dev/apps/{slug}/bundle-inspect",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "DEV review: file tree + bundle hash for hosted app."
-      },
-      {
-        "method": "GET",
-        "path": "dev/apps/{slug}/bundle-file",
-        "auth": "token",
-        "audience": ["host_dev"],
-        "description": "DEV review: read text source file from hosted bundle. Query: path."
       }
     ]
   }
