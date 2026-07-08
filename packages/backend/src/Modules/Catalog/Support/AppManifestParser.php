@@ -4,6 +4,7 @@ namespace Kennofizet\AppHub\Modules\Catalog\Support;
 
 use Illuminate\Http\UploadedFile;
 use Kennofizet\AppHub\Modules\Bridge\Support\AppBridgeScope;
+use Kennofizet\AppHub\Modules\Bridge\Support\ParentBridgeManifest;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestApiUrl;
 use Kennofizet\AppHub\Modules\Launch\Services\AppEntryUrlGuard;
 use Kennofizet\AppHub\Modules\Launch\Services\AppHealthcheckUrlGuard;
@@ -155,19 +156,7 @@ final class AppManifestParser
         }
 
         $permissions = AppBridgeScope::normalizeList($manifest['permissions'] ?? null);
-        if ($permissions !== []) {
-            $document['permissions'] = $permissions;
-        }
-
-        $apiUrls = AppManifestApiUrl::fromManifest($manifest);
-        if ($apiUrls !== []) {
-            AppManifestApiUrl::assertProductionSafe($manifest);
-            $document['api_urls'] = $apiUrls;
-            $pinned = AppManifestApiUrl::resolvePinnedClientIps($apiUrls);
-            if ($pinned !== []) {
-                $document['api_url_pinned_ips'] = $pinned;
-            }
-        }
+        $this->applyParentBridgeFields($document, $manifest, $permissions);
 
         return [
             'slug' => $slug,
@@ -256,19 +245,7 @@ final class AppManifestParser
         }
 
         $permissions = AppBridgeScope::normalizeList($manifest['permissions'] ?? null);
-        if ($permissions !== []) {
-            $document['permissions'] = $permissions;
-        }
-
-        $apiUrls = AppManifestApiUrl::fromManifest($manifest);
-        if ($apiUrls !== []) {
-            AppManifestApiUrl::assertProductionSafe($manifest);
-            $document['api_urls'] = $apiUrls;
-            $pinned = AppManifestApiUrl::resolvePinnedClientIps($apiUrls);
-            if ($pinned !== []) {
-                $document['api_url_pinned_ips'] = $pinned;
-            }
-        }
+        $this->applyParentBridgeFields($document, $manifest, $permissions);
 
         return [
             'slug' => $slug,
@@ -436,5 +413,33 @@ final class AppManifestParser
         $value = trim((string) $license);
 
         return $value !== '' ? mb_substr($value, 0, 64) : null;
+    }
+
+    /**
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $sourceManifest
+     * @param list<string> $permissions
+     */
+    private function applyParentBridgeFields(array &$document, array $sourceManifest, array $permissions): void
+    {
+        $parentBridge = ParentBridgeManifest::normalizeBlock($sourceManifest);
+        if ($parentBridge['actions'] !== [] || $parentBridge['events'] !== []) {
+            $document['parent_bridge'] = $parentBridge;
+        }
+
+        $mergedPermissions = ParentBridgeManifest::mergePermissionScopes($permissions, $document);
+        if ($mergedPermissions !== []) {
+            $document['permissions'] = $mergedPermissions;
+        }
+
+        $apiUrls = AppManifestApiUrl::fromManifest($sourceManifest);
+        if ($apiUrls !== []) {
+            AppManifestApiUrl::assertProductionSafe($sourceManifest);
+            $document['api_urls'] = $apiUrls;
+            $pinned = AppManifestApiUrl::resolvePinnedClientIps($apiUrls);
+            if ($pinned !== []) {
+                $document['api_url_pinned_ips'] = $pinned;
+            }
+        }
     }
 }

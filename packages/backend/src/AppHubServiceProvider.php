@@ -18,6 +18,19 @@ class AppHubServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/Config/apphub.php', 'apphub');
+        $this->mergeConfigFrom(__DIR__ . '/Config/apphub-parent-bridge.php', 'apphub-parent-bridge');
+
+        $this->app->singleton(
+            \Kennofizet\AppHub\Modules\Bridge\ParentBridge\Contracts\ParentBridgePermissionChecker::class,
+            function (): \Kennofizet\AppHub\Modules\Bridge\ParentBridge\Contracts\ParentBridgePermissionChecker {
+                $class = trim((string) config('apphub-parent-bridge.permission_checker', ''));
+                if ($class !== '' && class_exists($class)) {
+                    return app($class);
+                }
+
+                return new \Kennofizet\AppHub\Modules\Bridge\ParentBridge\DefaultParentBridgePermissionChecker();
+            },
+        );
 
         $this->app->register(CatalogServiceProvider::class);
         $this->app->register(LaunchServiceProvider::class);
@@ -30,6 +43,7 @@ class AppHubServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__ . '/Config/apphub.php' => config_path('apphub.php'),
+            __DIR__ . '/Config/apphub-parent-bridge.php' => config_path('apphub-parent-bridge.php'),
         ], 'apphub-config');
 
         $this->publishes([
@@ -78,6 +92,15 @@ class AppHubServiceProvider extends ServiceProvider
                 : 'verify-ip:' . (string) $request->ip();
 
             return Limit::perMinute(max(1, (int) config('apphub.verify_launch_rate_limit', 20)))->by($key);
+        });
+
+        RateLimiter::for('apphub-parent-bridge', function (Request $request): Limit {
+            $userId = trim((string) $request->attributes->get('knf_core_user_id', ''));
+            $key = $userId !== ''
+                ? 'parent-bridge:user:' . $userId
+                : 'parent-bridge-ip:' . (string) $request->ip();
+
+            return Limit::perMinute(max(1, (int) config('apphub-parent-bridge.defaults.rate_limit_per_minute', 60)))->by($key);
         });
     }
 }

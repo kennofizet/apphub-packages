@@ -173,6 +173,37 @@ final class LaunchTokenService
         return hash('sha256', $plainToken);
     }
 
+    public function findActiveSessionForUser(int $userId, string $appSlug, string $sessionId): ?AppLaunchToken
+    {
+        if ($userId < 1 || trim($sessionId) === '' || !preg_match(self::SLUG_PATTERN, $appSlug)) {
+            return null;
+        }
+
+        $record = AppLaunchToken::query()
+            ->where('session_id', trim($sessionId))
+            ->where('user_id', $userId)
+            ->whereHas('app', static function ($query) use ($appSlug): void {
+                $query->where('slug', $appSlug);
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if ($record === null || $record->isExpired()) {
+            return null;
+        }
+
+        return $record;
+    }
+
+    public function sessionHasScope(AppLaunchToken $record, string $scope): bool
+    {
+        $scopes = is_array($record->scopes_granted) ? $record->scopes_granted : [];
+
+        return in_array($scope, $scopes, true);
+    }
+
+    private const SLUG_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
+
     private function findByPlainToken(string $token): ?AppLaunchToken
     {
         if ($token === '' || !preg_match('/^[A-Za-z0-9]{32,128}$/', $token)) {

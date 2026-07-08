@@ -2,6 +2,7 @@
 
 namespace Kennofizet\AppHub\Modules\Launch\Services;
 
+use Kennofizet\AppHub\Modules\Bridge\Support\ParentBridgeManifest;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
@@ -34,7 +35,8 @@ final class LaunchService
      *     launch_token: string,
      *     session_id: string,
      *     bundle_version: string|null,
-     *     scopes_granted: list<string>
+     *     scopes_granted: list<string>,
+     *     parent_bridge: array{available: bool, actions: list<array<string, mixed>>, events: list<array<string, mixed>>}
      * }
      */
     public function launch(
@@ -94,6 +96,9 @@ final class LaunchService
             'session_id' => $minted['session_id'],
             'bundle_version' => $pinnedVersion,
             'scopes_granted' => $minted['scopes_granted'],
+            'parent_bridge' => ParentBridgeManifest::catalogFromManifest(
+                is_array($app->manifest) ? $app->manifest : null,
+            ),
         ];
     }
 

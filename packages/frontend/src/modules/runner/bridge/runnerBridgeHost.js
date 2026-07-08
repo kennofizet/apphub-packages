@@ -6,7 +6,18 @@ import {
   BRIDGE_EVENT_RESULT,
   BRIDGE_METHODS,
 } from './constants.js'
+import {
+  findParentBridgeAction,
+  findParentBridgeEvent,
+  normalizeParentBridgeCatalog,
+} from './parentBridgeCatalog.js'
+import {
+  assertParentBridgePayloadSize,
+  isValidParentBridgeActionName,
+  isValidParentBridgeEventName,
+} from './parentBridgeSecurity.js'
 import { scopeToRequestForMethod, isMethodScopeGranted } from './scopeRequirements.js'
+import { isParentBridgeScope } from '../../../utils/appBridgeScopes.js'
 
 const USER_SCOPES = new Set(['user.read', 'user.profile'])
 
@@ -42,6 +53,10 @@ function isBridgeMessage(data) {
  *   getHubLocale?: () => string | null,
  *   getColorScheme?: () => string | null,
  *   isOpaqueHostedSandbox?: () => boolean,
+ *   getParentBridgeCatalog?: () => object | null,
+ *   forwardParentCall?: (id: string, action: string, args: object, meta: object) => Promise<unknown>,
+ *   forwardParentEvent?: (name: string, payload: object, meta: object) => void,
+ *   hasProductParent?: () => boolean,
  * }} options
  */
 export function createRunnerBridgeHost(options) {
@@ -108,6 +123,7 @@ export function createRunnerBridgeHost(options) {
     const permissions = manifestPermissions()
     const publisherApiBase = options.getPublisherApiBase?.() ?? null
     const hasPublisherBridge = typeof publisherApiBase === 'string' && publisherApiBase.trim() !== ''
+    const parentBridge = normalizeParentBridgeCatalog(options.getParentBridgeCatalog?.())
     postToFrame({
       channel: BRIDGE_CHANNEL,
       event: BRIDGE_EVENT_READY,
@@ -124,6 +140,7 @@ export function createRunnerBridgeHost(options) {
         app_version: options.getAppVersion?.() ?? null,
         hub_locale: options.getHubLocale?.() ?? null,
         color_scheme: options.getColorScheme?.() ?? null,
+        ...(parentBridge.available ? { parent_bridge: parentBridge } : {}),
         ...(tokenScopes.has('user.read') && displayUser ? { display_user: displayUser } : {}),
       },
     })
@@ -204,7 +221,7 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
           reply(id, true, false)
           return
         }
-        if (USER_SCOPES.has(scope)) {
+        if (USER_SCOPES.has(scope) || isParentBridgeScope(scope)) {
           reply(id, true, tokenScopes.has(scope))
           return
         }
@@ -293,6 +310,111 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         anchor.remove()
         setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
         reply(id, true, { saved: true, filename })
+        return
+      }
+
+      if (method === 'callParent') {
+        const action = String(args?.[0] ?? '').trim()
+        const actionArgs = args?.[1]
+        const normalizedArgs = actionArgs && typeof actionArgs === 'object' && !Array.isArray(actionArgs)
+          ? actionArgs
+          : {}
+
+        if (!action) {
+          reply(id, false, null, 'Action required')
+          return
+        }
+
+        if (!isValidParentBridgeActionName(action)) {
+          reply(id, false, null, 'ACTION_NOT_ALLOWED')
+          return
+        }
+
+        const catalog = normalizeParentBridgeCatalog(options.getParentBridgeCatalog?.())
+        const entry = findParentBridgeAction(catalog, action)
+        if (!entry) {
+          reply(id, false, null, 'ACTION_NOT_ALLOWED')
+          return
+        }
+
+        if (!tokenScopes.has(entry.scope)) {
+          reply(id, false, null, 'Scope not granted')
+          return
+        }
+
+        if (!options.hasProductParent?.()) {
+          reply(id, false, null, 'PARENT_UNAVAILABLE')
+          return
+        }
+
+        if (!options.forwardParentCall) {
+          reply(id, false, null, 'PARENT_UNAVAILABLE')
+          return
+        }
+
+        try {
+          assertParentBridgePayloadSize(normalizedArgs)
+        } catch {
+          reply(id, false, null, 'Payload too large')
+          return
+        }
+
+        const result = await options.forwardParentCall(id, action, normalizedArgs, {
+          app_slug: slug,
+          session_id: ctx.session_id ?? null,
+          bridge_scope: entry.scope,
+        })
+        reply(id, true, result)
+        return
+      }
+
+      if (method === 'emitToParent') {
+        const eventName = String(args?.[0] ?? '').trim()
+        const payload = args?.[1]
+        const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+          ? payload
+          : {}
+
+        if (!eventName) {
+          reply(id, false, null, 'Event name required')
+          return
+        }
+
+        if (!isValidParentBridgeEventName(eventName)) {
+          reply(id, false, null, 'ACTION_NOT_ALLOWED')
+          return
+        }
+
+        const catalog = normalizeParentBridgeCatalog(options.getParentBridgeCatalog?.())
+        const entry = findParentBridgeEvent(catalog, eventName)
+        if (!entry) {
+          reply(id, false, null, 'ACTION_NOT_ALLOWED')
+          return
+        }
+
+        if (!tokenScopes.has(entry.scope)) {
+          reply(id, false, null, 'Scope not granted')
+          return
+        }
+
+        if (!options.hasProductParent?.() || !options.forwardParentEvent) {
+          reply(id, false, null, 'PARENT_UNAVAILABLE')
+          return
+        }
+
+        try {
+          assertParentBridgePayloadSize(normalizedPayload)
+        } catch {
+          reply(id, false, null, 'Payload too large')
+          return
+        }
+
+        options.forwardParentEvent(eventName, normalizedPayload, {
+          app_slug: slug,
+          bridge_scope: entry.scope,
+          session_id: ctx.session_id ?? null,
+        })
+        reply(id, true, undefined)
         return
       }
 

@@ -50,6 +50,9 @@ function buildPublicOptions(options = {}) {
     dedicatedHubHost: options.dedicatedHubHost === true,
     hubOrigin: typeof options.hubOrigin === 'string' ? options.hubOrigin.trim() : '',
     productOrigin: typeof options.productOrigin === 'string' ? options.productOrigin.trim() : '',
+    allowedProductOrigins: Array.isArray(options.allowedProductOrigins)
+      ? options.allowedProductOrigins.filter((o) => typeof o === 'string' && o.trim() !== '')
+      : [],
     runtimePublicUrl: typeof options.runtimePublicUrl === 'string' ? options.runtimePublicUrl.trim() : '',
     enforceDedicatedHubOrigin: options.enforceDedicatedHubOrigin !== false,
     enforceIsolatedHostedRuntime: options.enforceIsolatedHostedRuntime !== false,
@@ -100,11 +103,15 @@ function applyBootstrapOrigins(store, bootstrapResponse, { fromCache = false } =
     hubPublicUrl,
     frontendOrigin,
     runtimePublicUrl,
+    allowedProductOrigins,
     originsAuto,
   } = parseOriginsFromBootstrap(bootstrapResponse)
 
   store.options.isDevUser = parseDevUserFromBootstrap(bootstrapResponse)
   store.options.serverOriginsAuto = originsAuto
+  if (allowedProductOrigins.length > 0) {
+    store.options.allowedProductOrigins = allowedProductOrigins
+  }
 
   if (!store.options.isDevUser) {
     store.options.enforceDevFriendlyOrigins = true
@@ -306,6 +313,7 @@ function mergeInstallOptions(store, patch = {}) {
     dedicatedHubHost: store.options.dedicatedHubHost,
     hubOrigin: store.options.hubOrigin,
     productOrigin: store.options.productOrigin,
+    allowedProductOrigins: store.options.allowedProductOrigins,
     runtimePublicUrl: store.options.runtimePublicUrl,
     enforceDedicatedHubOrigin: store.options.enforceDedicatedHubOrigin,
     enforceIsolatedHostedRuntime: store.options.enforceIsolatedHostedRuntime,
@@ -339,6 +347,7 @@ function applyModuleOptions(store, options = {}) {
     dedicatedHubHost: nextPublic.dedicatedHubHost,
     hubOrigin: nextPublic.hubOrigin,
     productOrigin: nextPublic.productOrigin,
+    allowedProductOrigins: nextPublic.allowedProductOrigins,
     runtimePublicUrl: nextPublic.runtimePublicUrl,
     enforceDedicatedHubOrigin: nextPublic.enforceDedicatedHubOrigin,
     enforceIsolatedHostedRuntime: nextPublic.enforceIsolatedHostedRuntime,

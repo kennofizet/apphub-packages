@@ -10,8 +10,12 @@ export const APP_BRIDGE_SCOPES = Object.freeze([
 
 const SCOPE_SET = new Set(APP_BRIDGE_SCOPES)
 
+export function isParentBridgeScope(scope) {
+  return typeof scope === 'string' && /^parent\.[a-z0-9][a-z0-9._-]{0,62}$/.test(scope)
+}
+
 export function isValidBridgeScope(scope) {
-  return typeof scope === 'string' && SCOPE_SET.has(scope)
+  return typeof scope === 'string' && (SCOPE_SET.has(scope) || isParentBridgeScope(scope))
 }
 
 const BRIDGE_SCOPE_LABEL_KEYS = {

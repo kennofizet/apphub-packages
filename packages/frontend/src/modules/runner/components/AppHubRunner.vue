@@ -275,6 +275,10 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   reportUsageError: async (metadata) => {
     await api?.usage?.(props.slug, { action: 'error', metadata })
   },
+  getProductOrigin: () => moduleOptions?.productOrigin ?? '',
+  getAllowedProductOrigins: () => moduleOptions?.allowedProductOrigins ?? [],
+  getParentBridgeCatalog: () => launchContext.value?.parent_bridge ?? null,
+  getParentBridgeTimeoutMs: () => 30_000,
 })
 
 const preflightTargetLabel = computed(() => {
@@ -411,6 +415,7 @@ async function doLaunch() {
       session_id: data.session_id ?? null,
       scopes_granted: scopesGranted,
       slug: data.slug ?? props.slug,
+      parent_bridge: data.parent_bridge ?? null,
     }
     launched.value = true
     mountBridge()

@@ -12,4 +12,6 @@ export const BRIDGE_METHODS = new Set([
   'setTaskbarBadge',
   'reportError',
   'saveFile',
+  'callParent',
+  'emitToParent',
 ])

@@ -29,6 +29,33 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 14 | Disable app (DEV) | Store shows **Offline**; launch blocked |
 | 15 | **Report test error** in `demo-simple` or `demo-iframe` | Message confirms send; `apphub_app_usage_logs` row with `action=error` |
 | 16 | **Send desktop notify** in demo (`desktop.notify` + `api_urls` + proxy) | `POST …/bridge/notify` via proxy; bell + toast |
+| 17 | **Parent bridge** (`callParent`) with product iframe + listener | See below — `null` or data from host config handler |
+
+### Smoke #17 — parent bridge (config-driven)
+
+1. Publish `config/apphub-parent-bridge.php` on host Laravel (`vendor:publish --tag=apphub-config`).
+2. Child app `manifest.json` includes `parent_bridge` + `parent.*` permissions, e.g.:
+
+```json
+{
+  "permissions": ["user.read", "parent.project.list", "parent.events"],
+  "parent_bridge": {
+    "actions": [{ "name": "project.list", "scope": "parent.project.list" }],
+    "events": [{ "name": "bonus.assign", "scope": "parent.events" }]
+  }
+}
+```
+3. Product embeds Hub iframe; parent installs [example/product-shell/product-bridge-listener.js](../example/product-shell/product-bridge-listener.js).
+4. Child calls `AppHubBridge.callParent('project.list', { query: { page: 1 } })`.
+5. Default stub handler returns `{ ok: true, result: null }` — replace handler class in config for real data.
+
+**Security checks (all must pass in production)**
+
+- Child manifest declares action + scope; user granted install consent for that scope
+- API body includes `app_slug`, `bridge_scope`, and `session_id` (from launch context)
+- `productOrigin` in Hub matches `APPHUB_ALLOWED_PRODUCT_ORIGINS`
+- Action has non-null `permission` and passes `hubBridgeCan()` via host permission checker
+- Payload under `max_args_bytes`; per-action rate limit enforced
 
 ### Smoke #16 — desktop.notify
 

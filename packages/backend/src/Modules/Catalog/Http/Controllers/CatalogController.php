@@ -52,13 +52,19 @@ class CatalogController extends Controller
         return $this->apiSuccessWithMeta($result['items'], $result['meta']);
     }
 
-    /** @return array{hub_public_url: string, frontend_origin: string, runtime_public_url: string, auto_derived: true} */
+    /** @return array{hub_public_url: string, frontend_origin: string, runtime_public_url: string, allowed_product_origins: list<string>, auto_derived: true} */
     private function bootstrapOrigins(Request $request): array
     {
+        $allowedProduct = array_values(array_filter(array_map(
+            static fn (string $v): string => trim($v),
+            config('apphub.allowed_product_origins', []),
+        )));
+
         return [
             'hub_public_url' => $this->publicUrls->hubPublicUrlFromConfig(),
             'frontend_origin' => $this->publicUrls->resolveHubPublicUrl($request),
             'runtime_public_url' => $this->publicUrls->apiBaseUrl(),
+            'allowed_product_origins' => $allowedProduct,
             'auto_derived' => true,
         ];
     }

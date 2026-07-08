@@ -112,6 +112,21 @@ window.addEventListener('message', (e) => {
 })
 ```
 
+**Parent bridge (child apps → production data)**
+
+When a publisher child app calls `AppHubBridge.callParent(action, args)`, Hub forwards to your product window on channel `apphub:product`. Install the listener from [example/product-shell/product-bridge-listener.js](../example/product-shell/product-bridge-listener.js) in your **product** app (not in this Hub host). Configure handlers in host Laravel `config/apphub-parent-bridge.php`.
+
+**Security (production)**
+
+| Layer | What to configure |
+|-------|-------------------|
+| Laravel | `APPHUB_ALLOWED_PRODUCT_ORIGINS` — Hub validates `productOrigin` against bootstrap allowlist |
+| Laravel | `APPHUB_PARENT_BRIDGE_REQUIRE_SESSION=true` — API requires active launch `session_id` |
+| Laravel | `APPHUB_PARENT_BRIDGE_PERMISSION_CHECKER=App\HubBridge\HostParentBridgePermissionChecker` — see [example/hub-bridge](../example/hub-bridge/) |
+| Laravel | Set `permission` on every action/event in `apphub-parent-bridge.php` (stubs with `null` are blocked in production) |
+| Product listener | Only accepts messages from `hubOrigin`; forwards `app_slug`, `bridge_scope`, `session_id` to API |
+| Child manifest | Declare `parent_bridge` actions/events + install consent for matching `parent.*` scopes |
+
 ## iframe (main product)
 
 ```html

@@ -42,10 +42,14 @@ export function parseDevUserFromBootstrap(resp) {
 export function parseOriginsFromBootstrap(resp) {
   const data = resp?.data?.data ?? resp?.data ?? {}
   const origins = data.origins ?? {}
+  const allowedProduct = Array.isArray(origins.allowed_product_origins)
+    ? origins.allowed_product_origins.filter((o) => typeof o === 'string' && o.trim() !== '')
+    : []
   return {
     hubPublicUrl: String(origins.hub_public_url ?? '').trim(),
     frontendOrigin: String(origins.frontend_origin ?? '').trim(),
     runtimePublicUrl: String(origins.runtime_public_url ?? '').trim(),
+    allowedProductOrigins: allowedProduct,
     originsAuto: origins.auto_derived === true,
   }
 }

@@ -55,6 +55,10 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       }),
     usage: (slug, payload) =>
       client.post(`/apps/${encodeURIComponent(slug)}/usage`, payload),
+    parentBridgeCall: (action, args) =>
+      client.post('/parent-bridge/call', { action, args: args ?? {} }),
+    parentBridgeEvent: (name, payload) =>
+      client.post('/parent-bridge/event', { name, payload: payload ?? {} }),
     devApps: (params) => client.get('/dev/apps', { params }),
     devInspectBundle: (slug) =>
       client.get(`/dev/apps/${encodeURIComponent(slug)}/bundle-inspect`),

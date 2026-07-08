@@ -107,6 +107,12 @@
     saveFile(payload) {
       return postCall('saveFile', [payload])
     },
+    callParent(action, args) {
+      return postCall('callParent', [action, args])
+    },
+    emitToParent(event, payload) {
+      return postCall('emitToParent', [event, payload])
+    },
   }
 
   global.AppHubBridge = bridge

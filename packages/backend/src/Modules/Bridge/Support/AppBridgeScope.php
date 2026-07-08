@@ -28,7 +28,22 @@ final class AppBridgeScope
 
     public static function isValid(string $scope): bool
     {
-        return in_array($scope, self::ALL, true);
+        if (in_array($scope, self::ALL, true)) {
+            return true;
+        }
+
+        if (self::isParentScope($scope)) {
+            return true;
+        }
+
+        $configured = config('apphub-parent-bridge.scopes', []);
+
+        return is_array($configured) && array_key_exists($scope, $configured);
+    }
+
+    public static function isParentScope(string $scope): bool
+    {
+        return preg_match('/^parent\.[a-z0-9][a-z0-9._-]{0,62}$/', $scope) === 1;
     }
 
     /**

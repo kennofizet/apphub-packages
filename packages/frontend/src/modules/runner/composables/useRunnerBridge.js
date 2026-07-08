@@ -1,6 +1,7 @@
 import { onUnmounted, shallowRef, watch } from 'vue'
 import { entryUrlOrigin } from '../../../utils/launchUrl.js'
 import { createRunnerBridgeHost } from '../bridge/runnerBridgeHost.js'
+import { createProductBridgeRelay } from '../bridge/productBridgeRelay.js'
 import { createHostedStorageHost } from '../storage/hostedStorageHost.js'
 
 /**
@@ -9,6 +10,7 @@ import { createHostedStorageHost } from '../storage/hostedStorageHost.js'
 export function useRunnerBridge(options) {
   const hostRef = shallowRef(null)
   const storageHostRef = shallowRef(null)
+  const productRelayRef = shallowRef(null)
 
   function isOpaqueHostedSandbox() {
     if (typeof options.isOpaqueSandbox === 'function') {
@@ -34,6 +36,15 @@ export function useRunnerBridge(options) {
   function mount() {
     hostRef.value?.stop()
     storageHostRef.value?.stop()
+    productRelayRef.value?.stop()
+
+    const productRelay = createProductBridgeRelay({
+      getProductOrigin: options.getProductOrigin,
+      getAllowedProductOrigins: options.getAllowedProductOrigins,
+      getTimeoutMs: options.getParentBridgeTimeoutMs,
+    })
+    productRelay.start()
+    productRelayRef.value = productRelay
 
     const host = createRunnerBridgeHost({
       getIframe: () => options.iframeRef?.value ?? null,
@@ -59,6 +70,10 @@ export function useRunnerBridge(options) {
       getColorScheme: options.getColorScheme,
       getRuntimeType: options.getRuntimeType,
       isOpaqueHostedSandbox,
+      getParentBridgeCatalog: options.getParentBridgeCatalog,
+      hasProductParent: () => productRelay.hasProductParent(),
+      forwardParentCall: (id, action, args, meta) => productRelay.forwardCall(id, action, args, meta),
+      forwardParentEvent: (name, payload, meta) => productRelay.forwardEvent(name, payload, meta),
     })
 
     host.start()
@@ -92,6 +107,8 @@ export function useRunnerBridge(options) {
     hostRef.value = null
     storageHostRef.value?.stop()
     storageHostRef.value = null
+    productRelayRef.value?.stop()
+    productRelayRef.value = null
   })
 
   return {
