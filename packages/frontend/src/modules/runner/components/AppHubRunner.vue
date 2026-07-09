@@ -110,6 +110,7 @@ import { t } from '../../../i18n/index.js'
 import { resolveLang } from '../../../i18n/resolveLang.js'
 import { resolveTheme } from '../../../i18n/resolveTheme.js'
 import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
+import { parentBridgeScopeLabel } from '../../../utils/parentBridgeScopePrompts.js'
 import { useDesktopNotifications } from '../../notifications/index.js'
 import { useUserNotificationCenter } from '../../user-notifications/index.js'
 import AppHubInstallPermissionsDialog from '../../desktop/components/AppHubInstallPermissionsDialog.vue'
@@ -225,11 +226,14 @@ const scopeConsentScopes = computed(() =>
   scopeConsent.dialog.scope ? [scopeConsent.dialog.scope] : [],
 )
 
-const scopeConsentLabels = computed(() =>
-  scopeConsentScopes.value.map((scope) =>
-    bridgeScopeLabel(scope, props.slug, translateBridgeKey),
-  ),
-)
+const scopeConsentLabels = computed(() => {
+  const translate = translateBridgeKey
+  return scopeConsentScopes.value.map((scope) =>
+    bridgeScopeLabel(scope, props.slug, translate, {
+      parentScopeLabel: (parentScope, app) => parentBridgeScopeLabel(parentScope, app, translate),
+    }),
+  )
+})
 
 const scopeConsentMessage = computed(() => {
   const template = labels.value.bridge_perm_runtime_message

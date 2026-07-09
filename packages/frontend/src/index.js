@@ -21,6 +21,7 @@ import {
   parseOriginsFromBootstrap,
 } from './utils/originSafety.js'
 import { loadDevFriendlyOriginsPreference } from './utils/devOriginSettings.js'
+import { loadParentBridgeScopePrompts } from './utils/parentBridgeScopePrompts.js'
 import {
   bootstrapResponseFromCache,
   loadBootstrapCache,
@@ -156,6 +157,12 @@ function applyCachedBootstrapIfAny(store) {
   return true
 }
 
+async function refreshParentBridgeScopePrompts(store) {
+  syncApi(store)
+  if (!store.facade?.parentBridgeScopePrompts) return
+  await loadParentBridgeScopePrompts(() => store.facade.parentBridgeScopePrompts())
+}
+
 async function fetchBootstrapSession(store) {
   let promise = bootstrapInflight.get(store)
   if (promise) return promise
@@ -166,6 +173,7 @@ async function fetchBootstrapSession(store) {
 
     const res = await store.facade.bootstrap()
     if (res) applyBootstrapOrigins(store, res)
+    await refreshParentBridgeScopePrompts(store)
   })().catch(() => {
     store.options.originBootstrapLoading = false
     if (!store.options.serverOriginsResolved) {
@@ -277,6 +285,7 @@ function createApiFacade() {
     appVersions: (...args) => impl?.appVersions?.(...args),
     integrationDocs: (...args) => impl?.integrationDocs?.(...args),
     integrationDocsInternal: (...args) => impl?.integrationDocsInternal?.(...args),
+    parentBridgeScopePrompts: (...args) => impl?.parentBridgeScopePrompts?.(...args),
     notifications: (...args) => impl?.notifications?.(...args),
     notificationsSummary: (...args) => impl?.notificationsSummary?.(...args),
     notificationsDismiss: (...args) => impl?.notificationsDismiss?.(...args),

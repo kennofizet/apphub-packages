@@ -29,7 +29,7 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 14 | Disable app (DEV) | Store shows **Offline**; launch blocked |
 | 15 | **Report test error** in `demo-simple` or `demo-iframe` | Message confirms send; `apphub_app_usage_logs` row with `action=error` |
 | 16 | **Send desktop notify** in demo (`desktop.notify` + `api_urls` + proxy) | `POST …/bridge/notify` via proxy; bell + toast |
-| 17 | **Parent bridge** (`callParent`) with product iframe + listener | See below — `null` or data from host config handler |
+| 17 | **Parent bridge** (`callParent`) with product iframe + listener | `callParent('project.list')` → data or `null`; install dialog shows **Pending DEV review** on `parent.*` |
 
 ### Smoke #17 — parent bridge (config-driven)
 
@@ -48,6 +48,8 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 3. Product embeds Hub iframe; parent installs [example/product-shell/product-bridge-listener.js](../example/product-shell/product-bridge-listener.js).
 4. Child calls `AppHubBridge.callParent('project.list', { query: { page: 1 } })`.
 5. Default stub handler returns `{ ok: true, result: null }` — replace handler class in config for real data.
+6. `GET …/parent-bridge/catalog` lists host actions/scopes (integrator dev docs).
+7. Before DEV approve: `callParent` uses draft fixtures or `SCOPE_NOT_GRANTED` on token.
 
 **Security checks (all must pass in production)**
 

@@ -235,6 +235,38 @@ export function publisherGuideSectionsFromIntegrationDocs(doc, labels, lang = 'e
       })
     }
 
+    const parentScopes = bridge.parent_scopes
+    if (parentScopes && typeof parentScopes === 'object') {
+      const lines = []
+      if (typeof parentScopes.reader_note === 'string' && parentScopes.reader_note.trim()) {
+        lines.push(parentScopes.reader_note.trim())
+      }
+      const scopeRows = parentScopes.scopes ?? parentScopes.default_examples
+      if (Array.isArray(scopeRows) && scopeRows.length) {
+        scopeRows.forEach((row) => {
+          if (!row || typeof row !== 'object') return
+          const scope = row.scope ?? ''
+          const desc = row.description ?? ''
+          const prompt = row.user_prompt ?? ''
+          const action = row.typical_action ?? ''
+          if (!scope) return
+          const parts = [`${scope} — ${desc}`]
+          if (prompt) parts.push(`"${prompt}"`)
+          if (action) parts.push(`(${labels.parentActionLabel ?? 'typical'}: ${action})`)
+          lines.push(parts.join(' '))
+        })
+      }
+      if (typeof parentScopes.dev_gate === 'string' && parentScopes.dev_gate.trim()) {
+        lines.push(parentScopes.dev_gate.trim())
+      }
+      if (lines.length) {
+        sections.push({
+          title: labels.parentScopesTitle ?? 'Parent scopes (this platform)',
+          lines,
+        })
+      }
+    }
+
     const jsApi = bridge.javascript_api
     if (jsApi && typeof jsApi === 'object') {
       const needsLabel = labels.apiNeeds ?? 'needs'

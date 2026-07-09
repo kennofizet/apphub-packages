@@ -138,6 +138,8 @@ const refLabels = computed(() => ({
   storageTitle: t('guide_ref_storage_title', lang.value),
   launchTitle: t('guide_ref_launch_title', lang.value),
   permissionsTitle: t('guide_ref_permissions_title', lang.value),
+  parentScopesTitle: t('guide_ref_parent_scopes_title', lang.value),
+  parentActionLabel: t('guide_ref_parent_action_label', lang.value),
   apiTitle: t('guide_ref_api_title', lang.value),
   exampleTitle: t('guide_dev_bridge_code_title', lang.value),
   manifestTitle: t('guide_ref_manifest_title', lang.value),

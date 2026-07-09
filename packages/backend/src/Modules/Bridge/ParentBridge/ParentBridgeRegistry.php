@@ -142,6 +142,33 @@ final class ParentBridgeRegistry
         return max(1, (int) ($defaults['rate_limit_per_minute'] ?? 60));
     }
 
+    /**
+     * Install-dialog prompts for parent.* scopes — host config is source of truth.
+     *
+     * @return array<string, string> scope => user_prompt template ({app}, {scope})
+     */
+    public static function scopePrompts(): array
+    {
+        $raw = self::config()['scopes'] ?? [];
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($raw as $scope => $meta) {
+            if (!is_string($scope) || $scope === '' || !is_array($meta)) {
+                continue;
+            }
+            $prompt = $meta['user_prompt'] ?? null;
+            if (!is_string($prompt) || trim($prompt) === '') {
+                continue;
+            }
+            $out[$scope] = trim($prompt);
+        }
+
+        return $out;
+    }
+
     private static function normalizeKey(string $name): string
     {
         return strtolower(trim($name));

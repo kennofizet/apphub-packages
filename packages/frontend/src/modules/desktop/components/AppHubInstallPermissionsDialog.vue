@@ -32,7 +32,15 @@
             <span class="apphub-install-perm-dialog__item-dot" aria-hidden="true" />
             <div class="apphub-install-perm-dialog__item-body">
               <p class="apphub-install-perm-dialog__item-text">{{ label }}</p>
-              <code class="apphub-install-perm-dialog__item-scope">{{ permissionScopes[index] }}</code>
+              <div class="apphub-install-perm-dialog__item-meta">
+                <code class="apphub-install-perm-dialog__item-scope">{{ permissionScopes[index] }}</code>
+                <span
+                  v-if="permissionPending[index]"
+                  class="apphub-install-perm-dialog__item-badge"
+                >
+                  {{ pendingDevLabel }}
+                </span>
+              </div>
             </div>
           </li>
         </ul>
@@ -92,6 +100,8 @@ const props = defineProps({
   refuseLabel: { type: String, default: '' },
   permissionScopes: { type: Array, default: () => [] },
   permissionLabels: { type: Array, default: () => [] },
+  permissionPending: { type: Array, default: () => [] },
+  pendingDevLabel: { type: String, default: '' },
   permissionSectionTitle: { type: String, default: '' },
   apiUrls: { type: Array, default: () => [] },
   apiUrlsSectionTitle: { type: String, default: '' },

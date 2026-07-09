@@ -59,6 +59,7 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       client.post('/parent-bridge/call', { action, args: args ?? {} }),
     parentBridgeEvent: (name, payload) =>
       client.post('/parent-bridge/event', { name, payload: payload ?? {} }),
+    parentBridgeScopePrompts: () => client.get('/parent-bridge/scope-prompts'),
     devApps: (params) => client.get('/dev/apps', { params }),
     devInspectBundle: (slug) =>
       client.get(`/dev/apps/${encodeURIComponent(slug)}/bundle-inspect`),

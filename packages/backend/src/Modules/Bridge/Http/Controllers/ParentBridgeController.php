@@ -5,7 +5,9 @@ namespace Kennofizet\AppHub\Modules\Bridge\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Kennofizet\AppHub\Http\Controllers\Controller;
+use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeCatalog;
 use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeDispatcher;
+use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeRegistry;
 use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeSecurityGate;
 use Kennofizet\PackagesCore\Core\Model\BaseModelActions;
 
@@ -15,6 +17,27 @@ class ParentBridgeController extends Controller
         private readonly ParentBridgeDispatcher $dispatcher,
         private readonly ParentBridgeSecurityGate $security,
     ) {
+    }
+
+    public function catalog(): JsonResponse
+    {
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
+        }
+
+        return response()->json(ParentBridgeCatalog::forHost());
+    }
+
+    /** Install-dialog prompts for parent.* scopes (from host config). */
+    public function scopePrompts(): JsonResponse
+    {
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
+        }
+
+        return $this->apiResponseWithContext([
+            'prompts' => ParentBridgeRegistry::scopePrompts(),
+        ]);
     }
 
     public function call(Request $request): JsonResponse

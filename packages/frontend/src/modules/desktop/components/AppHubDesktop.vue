@@ -202,11 +202,13 @@
       :theme="activeTheme"
       :title="installPermTitle"
       :message="installPermMessage"
-      :hint="labels.install_perm_hint"
+      :hint="installPermHint"
       :accept-label="labels.install_perm_accept"
       :refuse-label="labels.install_perm_refuse"
       :permission-scopes="installPermDialog.permissions"
       :permission-labels="installPermLabels"
+      :permission-pending="installPermPending"
+      :pending-dev-label="labels.bridge_perm_pending_dev_review"
       :permission-section-title="installPermDialog.permissions.length ? labels.install_perm_permissions_title : ''"
       :api-urls="installPermDialog.apiUrls"
       :api-urls-section-title="installPermDialog.apiUrls.length ? labels.install_perm_api_urls_title : ''"
@@ -353,7 +355,8 @@ import {
   resolvePublisherTestVersion,
 } from '../../../utils/publisherTestVersion.js'
 import { evaluateOriginSafety } from '../../../utils/originSafety.js'
-import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
+import { bridgeScopeLabel, isParentBridgeScope } from '../../../utils/appBridgeScopes.js'
+import { parentBridgeScopeLabel, loadParentBridgeScopePrompts } from '../../../utils/parentBridgeScopePrompts.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import {
@@ -544,6 +547,8 @@ const labels = computed(() => ({
   duplicate_app_keep: t('duplicate_app_keep', lang.value),
   duplicate_app_cancel: t('duplicate_app_cancel', lang.value),
   install_perm_hint: t('install_perm_hint', lang.value),
+  install_perm_parent_hint: t('install_perm_parent_hint', lang.value),
+  bridge_perm_pending_dev_review: t('bridge_perm_pending_dev_review', lang.value),
   install_perm_permissions_title: t('install_perm_permissions_title', lang.value),
   install_perm_api_urls_title: t('install_perm_api_urls_title', lang.value),
   install_perm_api_urls_hint: t('install_perm_api_urls_hint', lang.value),
@@ -740,9 +745,23 @@ const installPermMessage = computed(() => {
 
 const installPermLabels = computed(() => {
   const appLabel = installPermDialog.app?.name || installPermDialog.app?.slug || ''
+  const translate = (key) => t(key, lang.value)
   return installPermDialog.permissions.map((scope) =>
-    bridgeScopeLabel(scope, appLabel, (key) => t(key, lang.value)),
+    bridgeScopeLabel(scope, appLabel, translate, {
+      parentScopeLabel: (parentScope, app) => parentBridgeScopeLabel(parentScope, app, translate),
+    }),
   )
+})
+
+const installPermPending = computed(() =>
+  installPermDialog.permissions.map((scope) => isParentBridgeScope(scope)),
+)
+
+const installPermHint = computed(() => {
+  if (installPermPending.value.some(Boolean)) {
+    return `${labels.value.install_perm_hint} ${labels.value.install_perm_parent_hint}`
+  }
+  return labels.value.install_perm_hint
 })
 
 function resolveInstallVersion(app) {
@@ -784,6 +803,13 @@ async function askInstallPermissions(app, action = 'install') {
         message: labels.value.install_perm_consent_failed,
       })
       return false
+    }
+  }
+
+  if (permissions.some(isParentBridgeScope)) {
+    const api = getHostApiForApp(rootApp)
+    if (api?.parentBridgeScopePrompts) {
+      await loadParentBridgeScopePrompts(() => api.parentBridgeScopePrompts())
     }
   }
 

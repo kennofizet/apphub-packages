@@ -1,8 +1,8 @@
 {
-  "schema_version": "1.13.0",
+  "schema_version": "1.14.0",
   "package": {
     "name": "apphub",
-    "version": "0.2.9",
+    "version": "0.2.20",
     "summary": "App Hub — desktop host + App Store for apps that connect via the runtime bridge."
   },
   "meta": {
@@ -282,12 +282,20 @@
             "user_prompt": "Allow {app} to save files to your device?"
           }
         ],
+        "parent_scopes": {
+          "pattern": "parent.[a-z0-9][a-z0-9._-]{0,62}",
+          "not_in_fixed_catalog": true,
+          "reader_note": "Parent scopes connect your app to the host product (projects, signatures, events, etc.). The list below shows what this platform supports — use matching scope names in your manifest. Consent wording users see at install comes from the platform team, not from your app.",
+          "publisher_manifest": "Add parent.* strings to manifest permissions and parent_bridge.actions/events. Action/event names must match a supported entry below.",
+          "dev_gate": "Users acknowledge at install. Parent scopes work on the launch token only after the platform DEV team approves your app version."
+        },
         "manifest": {
           "runtime_type": "hosted | iframe — required",
           "entry_url": "string — required for iframe (HTTPS publisher SPA URL); omitted for hosted zip",
           "healthcheck_url": "string optional — iframe draft preflight ping target",
           "icon": "string optional — emoji/short label (max 32) OR bundle-relative image path (icon.png, assets/icon.svg). Hub extracts image files at register and serves GET /apps/{slug}/icon (no launch token). HTTPS icon URL supported for iframe manifests. Optional multipart icon=@file on hosted POST /apps/register.",
-          "permissions": "string[] — bridge scopes (user.read, desktop.notify, desktop.download, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list).",
+          "permissions": "string[] — bridge scopes (user.read, desktop.notify, parent.project.list, …). Shown on install and DEV review; Hub UI only. Server records consent on POST /apps/{slug}/bridge-consents from manifest (never from client scope list). parent.* scopes are user-acked at install but minted on launch token only after DEV approves the app version.",
+          "parent_bridge": "object optional — declares named parent RPC actions/events the child may call. Merged into permissions for install consent. See audiences.publisher.parent_bridge.",
           "api_urls": "string[] optional — publisher tool backend URL(s) for bridge HTTP. Caller TCP IP must match DNS-pinned IPs at publish (production) or resolve live DNS (local dev). Optional APPHUB_BRIDGE_PROXY_SECRET for loopback port hardening. localhost rejected on publish in production.",
           "api_base_url": "string optional — legacy single URL; merged into api_urls."
         },
@@ -354,9 +362,67 @@
             "signature": "reportError(error: Error | string | { message?: string, name?: string, stack?: string }): Promise<void>",
             "requires": [],
             "description": "Log a runtime error to App Hub usage logs (action error). Hub shell calls POST /apps/{slug}/usage — no extra permission."
+          },
+          "callParent": {
+            "signature": "callParent(action: string, args?: object, options?: { timeoutMs?: number }): Promise<unknown | null>",
+            "requires": [
+              "matching parent.* scope on launch token for action"
+            ],
+            "description": "RPC to parent production suite through Hub → product shell. Action must be listed in your manifest parent_bridge.actions and supported on this platform. Returns null or typed error when parent unavailable, forbidden, or not implemented. Never fabricates production data."
+          },
+          "emitToParent": {
+            "signature": "emitToParent(event: string, payload?: object): Promise<void>",
+            "requires": [
+              "parent.events or event-specific scope on launch token"
+            ],
+            "description": "Fire-and-forget event to parent production via Hub relay. Event must be in your manifest parent_bridge.events and supported on this platform."
           }
         },
-        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Authoritative user: GET bridge/user from your publisher backend (see http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Hello', body: `Welcome ${display?.name}`, duration_ms: 5000 })",
+        "parent_bridge": {
+          "summary": "Access parent production data and events via generic callParent / emitToParent — no per-domain methods in Hub core.",
+          "manifest_block": {
+            "actions": "array of { name, scope, description?, args?, returns? } — name must match a supported platform action in the parent scopes list",
+            "events": "array of { name, scope } — name must match a supported platform event"
+          },
+          "consent_layers": [
+            "User accepts parent.* scopes at install (stored per bundle version)",
+            "Platform DEV approves your app version → parent scopes eligible on launch token",
+            "Host product enforces permission before returning production data"
+          ],
+          "bridge_ready_context": "apphub:bridge:ready context.parent_bridge lists allowed action/event names + scopes (no backend paths)",
+          "errors": [
+            "ACTION_NOT_ALLOWED",
+            "SCOPE_NOT_GRANTED",
+            "PARENT_UNAVAILABLE",
+            "PARENT_TIMEOUT",
+            "NOT_IMPLEMENTED",
+            "FORBIDDEN",
+            "VALIDATION_ERROR",
+            "RATE_LIMITED"
+          ],
+          "example_manifest": {
+            "permissions": [
+              "user.read",
+              "parent.project.list",
+              "parent.events"
+            ],
+            "parent_bridge": {
+              "actions": [
+                {
+                  "name": "project.list",
+                  "scope": "parent.project.list"
+                }
+              ],
+              "events": [
+                {
+                  "name": "bonus.assign",
+                  "scope": "parent.events"
+                }
+              ]
+            }
+          }
+        },
+        "example": "// After apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // UI greeting — no API\nconsole.log('Hello', display?.name)\n// Parent production data (when embedded in product shell + DEV approved):\nconst projects = await bridge.callParent('project.list', { query: { page: 1 } })\nawait bridge.emitToParent('bonus.assign', { projectCode: 'ALPHA', userId: display?.id })",
         "http_companion": {
           "note": "Publisher tool backends (manifest api_urls) may call GET bridge/user and POST bridge/notify. App Hub matches caller TCP IP to api_urls. Implement fetch in your app against your api_urls proxy — not Hub postMessage. Hub postMessage is for desktop UI (message, badge) and reportError only.",
           "routes": [
@@ -455,6 +521,12 @@
                 "user_prompt": "Cho phép {app} cập nhật badge taskbar?"
               }
             ],
+            "parent_scopes": {
+              "pattern": "parent.[a-z0-9][a-z0-9._-]{0,62}",
+              "not_in_fixed_catalog": true,
+              "reader_note": "Scope parent.* kết nối app của bạn với sản phẩm host (dự án, chữ ký, sự kiện…). Danh sách dưới đây là những gì nền tảng này hỗ trợ — khai báo đúng tên scope trong manifest. Lời chào đồng ý lúc cài do đội nền tảng quy định, không phải app publisher.",
+              "dev_gate": "User ack lúc cài; scope trên launch token sau khi DEV nền tảng duyệt phiên bản app"
+            },
             "data_tiers": {
               "display_only": {
                 "use_for": "Lời chào, nhãn, copy UI trong iframe app",
@@ -477,6 +549,12 @@
               },
               "setTaskbarBadge": {
                 "description": "Đặt hoặc xóa badge taskbar trên nút app của bạn."
+              },
+              "callParent": {
+                "description": "RPC tới suite sản xuất cha qua Hub → shell sản phẩm → POST parent-bridge/call. Cần scope parent.* trên launch token và DEV đã duyệt phiên bản."
+              },
+              "emitToParent": {
+                "description": "Gửi sự kiện fire-and-forget tới app cha qua Hub relay."
               }
             },
             "example": "// Sau apphub:bridge:ready\nconst bridge = window.AppHubBridge\nconst display = bridge.getDisplayUser() // Lời chào UI — không gọi API\nconsole.log('Xin chào', display?.name)\n// User tin cậy: GET bridge/user từ backend publisher (xem http_companion)\nawait bridge.requestPermission('desktop.message')\nawait bridge.sendDesktopMessage({ type: 'banner', title: 'Xin chào', body: `Chào ${display?.name}`, duration_ms: 5000 })"
@@ -618,6 +696,20 @@
         "summary": "Hosted zip apps get localStorage shim injected at serve time; Hub parent persists via apphub:storage postMessage.",
         "resource": "packages/backend/src/Modules/Catalog/Resources/hosted-storage-shim.js",
         "hub_key_prefix": "apphub_hosted_store:{userId}:{slug}"
+      },
+      "parent_bridge": {
+        "summary": "Host integrator only — wire production handlers, permissions, and install consent labels. Not shown to publishers.",
+        "publish_config": "php artisan vendor:publish --tag=apphub-config → config/apphub-parent-bridge.php",
+        "scopes_block": "scopes[].description + user_prompt — drives install dialog and publisher-facing GET integration-docs parent_scopes.scopes list",
+        "handlers": "actions[].handler + events[].listener — your App\\HubBridge\\ classes",
+        "permission_checker": "APPHUB_PARENT_BRIDGE_PERMISSION_CHECKER → host RBAC class",
+        "integrator_endpoints": [
+          "GET parent-bridge/catalog — action/event catalog for your team",
+          "GET parent-bridge/scope-prompts — scope → user_prompt map",
+          "POST parent-bridge/call — production RPC",
+          "POST parent-bridge/event — production events"
+        ],
+        "examples": "apphub-packages/example/hub-bridge/"
       }
     }
   },

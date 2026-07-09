@@ -12,6 +12,9 @@ Route::post('apps/{slug}/bridge-consents', [BridgeConsentController::class, 'sto
 Route::delete('apps/{slug}/bridge-consents', [BridgeConsentController::class, 'destroy'])
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
 
+Route::get('parent-bridge/catalog', [ParentBridgeController::class, 'catalog']);
+Route::get('parent-bridge/scope-prompts', [ParentBridgeController::class, 'scopePrompts']);
+
 Route::middleware('throttle:apphub-parent-bridge')->group(function (): void {
     Route::post('parent-bridge/call', [ParentBridgeController::class, 'call']);
     Route::post('parent-bridge/event', [ParentBridgeController::class, 'event']);

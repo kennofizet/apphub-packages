@@ -18,6 +18,7 @@ export function isValidBridgeScope(scope) {
   return typeof scope === 'string' && (SCOPE_SET.has(scope) || isParentBridgeScope(scope))
 }
 
+/** Fixed Hub core scopes only — parent.* labels come from host config (GET parent-bridge/scope-prompts). */
 const BRIDGE_SCOPE_LABEL_KEYS = {
   'user.read': 'bridge_perm_user_read',
   'user.profile': 'bridge_perm_user_profile',
@@ -31,8 +32,13 @@ const BRIDGE_SCOPE_LABEL_KEYS = {
  * @param {string} scope
  * @param {string} appLabel
  * @param {(key: string, params?: Record<string, string>) => string} translate
+ * @param {{ parentScopeLabel?: (scope: string, appLabel: string) => string }} [options]
  */
-export function bridgeScopeLabel(scope, appLabel, translate) {
+export function bridgeScopeLabel(scope, appLabel, translate, options = {}) {
+  if (isParentBridgeScope(scope) && typeof options.parentScopeLabel === 'function') {
+    return options.parentScopeLabel(scope, appLabel)
+  }
+
   const key = BRIDGE_SCOPE_LABEL_KEYS[scope] ?? 'bridge_perm_default'
   const template = translate(key)
   return template.replace(/\{app\}/g, appLabel).replace(/\{scope\}/g, scope)
