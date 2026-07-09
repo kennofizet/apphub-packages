@@ -11,8 +11,6 @@ use Kennofizet\PackagesCore\Core\Model\BaseModelActions;
 
 class ParentBridgeController extends Controller
 {
-    private const SLUG_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
-
     public function __construct(
         private readonly ParentBridgeDispatcher $dispatcher,
         private readonly ParentBridgeSecurityGate $security,

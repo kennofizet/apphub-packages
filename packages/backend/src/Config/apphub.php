@@ -99,6 +99,14 @@ return [
     'app_versions_table' => env('APPHUB_APP_VERSIONS_TABLE', 'apphub_app_versions'),
     'app_permissions_table' => env('APPHUB_APP_PERMISSIONS_TABLE', 'apphub_app_permissions'),
     'app_bridge_consents_table' => env('APPHUB_APP_BRIDGE_CONSENTS_TABLE', 'apphub_app_bridge_consents'),
+    'app_bridge_parent_consents_table' => env(
+        'APPHUB_APP_BRIDGE_PARENT_CONSENTS_TABLE',
+        'apphub_app_bridge_parent_consents',
+    ),
+    'app_bridge_parent_approvals_table' => env(
+        'APPHUB_APP_BRIDGE_PARENT_APPROVALS_TABLE',
+        'apphub_app_bridge_parent_approvals',
+    ),
     'app_bridge_consent_intents_table' => env('APPHUB_APP_BRIDGE_CONSENT_INTENTS_TABLE', 'apphub_app_bridge_consent_intents'),
     'app_zone_access_table' => env('APPHUB_APP_ZONE_ACCESS_TABLE', 'apphub_app_zone_access'),
     'app_launch_tokens_table' => env('APPHUB_APP_LAUNCH_TOKENS_TABLE', 'apphub_app_launch_tokens'),

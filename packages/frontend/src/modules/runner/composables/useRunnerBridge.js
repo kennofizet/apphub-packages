@@ -71,6 +71,7 @@ export function useRunnerBridge(options) {
       getRuntimeType: options.getRuntimeType,
       isOpaqueHostedSandbox,
       getParentBridgeCatalog: options.getParentBridgeCatalog,
+      isDraftApp: options.isDraftApp,
       hasProductParent: () => productRelay.hasProductParent(),
       forwardParentCall: (id, action, args, meta) => productRelay.forwardCall(id, action, args, meta),
       forwardParentEvent: (name, payload, meta) => productRelay.forwardEvent(name, payload, meta),

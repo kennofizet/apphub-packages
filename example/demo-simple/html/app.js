@@ -2,6 +2,8 @@ const btn = document.getElementById('btn')
 const btnVerify = document.getElementById('btn-verify')
 const btnNotify = document.getElementById('btn-notify')
 const btnReportError = document.getElementById('btn-report-error')
+const btnCallParent = document.getElementById('btn-call-parent')
+const btnCallParentReal = document.getElementById('btn-call-parent-real')
 const hello = document.getElementById('hello')
 const status = document.getElementById('status')
 const versionEl = document.getElementById('version')
@@ -141,6 +143,36 @@ btnReportError?.addEventListener('click', async () => {
     hello.textContent = bridgeErr instanceof Error ? bridgeErr.message : 'reportError failed'
   }
 })
+
+async function runCallParent(btn, { forceReal = false } = {}) {
+  hello.hidden = false
+  if (!bridge.ready) {
+    hello.textContent = 'Bridge not ready — open from App Hub (product iframe shell), then try again'
+    bridge.requestBridgeReady()
+    return
+  }
+  const hasScope = bridge.scopesGranted().includes('parent.project.list')
+  const mode = forceReal ? 'real API' : 'auto'
+  btn.disabled = true
+  hello.textContent = hasScope
+    ? `callParent(project.list) [${mode}]…`
+    : `callParent(project.list) [${mode}]… (no scope)`
+  try {
+    const result = await bridge.callParent(
+      'project.list',
+      { query: { page: 1 } },
+      forceReal ? { forceReal: true } : undefined,
+    )
+    hello.textContent = `callParent ok [${mode}] — result: ${JSON.stringify(result)}`
+  } catch (err) {
+    hello.textContent = `[${mode}] ${err instanceof Error ? err.message : 'callParent failed'}`
+  } finally {
+    btn.disabled = false
+  }
+}
+
+btnCallParent?.addEventListener('click', () => runCallParent(btnCallParent, { forceReal: false }))
+btnCallParentReal?.addEventListener('click', () => runCallParent(btnCallParentReal, { forceReal: true }))
 
 if (window.parent !== window) {
   if (status && !launchToken) {

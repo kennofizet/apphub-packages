@@ -11,6 +11,7 @@ import {
   findParentBridgeEvent,
   normalizeParentBridgeCatalog,
 } from './parentBridgeCatalog.js'
+import { draftParentBridgeFixture } from './parentBridgeDraftFixtures.js'
 import {
   assertParentBridgePayloadSize,
   isValidParentBridgeActionName,
@@ -54,6 +55,7 @@ function isBridgeMessage(data) {
  *   getColorScheme?: () => string | null,
  *   isOpaqueHostedSandbox?: () => boolean,
  *   getParentBridgeCatalog?: () => object | null,
+ *   isDraftApp?: () => boolean,
  *   forwardParentCall?: (id: string, action: string, args: object, meta: object) => Promise<unknown>,
  *   forwardParentEvent?: (name: string, payload: object, meta: object) => void,
  *   hasProductParent?: () => boolean,
@@ -65,6 +67,26 @@ export function createRunnerBridgeHost(options) {
   /** Hub session desktop consents (message, badge) — UI only. */
   let sessionGranted = new Set()
   let stopped = false
+
+  function isDraftApp() {
+    return options.isDraftApp?.() === true
+  }
+
+  /** Soft failures where draft fixtures may stand in for real parent data. */
+  function isParentBridgeSoftFail(message) {
+    const msg = String(message ?? '')
+    return (
+      msg === 'Scope not granted'
+      || msg === 'PARENT_UNAVAILABLE'
+      || msg === 'PARENT_TIMEOUT'
+      || msg === 'SCOPE_NOT_GRANTED'
+      || msg === 'FORBIDDEN'
+      || msg === 'NOT_IMPLEMENTED'
+      || msg.includes('Install consent')
+      || msg.includes('Permission denied')
+      || msg.includes('Parent bridge')
+    )
+  }
 
   function syncTokenScopesFromContext() {
     const ctx = options.getLaunchContext?.()
@@ -316,9 +338,14 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
       if (method === 'callParent') {
         const action = String(args?.[0] ?? '').trim()
         const actionArgs = args?.[1]
+        const callOptions = args?.[2] && typeof args[2] === 'object' && !Array.isArray(args[2])
+          ? args[2]
+          : {}
         const normalizedArgs = actionArgs && typeof actionArgs === 'object' && !Array.isArray(actionArgs)
           ? actionArgs
           : {}
+        // forceReal: skip draft Hub fixtures and always use real parent / strict errors
+        const allowDraftFixture = isDraftApp() && callOptions.forceReal !== true
 
         if (!action) {
           reply(id, false, null, 'Action required')
@@ -338,16 +365,28 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!tokenScopes.has(entry.scope)) {
+          if (allowDraftFixture) {
+            reply(id, true, draftParentBridgeFixture(action))
+            return
+          }
           reply(id, false, null, 'Scope not granted')
           return
         }
 
         if (!options.hasProductParent?.()) {
+          if (allowDraftFixture) {
+            reply(id, true, draftParentBridgeFixture(action))
+            return
+          }
           reply(id, false, null, 'PARENT_UNAVAILABLE')
           return
         }
 
         if (!options.forwardParentCall) {
+          if (allowDraftFixture) {
+            reply(id, true, draftParentBridgeFixture(action))
+            return
+          }
           reply(id, false, null, 'PARENT_UNAVAILABLE')
           return
         }
@@ -359,12 +398,21 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
           return
         }
 
-        const result = await options.forwardParentCall(id, action, normalizedArgs, {
-          app_slug: slug,
-          session_id: ctx.session_id ?? null,
-          bridge_scope: entry.scope,
-        })
-        reply(id, true, result)
+        try {
+          const result = await options.forwardParentCall(id, action, normalizedArgs, {
+            app_slug: slug,
+            session_id: ctx.session_id ?? null,
+            bridge_scope: entry.scope,
+          })
+          reply(id, true, result)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Bridge error'
+          if (allowDraftFixture && isParentBridgeSoftFail(message)) {
+            reply(id, true, draftParentBridgeFixture(action))
+            return
+          }
+          reply(id, false, null, message)
+        }
         return
       }
 
@@ -393,11 +441,19 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!tokenScopes.has(entry.scope)) {
+          if (isDraftApp()) {
+            reply(id, true, undefined)
+            return
+          }
           reply(id, false, null, 'Scope not granted')
           return
         }
 
         if (!options.hasProductParent?.() || !options.forwardParentEvent) {
+          if (isDraftApp()) {
+            reply(id, true, undefined)
+            return
+          }
           reply(id, false, null, 'PARENT_UNAVAILABLE')
           return
         }

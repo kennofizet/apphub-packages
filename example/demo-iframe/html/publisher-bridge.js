@@ -189,6 +189,25 @@
       })
     }
 
+    /**
+     * Parent production bridge — Hub relays to product shell → POST /parent-bridge/call
+     * @param {string} action
+     * @param {object} [args]
+     * @param {{ forceReal?: boolean }} [options] forceReal skips draft Hub fixtures
+     */
+    function callParent(action, args, options) {
+      const bridgeArgs = [action, args ?? {}]
+      if (options && typeof options === 'object') {
+        bridgeArgs.push(options)
+      }
+      return callBridge('callParent', bridgeArgs)
+    }
+
+    /** Fire-and-forget parent event — Hub relays to product shell → POST /parent-bridge/event */
+    function emitToParent(name, payload) {
+      return callBridge('emitToParent', [name, payload ?? {}])
+    }
+
     function requestBridgeReady() {
       if (global.parent === global) return
       global.parent.postMessage({ channel: BRIDGE_CHANNEL, event: EVENT_PING }, '*')
@@ -252,6 +271,8 @@
       fetchBridgeUser,
       fetchBridgeNotify,
       callBridge,
+      callParent,
+      emitToParent,
       requestBridgeReady,
       handleBridgeMessage,
       formatHttpError,

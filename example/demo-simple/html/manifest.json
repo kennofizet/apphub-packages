@@ -1,7 +1,7 @@
 {
-  "slug": "demo-simple-html",
+  "slug": "demo-simple-htmln",
   "name": "demo-simple-html",
-  "version": "1.1.97",
+  "version": "1.1.118",
   "description": "Plain HTML, CSS, and JavaScript hosted bundle example.",
   "main": "index.html",
   "type": "module",
@@ -16,8 +16,24 @@
   "runtime_type": "hosted",
   "permissions": [
     "user.read",
-    "desktop.notify"
+    "desktop.notify",
+    "parent.project.list",
+    "parent.events"
   ],
+  "parent_bridge": {
+    "actions": [
+      {
+        "name": "project.list",
+        "scope": "parent.project.list"
+      }
+    ],
+    "events": [
+      {
+        "name": "bonus.assign",
+        "scope": "parent.events"
+      }
+    ]
+  },
   "api_urls": [
     "http://localhost:51732"
   ]

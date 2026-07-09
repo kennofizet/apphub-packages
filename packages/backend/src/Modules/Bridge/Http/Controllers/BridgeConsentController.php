@@ -79,14 +79,15 @@ class BridgeConsentController extends Controller
             return $this->apiErrorResponse('You do not have permission for this app', 403);
         }
 
-        if (!$this->intents->consumeIntent($validated['intent_token'], $app, $userId)) {
+        $bundleVersion = $this->normalizeBundleVersion($validated['version'] ?? null);
+
+        if (!$this->intents->consumeIntent($validated['intent_token'], $app, $userId, $bundleVersion)) {
             return $this->apiErrorResponse(
                 'Invalid or expired install intent — open the permission dialog again',
                 403,
             );
         }
 
-        $bundleVersion = $this->normalizeBundleVersion($validated['version'] ?? null);
         $recorded = $this->consents->recordManifestConsents($app, $userId, $bundleVersion);
 
         return $this->apiResponseWithContext(['scopes_recorded' => $recorded]);

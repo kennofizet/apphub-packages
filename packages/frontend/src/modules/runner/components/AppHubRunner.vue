@@ -279,6 +279,7 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   getAllowedProductOrigins: () => moduleOptions?.allowedProductOrigins ?? [],
   getParentBridgeCatalog: () => launchContext.value?.parent_bridge ?? null,
   getParentBridgeTimeoutMs: () => 30_000,
+  isDraftApp: () => props.status === 'draft',
 })
 
 const preflightTargetLabel = computed(() => {

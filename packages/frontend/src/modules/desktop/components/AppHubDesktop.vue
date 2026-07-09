@@ -884,10 +884,12 @@ async function persistBridgeConsent(app, intentToken, permissions = [], apiUrls 
 }
 
 async function handleInstallUserApp(app, position, method = 'local') {
-  if (method !== 'publish') {
-    const permitted = await askInstallPermissions(app, 'install')
-    if (!permitted) return 'cancelled'
-  }
+  // Always require explicit Accept dialog — never auto-record publish drop consents.
+  const permitted = await askInstallPermissions(
+    app,
+    method === 'publish' ? 'update' : 'install',
+  )
+  if (!permitted) return 'cancelled'
 
   let result = shell.installUserApp(app, position, method)
   while (result?.needsDuplicateChoice) {
@@ -897,30 +899,6 @@ async function handleInstallUserApp(app, position, method = 'local') {
   }
   assignDefaultIconPositions()
   schedulePersist()
-  if (result && result !== 'cancelled' && method === 'publish') {
-    const permissions = resolveAppPermissions(app)
-    const apiUrls = resolveAppApiUrls(app)
-    if (needsServerInstallConsent(app, permissions, apiUrls)) {
-      const api = getHostApiForApp(rootApp)
-      const version = resolveInstallVersion(app)
-      let intentToken = null
-      try {
-        const res = await api.createInstallIntent(app.slug, version ? { version } : {})
-        intentToken = res?.data?.data?.intent_token ?? res?.data?.intent_token ?? null
-      } catch {
-        return 'cancelled'
-      }
-      const saved = await persistBridgeConsent(app, intentToken, permissions, apiUrls)
-      if (!saved) {
-        desktopNotifications.push({
-          type: 'error',
-          title: app?.name || app?.slug || labels.value.notif_error_title,
-          message: labels.value.install_perm_consent_failed,
-        })
-        return 'cancelled'
-      }
-    }
-  }
   return result
 }
 

@@ -12,6 +12,8 @@ use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppManifestParser;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppVersionReviewStatus;
+use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentIntentService;
+use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
 use RuntimeException;
 
 final class AppPublishService
@@ -172,6 +174,7 @@ final class AppPublishService
         $app->save();
 
         $this->skipOtherPendingVersions($app->id, $nextVersion);
+        $this->invalidateInstallConsentAfterDraftResubmit($app, $ownerUserId, $nextVersion);
 
         return $app;
     }
@@ -243,8 +246,20 @@ final class AppPublishService
         $app->save();
 
         $this->skipOtherPendingVersions($app->id, $nextVersion);
+        $this->invalidateInstallConsentAfterDraftResubmit($app, $ownerUserId, $nextVersion);
 
         return $this->persistHostedIcon($app, $meta, $stored['path'], $iconUpload);
+    }
+
+    /**
+     * Draft re-submit: clear publisher parent ack for the new version only; basic consents for all users stay.
+     */
+    private function invalidateInstallConsentAfterDraftResubmit(App $app, int $ownerUserId, string $bundleVersion): void
+    {
+        $consents = app(AppBridgeConsentService::class);
+        $consents->revokeParentConsentsForUserVersion($app, $ownerUserId, $bundleVersion);
+        $consents->revokeParentDevApprovalForVersion($app, $bundleVersion);
+        app(AppBridgeConsentIntentService::class)->invalidateOpenIntentsForApp($app);
     }
 
     /**

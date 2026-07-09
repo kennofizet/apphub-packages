@@ -107,8 +107,10 @@
     saveFile(payload) {
       return postCall('saveFile', [payload])
     },
-    callParent(action, args) {
-      return postCall('callParent', [action, args])
+    callParent(action, args, options) {
+      const callArgs = [action, args]
+      if (options && typeof options === 'object') callArgs.push(options)
+      return postCall('callParent', callArgs)
     },
     emitToParent(event, payload) {
       return postCall('emitToParent', [event, payload])

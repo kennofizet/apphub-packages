@@ -92,6 +92,21 @@ final class AppVersionService
         return $this->permissionsForVersion($app, $versionKey);
     }
 
+    /**
+     * Manifest for launch/runtime security checks (pinned version or catalog current).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function manifestForLaunchBundle(App $app, ?string $version): ?array
+    {
+        $versionKey = $version !== null ? trim($version) : '';
+        if ($versionKey === '') {
+            return $this->manifestForVersion($app, (string) $app->version);
+        }
+
+        return $this->manifestForVersion($app, $versionKey);
+    }
+
     /** @return list<string> */
     public function apiUrlsForLaunchBundle(App $app, ?string $version): array
     {
@@ -166,6 +181,27 @@ final class AppVersionService
         }
 
         return AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function manifestForVersion(App $app, string $version): ?array
+    {
+        $version = trim($version);
+        if ($version !== '' && $version === (string) $app->version) {
+            $fromApp = is_array($app->manifest) ? $app->manifest : null;
+            if ($fromApp !== null) {
+                return $fromApp;
+            }
+        }
+
+        $row = $version !== '' ? $this->findVersionRow($app, $version) : null;
+        if ($row !== null && is_array($row->manifest)) {
+            return $row->manifest;
+        }
+
+        return is_array($app->manifest) ? $app->manifest : null;
     }
 
     private function canUserLaunchVersion(App $app, AppVersion $row, int $userId): bool

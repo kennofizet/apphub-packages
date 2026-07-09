@@ -2,6 +2,7 @@
 
 namespace Kennofizet\AppHub\Modules\Catalog\Services;
 
+use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppStatus;
@@ -57,6 +58,7 @@ final class AppHubService
             $app = $this->publish->promotePendingVersion($app);
             $this->ensureDefaultZoneAccess($app);
             $this->pingHealthIfConfigured($app);
+            $this->approveParentBridgeForLiveVersion($app, $actorUserId);
 
             return $app;
         }
@@ -68,9 +70,20 @@ final class AppHubService
             $this->publish->markLiveVersionPublished($app);
             $this->ensureDefaultZoneAccess($app);
             $this->pingHealthIfConfigured($app);
+            $this->approveParentBridgeForLiveVersion($app, $actorUserId);
         }
 
         return $app;
+    }
+
+    private function approveParentBridgeForLiveVersion(App $app, ?int $actorUserId): void
+    {
+        $version = trim((string) ($app->version ?? ''));
+        if ($version === '') {
+            return;
+        }
+
+        app(AppBridgeConsentService::class)->approveParentBridgeForVersion($app, $version, $actorUserId);
     }
 
     public function assertDevUser(int $userId): void

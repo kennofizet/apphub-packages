@@ -3,10 +3,13 @@
 namespace Kennofizet\AppHub\Modules\Bridge\ParentBridge;
 
 use Illuminate\Support\Facades\RateLimiter;
-use Kennofizet\AppHub\Modules\Bridge\ParentBridge\Contracts\ParentBridgePermissionChecker;
 use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
+use Kennofizet\AppHub\Modules\Bridge\ParentBridge\Contracts\ParentBridgePermissionChecker;
 use Kennofizet\AppHub\Modules\Bridge\Support\ParentBridgeManifest;
+use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
+use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
+use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
 use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Kennofizet\PackagesCore\Models\User;
 
@@ -16,6 +19,7 @@ final class ParentBridgeSecurityGate
 
     public function __construct(
         private readonly AppCatalogService $catalog,
+        private readonly AppVersionService $versions,
         private readonly AppBridgeConsentService $consents,
         private readonly LaunchTokenService $launchTokens,
         private readonly ParentBridgePermissionChecker $permissionChecker,
@@ -111,7 +115,10 @@ final class ParentBridgeSecurityGate
             return $this->error('FORBIDDEN', 'You cannot use this app');
         }
 
-        $manifestBlock = ParentBridgeManifest::normalizeBlock(is_array($app->manifest) ? $app->manifest : null);
+        $bundleVersion = $this->resolveSessionBundleVersion($userId, $appSlug, $sessionId, $app);
+        $manifestBlock = ParentBridgeManifest::normalizeBlock(
+            $this->versions->manifestForLaunchBundle($app, $bundleVersion),
+        );
         $manifestEntry = $action !== null
             ? ParentBridgeManifest::findActionInBlock($manifestBlock, $action)
             : ParentBridgeManifest::findEventInBlock($manifestBlock, (string) $event);
@@ -124,7 +131,7 @@ final class ParentBridgeSecurityGate
             return $this->error('SCOPE_NOT_GRANTED', 'bridge_scope mismatch');
         }
 
-        if (!$this->consents->userHasScope($app, $userId, $scope)) {
+        if (!$this->consents->userHasScope($app, $userId, $scope, $bundleVersion)) {
             return $this->error('SCOPE_NOT_GRANTED', 'Install consent required');
         }
 
@@ -193,6 +200,31 @@ final class ParentBridgeSecurityGate
         ]);
 
         return null;
+    }
+
+    private function resolveSessionBundleVersion(
+        int $userId,
+        string $appSlug,
+        ?string $sessionId,
+        App $app,
+    ): ?string {
+        $sessionId = $sessionId !== null ? trim($sessionId) : '';
+        if ($sessionId !== '') {
+            $record = $this->launchTokens->findActiveSessionForUser($userId, $appSlug, $sessionId);
+            if ($record !== null) {
+                $fromSession = $record->bundle_version !== null
+                    ? trim((string) $record->bundle_version)
+                    : '';
+
+                if ($fromSession !== '') {
+                    return AppSemver::normalize($fromSession) ?: $fromSession;
+                }
+            }
+        }
+
+        $fromApp = AppSemver::normalize((string) ($app->version ?? ''));
+
+        return $fromApp !== '' ? $fromApp : null;
     }
 
     /**

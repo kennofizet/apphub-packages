@@ -11,7 +11,8 @@ export function bumpPatchVersion(version) {
 
 /** @param {string} manifestPath */
 export function readManifest(manifestPath) {
-  return JSON.parse(readFileSync(manifestPath, 'utf8'))
+  const raw = readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, '')
+  return JSON.parse(raw)
 }
 
 /**
