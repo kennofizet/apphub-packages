@@ -41,11 +41,7 @@ final class AppBundleStorageService
             throw new RuntimeException('Bundle source directory not found');
         }
 
-        $tempDir = sys_get_temp_dir() . '/apphub-bundle-' . bin2hex(random_bytes(8));
-        if (!mkdir($tempDir, 0700, true) && !is_dir($tempDir)) {
-            throw new RuntimeException('Could not create temp directory');
-        }
-
+        $tempDir = $this->makeExtractTempDir('apphub-bundle');
         $this->copyDirectory($sourceDir, $tempDir);
         try {
             $this->validateExtractedTree($tempDir, $entry);
@@ -240,10 +236,7 @@ final class AppBundleStorageService
 
     private function extractZipToTemp(UploadedFile $zip): string
     {
-        $tempDir = sys_get_temp_dir() . '/apphub-unzip-' . bin2hex(random_bytes(8));
-        if (!mkdir($tempDir, 0700, true) && !is_dir($tempDir)) {
-            throw new RuntimeException('Could not create temp directory');
-        }
+        $tempDir = $this->makeExtractTempDir('apphub-unzip');
 
         $archive = new ZipArchive();
         if ($archive->open($zip->getRealPath()) !== true) {
@@ -273,9 +266,42 @@ final class AppBundleStorageService
 
     private function normalizeExtractRoot(string $tempDir): string
     {
-        $entries = array_values(array_filter(scandir($tempDir) ?: [], static fn ($e) => $e !== '.' && $e !== '..'));
+        $entries = @scandir($tempDir);
+        if ($entries === false) {
+            throw new RuntimeException(
+                'Could not read extracted bundle directory. '
+                . 'Set APPHUB_BUNDLE_EXTRACT_TEMP_ROOT to a writable path.',
+            );
+        }
+
+        $entries = array_values(array_filter($entries, static fn ($e) => $e !== '.' && $e !== '..'));
         if (count($entries) === 1 && is_dir($tempDir . '/' . $entries[0])) {
             return $tempDir . '/' . $entries[0];
+        }
+
+        return $tempDir;
+    }
+
+    private function resolveExtractTempRoot(): string
+    {
+        $configured = trim(str_replace('\\', '/', (string) config('apphub.bundle_extract_temp_root', '')));
+        if ($configured !== '') {
+            return rtrim($configured, '/');
+        }
+
+        return rtrim(str_replace('\\', '/', sys_get_temp_dir()), '/');
+    }
+
+    private function makeExtractTempDir(string $prefix): string
+    {
+        $base = $this->resolveExtractTempRoot();
+        if (!is_dir($base) && !mkdir($base, 0755, true) && !is_dir($base)) {
+            throw new RuntimeException('Could not create bundle extract temp root: ' . $base);
+        }
+
+        $tempDir = $base . '/' . $prefix . '-' . bin2hex(random_bytes(8));
+        if (!mkdir($tempDir, 0700, true) && !is_dir($tempDir)) {
+            throw new RuntimeException('Could not create temp directory');
         }
 
         return $tempDir;

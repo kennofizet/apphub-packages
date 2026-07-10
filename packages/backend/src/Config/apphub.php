@@ -127,6 +127,14 @@ return [
     'bundle_disk' => env('APPHUB_BUNDLE_DISK', 'local'),
     'bundle_max_bytes' => (int) env('APPHUB_BUNDLE_MAX_BYTES', 52_428_800),
     'bundle_storage_root' => env('APPHUB_BUNDLE_STORAGE_ROOT', 'apphub/bundles'),
+    /**
+     * Writable directory for zip extract before files move to bundle disk.
+     * On Windows Laragon/IIS, sys_get_temp_dir() may be C:\Windows\Temp (not readable by the web user).
+     */
+    'bundle_extract_temp_root' => env(
+        'APPHUB_BUNDLE_EXTRACT_TEMP_ROOT',
+        PHP_OS_FAMILY === 'Windows' ? storage_path('framework/apphub-temp') : '',
+    ),
     'icon_storage_root' => env('APPHUB_ICON_STORAGE_ROOT', 'apphub/icons'),
 
     /** Re-ping healthcheck_url when older than this (store catalog + launch). */
