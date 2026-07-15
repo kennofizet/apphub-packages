@@ -7,6 +7,9 @@ use Kennofizet\AppHub\Modules\Launch\Http\Controllers\UserNotificationController
 Route::post('apps/{slug}/launch', [LaunchController::class, 'launch'])
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
 
+Route::post('apps/{slug}/launch/refresh', [LaunchController::class, 'refresh'])
+    ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
+
 Route::post('apps/{slug}/ping', [LaunchController::class, 'ping'])
     ->where('slug', '[a-z0-9][a-z0-9_-]{0,63}');
 

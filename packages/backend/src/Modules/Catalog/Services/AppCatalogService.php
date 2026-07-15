@@ -258,15 +258,30 @@ final class AppCatalogService
             'bundle_hash' => $app->bundle_hash,
             'bundle_entry' => $app->bundle_entry,
             'bundle_file_count' => is_array($app->manifest) ? ($app->manifest['file_count'] ?? null) : null,
-            'permissions' => $this->resolvePermissionsForCatalog($app),
-            'api_urls' => $this->resolveApiUrlsForCatalog($app),
+            'permissions' => $this->resolvePermissionsForCatalog($app, $showReviewFields),
+            'api_urls' => $this->resolveApiUrlsForCatalog($app, $showReviewFields),
             'installed' => false,
         ];
     }
 
-    /** @return list<string> */
-    private function resolvePermissionsForCatalog(App $app): array
+    /**
+     * When a pending upgrade exists and the viewer can see review fields (owner/dev/publisher),
+     * prefer the pending bundle manifest — live apps.manifest stays the approved store version.
+     *
+     * @return list<string>
+     */
+    private function resolvePermissionsForCatalog(App $app, bool $preferPendingUpgrade = false): array
     {
+        if ($preferPendingUpgrade) {
+            $pending = trim((string) ($app->pending_version ?? ''));
+            if ($pending !== '') {
+                $fromPending = $this->permissionsFromVersion($app->id, $pending);
+                if ($fromPending !== []) {
+                    return $fromPending;
+                }
+            }
+        }
+
         $fromApp = AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
         if ($fromApp !== []) {
             return $fromApp;
@@ -280,17 +295,31 @@ final class AppCatalogService
             }
         }
 
-        $pending = trim((string) ($app->pending_version ?? ''));
-        if ($pending !== '') {
-            return $this->permissionsFromVersion($app->id, $pending);
+        if (!$preferPendingUpgrade) {
+            $pending = trim((string) ($app->pending_version ?? ''));
+            if ($pending !== '') {
+                return $this->permissionsFromVersion($app->id, $pending);
+            }
         }
 
         return [];
     }
 
-    /** @return list<string> */
-    private function resolveApiUrlsForCatalog(App $app): array
+    /**
+     * @return list<string>
+     */
+    private function resolveApiUrlsForCatalog(App $app, bool $preferPendingUpgrade = false): array
     {
+        if ($preferPendingUpgrade) {
+            $pending = trim((string) ($app->pending_version ?? ''));
+            if ($pending !== '') {
+                $fromPending = $this->apiUrlsFromVersion($app->id, $pending);
+                if ($fromPending !== []) {
+                    return $fromPending;
+                }
+            }
+        }
+
         $fromApp = AppManifestApiUrl::fromManifest(is_array($app->manifest) ? $app->manifest : null);
         if ($fromApp !== []) {
             return $fromApp;
@@ -304,9 +333,11 @@ final class AppCatalogService
             }
         }
 
-        $pending = trim((string) ($app->pending_version ?? ''));
-        if ($pending !== '') {
-            return $this->apiUrlsFromVersion($app->id, $pending);
+        if (!$preferPendingUpgrade) {
+            $pending = trim((string) ($app->pending_version ?? ''));
+            if ($pending !== '') {
+                return $this->apiUrlsFromVersion($app->id, $pending);
+            }
         }
 
         return [];

@@ -18,12 +18,13 @@
 Publisher documentation explains **how to use** App Hub from an app:
 
 - **Runtime types** — `hosted` (zip on Hub) vs `iframe` (your `entry_url` SPA); see `audiences.publisher.runtime_types`
-- Launch flow (`POST /apps/{slug}/launch` — server mints `scopes_granted` from install consent DB)
+- Launch flow (`POST /apps/{slug}/launch` — server mints `scopes_granted` + short-lived `launch_token` + `expires_in`; Hub auto-refreshes while the window is open)
+- **Parent bridge demo mode** — before DEV approve (draft / pending), `callParent` may return host demo fixtures; runner shows a Demo badge; after approve + relaunch, real `parent.*` scopes apply
 - **Hosted storage** — automatic `localStorage` shim; `window.__APPHUB_STORAGE__.ready` (hosted only)
 - **Hosted troubleshooting** — zip contract, ES modules (`type="module"`), CSP `frame-ancestors`, runtime serve; see `audiences.publisher.hosted_runtime_troubleshooting` (schema ≥ 1.11.0)
 - `POST /apps/{slug}/install-intent` when permission dialog opens
 - `POST /apps/{slug}/bridge-consents` with `intent_token` after user Accept
-- `AppHubBridge` handshake — full `bridge:ready` context (`bridge_api_base`, `publisher_api_base`, `app_version`, …)
+- `AppHubBridge` handshake — full `bridge:ready` context (`bridge_api_base`, `publisher_api_base`, `app_version`, …); listen again after Hub refreshes `launch_token`
 - `getDisplayUser()` for UI; publisher backend `GET bridge/user` for verified identity
 - `requestPermission`, `sendDesktopMessage`, `setTaskbarBadge` for Hub desktop UI (postMessage)
 - `POST bridge/notify` from publisher backend (`api_urls`) for inbox notifications — same pattern as `GET bridge/user`
@@ -48,6 +49,10 @@ Host backend must:
 
 - Enforce scopes on every `bridge/*` call
 - Validate `launch_token` per app slug + session; `user_id` from `knf_core_user_id` (not client headers)
+- Keep `launch_token` short (`APPHUB_LAUNCH_TOKEN_TTL`); allow Hub `POST …/launch/refresh` within `APPHUB_LAUNCH_SESSION_MAX_TTL`
+- Refresh recomputes `scopes_granted` from live consent; uninstall/revoke deletes launch sessions
+- Configure `defaults.demo_data` in `apphub-parent-bridge.php` for publisher draft/pending testing
+- On DEV approve: sync owner parent consents for the approved version (no reinstall required)
 - `POST /apps/{slug}/bridge-consents` records manifest permissions server-side after install accept
 - `POST /apps/{slug}/launch` mints token scopes from server consent DB only
 - `GET integration-docs/internal` only with `X-AppHub-Host-Access` matching `APPHUB_HOST_ACCESS_SECRET` (host integrator — **not** packages-core zone/server manager users)
@@ -71,8 +76,8 @@ Parent `postMessage` must include `productOrigin: window.location.origin`. Hub f
 | Laravel env | Role |
 |-------------|------|
 | *(catalog)* | Per-app `apps.entry_url` + DEV approval — primary allowlist |
-| `APPHUB_ALLOWED_RUNTIME_ORIGINS` | Optional enterprise cap on publisher origins |
-| `APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN` | Production opt-in when enterprise list is empty (catalog+DEV model) |
+| `APPHUB_ALLOWED_RUNTIME_ORIGINS` | Optional enterprise cap on publisher origins. Exact `http://host:port` entries allow intranet HTTP for those origins only (`ALLOW_ANY` never implies HTTP) |
+| `APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN` | Production opt-in when enterprise list is empty (HTTPS only; catalog+DEV model) |
 
 Iframe runtime uses `allow-same-origin` on the **publisher** origin only — Hub `localStorage` stays isolated.
 
@@ -95,5 +100,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`)
 - **Major**: breaking bridge or launch contract

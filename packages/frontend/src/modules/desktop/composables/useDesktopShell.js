@@ -96,6 +96,8 @@ export function createDesktopShell(options = {}) {
         slug: app.slug,
         status: app.status ?? 'active',
         installedVersion: app.installedVersion ?? app.version ?? null,
+        pending_version: app.pending_version ?? null,
+        rejected_version: app.rejected_version ?? null,
         permissions: Array.isArray(app.permissions) ? app.permissions : [],
         apiUrls: resolveAppApiUrls(app),
         entryUrl: app.entry_url ?? null,

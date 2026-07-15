@@ -55,6 +55,37 @@ class LaunchController extends Controller
         return $this->apiResponseWithContext($data);
     }
 
+    /** Hub silently renews short-lived launch_token for an open session (Core auth required). */
+    public function refresh(Request $request, string $slug): JsonResponse
+    {
+        if ($response = $this->ensureValidSlug($slug)) {
+            return $response;
+        }
+
+        if ($response = $this->ensureAuthenticated()) {
+            return $response;
+        }
+
+        $validated = $request->validate([
+            'session_id' => 'required|uuid',
+        ]);
+
+        try {
+            $data = $this->launch->refresh(
+                $slug,
+                (int) self::currentUserId(),
+                self::currentUserZoneIdList(),
+                (string) $validated['session_id'],
+                $request->ip(),
+                (string) $request->userAgent(),
+            );
+        } catch (LaunchDeniedException $e) {
+            return $this->apiErrorResponse($e->getMessage(), $e->httpStatus());
+        }
+
+        return $this->apiResponseWithContext($data);
+    }
+
     /** Tool backend verifies launch token (no user session token required). */
     public function verifyLaunchToken(Request $request): JsonResponse
     {

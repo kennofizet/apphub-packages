@@ -2,6 +2,7 @@
 
 namespace Kennofizet\AppHub\Modules\Launch\Services;
 
+use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeDemoFixtures;
 use Kennofizet\AppHub\Modules\Bridge\Support\ParentBridgeManifest;
 use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Bridge\Services\AppBridgeConsentService;
@@ -36,7 +37,9 @@ final class LaunchService
      *     session_id: string,
      *     bundle_version: string|null,
      *     scopes_granted: list<string>,
-     *     parent_bridge: array{available: bool, actions: list<array<string, mixed>>, events: list<array<string, mixed>>}
+     *     expires_in: int,
+     *     parent_bridge: array{available: bool, actions: list<array<string, mixed>>, events: list<array<string, mixed>>},
+     *     parent_bridge_demo: array<string, mixed>
      * }
      */
     public function launch(
@@ -96,9 +99,80 @@ final class LaunchService
             'session_id' => $minted['session_id'],
             'bundle_version' => $pinnedVersion,
             'scopes_granted' => $minted['scopes_granted'],
+            'expires_in' => $minted['expires_in'],
             'parent_bridge' => ParentBridgeManifest::catalogFromManifest(
                 is_array($app->manifest) ? $app->manifest : null,
             ),
+            'parent_bridge_demo' => ParentBridgeDemoFixtures::forManifest(
+                is_array($app->manifest) ? $app->manifest : null,
+            ),
+        ];
+    }
+
+    /**
+     * Extend an open launch session with a new short-lived launch_token (Hub Core auth required).
+     *
+     * @return array{
+     *     slug: string,
+     *     launch_token: string,
+     *     session_id: string,
+     *     scopes_granted: list<string>,
+     *     expires_in: int,
+     *     bundle_version: string|null
+     * }
+     */
+    public function refresh(
+        string $slug,
+        int $userId,
+        array $userZoneIds,
+        string $sessionId,
+        ?string $ip = null,
+        ?string $userAgent = null,
+    ): array {
+        $app = $this->catalog->findBySlug($slug);
+        if ($app === null) {
+            throw new LaunchDeniedException('App not found', 404);
+        }
+
+        if ($app->isDisabled()) {
+            throw new LaunchDeniedException('App has been disabled', 403);
+        }
+
+        if (!AppStatus::canLaunch((string) $app->status)) {
+            throw new LaunchDeniedException('App is not available for launch', 403);
+        }
+
+        if (!$this->catalog->userCanLaunch($app, $userId, $userZoneIds)) {
+            throw new LaunchDeniedException('You do not have permission to launch this app', 403);
+        }
+
+        $record = $this->launchTokens->findSessionForRefresh($userId, (string) $app->slug, $sessionId);
+        if ($record === null) {
+            throw new LaunchDeniedException('Launch session expired — reopen the app', 401);
+        }
+
+        $bundleVersion = $record->bundle_version !== null ? trim((string) $record->bundle_version) : '';
+        $pinnedVersion = $bundleVersion !== '' ? $this->normalizeBundleVersion($bundleVersion) : null;
+
+        $refreshed = $this->launchTokens->refreshForUser(
+            $app,
+            $userId,
+            $sessionId,
+            $this->bridgeConsents->scopesForLaunch($app, $userId, $pinnedVersion),
+            $ip,
+            $userAgent,
+        );
+        if ($refreshed === null) {
+            throw new LaunchDeniedException('Launch session expired — reopen the app', 401);
+        }
+
+        return [
+            'slug' => $app->slug,
+            'launch_token' => $refreshed['launch_token'],
+            'session_id' => $refreshed['session_id'],
+            'scopes_granted' => $refreshed['scopes_granted'],
+            'expires_in' => $refreshed['expires_in'],
+            'bundle_version' => $refreshed['bundle_version'],
         ];
     }
 

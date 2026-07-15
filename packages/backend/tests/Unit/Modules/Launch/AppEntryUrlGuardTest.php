@@ -95,10 +95,48 @@ final class AppEntryUrlGuardTest extends TestCase
         app('config')->set('apphub.allow_localhost_api_urls', false);
         app('config')->set('app.env', 'production');
         app('config')->set('apphub.allowed_runtime_origins', []);
+        app('config')->set('apphub.allow_any_publisher_runtime_origin', true);
 
         $this->expectException(LaunchDeniedException::class);
-        $this->expectExceptionMessage('App entry URL must use HTTPS');
+        $this->expectExceptionMessage('must use HTTPS');
 
         AppEntryUrlGuard::assertRegisterableUrl('http://tools.example.com/app/');
+    }
+
+    public function test_allows_http_when_exact_origin_on_enterprise_allowlist(): void
+    {
+        if (!function_exists('app') || !app()->bound('config')) {
+            $this->markTestSkipped('Laravel app container not available');
+        }
+
+        app('config')->set('apphub.allow_localhost_api_urls', false);
+        app('config')->set('app.env', 'production');
+        app('config')->set('apphub.allow_any_publisher_runtime_origin', false);
+        app('config')->set('apphub.allowed_runtime_origins', [
+            'http://tools.internal:8080',
+            'https://apps.example.com',
+        ]);
+
+        AppEntryUrlGuard::assertRegisterableUrl('http://tools.internal:8080/my-app/');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_rejects_http_when_origin_not_on_enterprise_allowlist(): void
+    {
+        if (!function_exists('app') || !app()->bound('config')) {
+            $this->markTestSkipped('Laravel app container not available');
+        }
+
+        app('config')->set('apphub.allow_localhost_api_urls', false);
+        app('config')->set('app.env', 'production');
+        app('config')->set('apphub.allowed_runtime_origins', [
+            'https://apps.example.com',
+        ]);
+
+        $this->expectException(LaunchDeniedException::class);
+        $this->expectExceptionMessage('must use HTTPS');
+
+        AppEntryUrlGuard::assertRegisterableUrl('http://tools.internal:8080/my-app/');
     }
 }

@@ -73,17 +73,27 @@
     <template v-else>
       <p v-if="loading" class="apphub-runner__msg">{{ labels.loading }}</p>
       <p v-else-if="error" class="apphub-runner__error">{{ error }}</p>
-      <iframe
-        v-else-if="launchUrl"
-        :key="slug"
-        ref="iframeRef"
-        :src="launchUrl"
-        class="apphub-runner__frame"
-        :title="slug"
-        :sandbox="iframeSandbox"
-        referrerpolicy="strict-origin-when-cross-origin"
-        @load="onIframeLoad"
-      />
+      <div v-else-if="launchUrl" class="apphub-runner__runtime">
+        <div
+          v-if="showParentBridgeDemoBanner"
+          class="apphub-runner__demo-banner"
+          role="status"
+          :title="labels.demo_banner_hint"
+        >
+          <span class="apphub-runner__demo-banner-badge">{{ labels.demo_badge }}</span>
+          <span class="apphub-runner__demo-banner-text">{{ labels.demo_banner_hint }}</span>
+        </div>
+        <iframe
+          :key="slug"
+          ref="iframeRef"
+          :src="launchUrl"
+          class="apphub-runner__frame"
+          :title="slug"
+          :sandbox="iframeSandbox"
+          referrerpolicy="strict-origin-when-cross-origin"
+          @load="onIframeLoad"
+        />
+      </div>
     </template>
 
     <AppHubInstallPermissionsDialog
@@ -103,7 +113,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, onUnmounted, ref, watch } from 'vue'
 import { getAppHubStore } from '../../../moduleStore.js'
 import { useAppHubHostApi, useAppHubModuleStore } from '../../../composables/useAppHubHostApi.js'
 import { t } from '../../../i18n/index.js'
@@ -127,6 +137,7 @@ import {
 } from '../../../utils/installedAppPermissions.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
+import { isRunningRejectedVersion, isTestingPendingVersion } from '../../../utils/publisherTestVersion.js'
 import { useBridgeScopeConsent } from '../composables/useBridgeScopeConsent.js'
 import { injectRuntimeDocumentScrollbarsIntoIframe } from '../../../utils/runtimeDocumentScrollbars.js'
 import { useRunnerBridge } from '../composables/useRunnerBridge.js'
@@ -138,6 +149,8 @@ const props = defineProps({
   permissions: { type: Array, default: () => [] },
   apiUrls: { type: Array, default: () => [] },
   status: { type: String, default: 'active' },
+  pending_version: { type: String, default: null },
+  rejected_version: { type: String, default: null },
   runtimeType: { type: String, default: 'iframe' },
   entryUrl: { type: String, default: null },
   healthcheckUrl: { type: String, default: null },
@@ -175,6 +188,8 @@ const labels = computed(() => ({
   draft_badge: t('app_store_status_draft', lang.value),
   hosted_badge: t('runner_hosted_badge', lang.value),
   hosted_bundle: t('runner_hosted_bundle', lang.value),
+  demo_badge: t('runner_demo_badge', lang.value),
+  demo_banner_hint: t('runner_demo_banner_hint', lang.value),
   entry_url: t('draft_ping_entry_url', lang.value),
   health_url: t('draft_ping_health_url', lang.value),
   not_configured: t('draft_ping_no_health_url', lang.value),
@@ -246,6 +261,30 @@ function hubDisplayUser(moduleStore) {
   return { id: user.id, name: user.name ?? String(user.id) }
 }
 
+const publisherTestApp = computed(() => ({
+  status: props.status,
+  installedVersion: props.installedVersion,
+  pending_version: props.pending_version,
+  rejected_version: props.rejected_version,
+}))
+
+const allowParentBridgeDemo = computed(() => {
+  if (props.status === 'draft') return true
+  if (isTestingPendingVersion(publisherTestApp.value)) return true
+  if (isRunningRejectedVersion(publisherTestApp.value)) return true
+  return false
+})
+
+const hasParentBridgeDemoFixtures = computed(() => {
+  const demo = launchContext.value?.parent_bridge_demo
+  if (!demo || typeof demo !== 'object' || Array.isArray(demo)) return false
+  return Object.keys(demo).length > 0
+})
+
+const showParentBridgeDemoBanner = computed(() =>
+  allowParentBridgeDemo.value && hasParentBridgeDemoFixtures.value && Boolean(launchUrl.value),
+)
+
 const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   iframeRef,
   launchContext,
@@ -282,8 +321,9 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   getProductOrigin: () => moduleOptions?.productOrigin ?? '',
   getAllowedProductOrigins: () => moduleOptions?.allowedProductOrigins ?? [],
   getParentBridgeCatalog: () => launchContext.value?.parent_bridge ?? null,
+  getParentBridgeDemoFixtures: () => launchContext.value?.parent_bridge_demo ?? null,
+  allowParentBridgeDemo: () => allowParentBridgeDemo.value,
   getParentBridgeTimeoutMs: () => 30_000,
-  isDraftApp: () => props.status === 'draft',
 })
 
 const preflightTargetLabel = computed(() => {
@@ -318,6 +358,91 @@ const launchRuntimeType = ref(props.runtimeType)
 const pinging = ref(false)
 const pingResult = ref(null)
 const safeResult = ref(null)
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let launchRefreshTimer = null
+let launchRefreshInFlight = false
+
+function clearLaunchRefreshTimer() {
+  if (launchRefreshTimer != null) {
+    clearTimeout(launchRefreshTimer)
+    launchRefreshTimer = null
+  }
+}
+
+function scheduleLaunchRefresh(expiresInSeconds) {
+  clearLaunchRefreshTimer()
+  const ttl = Number(expiresInSeconds)
+  if (!Number.isFinite(ttl) || ttl < 30) return
+  // Refresh at ~half TTL (min 20s, max ttl - 15s) so the short token never goes idle-expired.
+  const delayMs = Math.max(20_000, Math.min((ttl - 15) * 1000, (ttl * 1000) / 2))
+  launchRefreshTimer = setTimeout(() => {
+    void refreshLaunchSession()
+  }, delayMs)
+}
+
+async function refreshLaunchSession() {
+  if (launchRefreshInFlight) return
+  if (!props.slug) return
+  const sessionId = launchContext.value?.session_id
+  if (!sessionId || !isBackendReady()) return
+
+  const refresh = typeof api?.refreshLaunch === 'function'
+    ? (slug, payload) => api.refreshLaunch(slug, payload)
+    : (typeof api?.post === 'function'
+      ? (slug, payload) => api.post(`/apps/${encodeURIComponent(slug)}/launch/refresh`, payload ?? {})
+      : null)
+  if (!refresh) return
+
+  launchRefreshInFlight = true
+  try {
+    const res = await refresh(props.slug, { session_id: sessionId })
+    const data = res?.data?.data ?? res?.data ?? {}
+    const nextToken = data.launch_token
+    if (!nextToken || typeof nextToken !== 'string') {
+      clearLaunchRefreshTimer()
+      if (launchContext.value) {
+        launchContext.value = {
+          ...launchContext.value,
+          scopes_granted: [],
+          launch_token: '',
+        }
+        sendBridgeReady()
+      }
+      return
+    }
+
+    const scopesGranted = Array.isArray(data.scopes_granted)
+      ? [...data.scopes_granted]
+      : (launchContext.value?.scopes_granted ?? [])
+
+    launchContext.value = {
+      ...(launchContext.value ?? {}),
+      launch_token: nextToken,
+      session_id: data.session_id ?? sessionId,
+      scopes_granted: scopesGranted,
+      slug: data.slug ?? props.slug,
+    }
+    sendBridgeReady()
+    scheduleLaunchRefresh(data.expires_in ?? 180)
+  } catch {
+    clearLaunchRefreshTimer()
+    if (launchContext.value) {
+      launchContext.value = {
+        ...launchContext.value,
+        scopes_granted: [],
+        launch_token: '',
+      }
+      sendBridgeReady()
+    }
+  } finally {
+    launchRefreshInFlight = false
+  }
+}
+
+onUnmounted(() => {
+  clearLaunchRefreshTimer()
+})
 
 const pingLabel = computed(() => {
   if (!pingResult.value) return ''
@@ -386,6 +511,7 @@ async function doLaunch() {
   launching.value = true
   error.value = ''
   preflightError.value = ''
+  clearLaunchRefreshTimer()
 
   try {
     const launchBody = props.installedVersion ? { version: props.installedVersion } : {}
@@ -421,9 +547,11 @@ async function doLaunch() {
       scopes_granted: scopesGranted,
       slug: data.slug ?? props.slug,
       parent_bridge: data.parent_bridge ?? null,
+      parent_bridge_demo: data.parent_bridge_demo ?? null,
     }
     launched.value = true
     mountBridge()
+    scheduleLaunchRefresh(data.expires_in ?? 180)
   } catch {
     error.value = labels.value.err_generic
   } finally {

@@ -32,4 +32,12 @@ final class LaunchTokenServiceTest extends TestCase
         $this->assertTrue($service->hasUserReadAccess(['scopes_granted' => ['user.profile']]));
         $this->assertFalse($service->hasUserReadAccess(['scopes_granted' => ['desktop.notify']]));
     }
+
+    public function test_find_session_for_refresh_rejects_invalid_session_id(): void
+    {
+        $service = new LaunchTokenService();
+
+        $this->assertNull($service->findSessionForRefresh(1, 'demo-app', 'not-a-uuid'));
+        $this->assertNull($service->findSessionForRefresh(0, 'demo-app', '11111111-1111-4111-8111-111111111111'));
+    }
 }

@@ -71,9 +71,32 @@ final class AppEntryUrlGuard
             return;
         }
 
-        if ($scheme !== 'https') {
-            throw new LaunchDeniedException('App entry URL must use HTTPS', 422);
+        if ($scheme === 'https') {
+            return;
         }
+
+        // Non-loopback HTTP only when this exact origin is in APPHUB_ALLOWED_RUNTIME_ORIGINS.
+        // APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN never implies plain HTTP.
+        if ($scheme === 'http' && self::isHttpOriginOnEnterpriseAllowlist($url)) {
+            return;
+        }
+
+        throw new LaunchDeniedException(
+            'App entry URL must use HTTPS (or an http origin listed in APPHUB_ALLOWED_RUNTIME_ORIGINS)',
+            422,
+        );
+    }
+
+    private static function isHttpOriginOnEnterpriseAllowlist(string $url): bool
+    {
+        $origin = self::originOfStatic($url);
+        if ($origin === null || !str_starts_with($origin, 'http://')) {
+            return false;
+        }
+
+        $allowed = self::enterpriseOriginsFromConfig();
+
+        return $allowed !== [] && in_array($origin, $allowed, true);
     }
 
     /**

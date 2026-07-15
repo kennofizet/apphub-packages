@@ -143,6 +143,28 @@ final class ParentBridgeRegistry
     }
 
     /**
+     * Demo payload for an action — action.demo_data overrides defaults.demo_data[name].
+     *
+     * @return mixed
+     */
+    public static function demoDataFor(string $name): mixed
+    {
+        $key = self::normalizeKey($name);
+        $entry = self::action($key);
+        if (is_array($entry) && array_key_exists('demo_data', $entry)) {
+            return $entry['demo_data'];
+        }
+
+        $defaults = self::config()['defaults'] ?? [];
+        $demoDefaults = $defaults['demo_data'] ?? [];
+        if (!is_array($demoDefaults) || !isset($demoDefaults[$key])) {
+            return null;
+        }
+
+        return $demoDefaults[$key];
+    }
+
+    /**
      * Install-dialog prompts for parent.* scopes — host config is source of truth.
      *
      * @return array<string, string> scope => user_prompt template ({app}, {scope})

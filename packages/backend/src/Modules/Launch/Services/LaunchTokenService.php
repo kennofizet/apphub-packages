@@ -41,7 +41,117 @@ final class LaunchTokenService
             'launch_token' => $plainToken,
             'session_id' => $sessionId,
             'scopes_granted' => $scopesGranted,
+            'expires_in' => $this->ttlSeconds(),
         ];
+    }
+
+    /**
+     * Rotate launch_token for an existing session while Hub user auth is still valid.
+     * Keeps session_id; replaces token hash (short theft window) and scopes_granted from live consent.
+     *
+     * @param list<string> $scopesGranted Fresh scopes from AppBridgeConsentService::scopesForLaunch
+     * @return array{launch_token: string, session_id: string, scopes_granted: list<string>, expires_in: int, bundle_version: string|null}|null
+     */
+    public function refreshForUser(
+        App $app,
+        int $userId,
+        string $sessionId,
+        array $scopesGranted = [],
+        ?string $ip = null,
+        ?string $userAgent = null,
+    ): ?array {
+        $record = $this->findSessionForRefresh($userId, (string) $app->slug, $sessionId);
+        if ($record === null) {
+            return null;
+        }
+
+        $scopes = $this->normalizeScopes($scopesGranted);
+
+        $plainToken = Str::random(64);
+        $record->token_hash = $this->hashToken($plainToken);
+        $record->expires_at = now()->addSeconds($this->ttlSeconds());
+        $record->scopes_granted = $scopes;
+        $record->used_at = null;
+        if ($ip !== null && $ip !== '') {
+            $record->ip = $ip;
+        }
+        if ($userAgent !== null && $userAgent !== '') {
+            $record->user_agent = $userAgent;
+        }
+        $record->save();
+
+        $bundleVersion = $record->bundle_version !== null ? trim((string) $record->bundle_version) : '';
+
+        return [
+            'launch_token' => $plainToken,
+            'session_id' => (string) $record->session_id,
+            'scopes_granted' => $scopes,
+            'expires_in' => $this->ttlSeconds(),
+            'bundle_version' => $bundleVersion !== '' ? $bundleVersion : null,
+        ];
+    }
+
+    /**
+     * Drop launch sessions for a user+app so refresh and token validation stop after consent revoke.
+     */
+    public function invalidateSessionsForUser(App $app, int $userId): int
+    {
+        if ($userId < 1 || (int) ($app->id ?? 0) < 1) {
+            return 0;
+        }
+
+        return AppLaunchToken::query()
+            ->where('app_id', $app->id)
+            ->where('user_id', $userId)
+            ->delete();
+    }
+
+    /**
+     * Drop all launch sessions for an app (every user) — used when app-wide consents are cleared.
+     */
+    public function invalidateSessionsForApp(App $app): int
+    {
+        if ((int) ($app->id ?? 0) < 1) {
+            return 0;
+        }
+
+        return AppLaunchToken::query()
+            ->where('app_id', $app->id)
+            ->delete();
+    }
+
+    /**
+     * Session eligible for Hub-authenticated refresh (may be past short token TTL,
+     * but still within absolute session max lifetime).
+     */
+    public function findSessionForRefresh(int $userId, string $appSlug, string $sessionId): ?AppLaunchToken
+    {
+        if ($userId < 1 || trim($sessionId) === '' || !preg_match(self::SLUG_PATTERN, $appSlug)) {
+            return null;
+        }
+
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $sessionId)) {
+            return null;
+        }
+
+        $record = AppLaunchToken::query()
+            ->where('session_id', trim($sessionId))
+            ->where('user_id', $userId)
+            ->whereHas('app', static function ($query) use ($appSlug): void {
+                $query->where('slug', $appSlug);
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if ($record === null || $record->created_at === null) {
+            return null;
+        }
+
+        if ($record->created_at->lt(now()->subSeconds($this->sessionMaxTtlSeconds()))) {
+            return null;
+        }
+
+        return $record;
     }
 
     public function resolve(string $token, string $appSlug): ?array
@@ -236,6 +346,13 @@ final class LaunchTokenService
         $configured = (int) config('apphub.launch_token_ttl', 180);
 
         return max($min, min($max, $configured));
+    }
+
+    private function sessionMaxTtlSeconds(): int
+    {
+        $tokenTtl = $this->ttlSeconds();
+
+        return max($tokenTtl, (int) config('apphub.launch_session_max_ttl', 28_800));
     }
 
     /**

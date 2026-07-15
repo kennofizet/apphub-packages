@@ -11,6 +11,55 @@ return [
         'timeout_ms' => max(1000, (int) env('APPHUB_PARENT_BRIDGE_TIMEOUT_MS', 30_000)),
         'max_args_bytes' => max(1024, (int) env('APPHUB_PARENT_BRIDGE_MAX_ARGS_BYTES', 65_536)),
         'rate_limit_per_minute' => max(1, (int) env('APPHUB_PARENT_BRIDGE_RATE_LIMIT', 60)),
+        /**
+         * Default demo payloads for publisher testing (draft / pending version before DEV approves parent scopes).
+         * Key = action name. Override per action with action.demo_data when needed.
+         *
+         * @var array<string, mixed>
+         */
+        'demo_data' => [
+            'project.list' => [
+                [
+                    'id' => 9001,
+                    'code' => 'DEMO-A',
+                    'name' => 'Demo project A',
+                    'status' => 'active',
+                    'updated_at' => '2026-07-01T00:00:00Z',
+                ],
+                [
+                    'id' => 9002,
+                    'code' => 'DEMO-B',
+                    'name' => 'Demo project B',
+                    'status' => 'planning',
+                    'updated_at' => '2026-07-02T00:00:00Z',
+                ],
+            ],
+            'project.members' => [
+                [
+                    'userId' => 1,
+                    'name' => 'Demo Lead',
+                    'role' => 'lead',
+                    'jobPosition' => 'Project Manager',
+                ],
+                [
+                    'userId' => 2,
+                    'name' => 'Demo Member',
+                    'role' => 'member',
+                    'jobPosition' => 'Developer',
+                ],
+                [
+                    'userId' => 3,
+                    'name' => 'Demo Reviewer',
+                    'role' => 'reviewer',
+                    'jobPosition' => 'QA Engineer',
+                ],
+            ],
+            'signature.user' => [
+                'url' => null,
+                'mime' => 'image/png',
+                'data' => 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            ],
+        ],
     ],
 
     /**

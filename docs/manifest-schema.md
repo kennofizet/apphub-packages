@@ -96,7 +96,7 @@ Zip layout: `manifest.json` at zip root or one subfolder. Blocked: `.php`, `.exe
 | `entry_url` | string | yes | Publisher SPA URL; alias: `runtime_url` |
 | `healthcheck_url` | string | no | Server-side preflight via Hub `POST /apps/{slug}/ping` |
 
-`entry_url` must pass `AppEntryUrlGuard` (HTTPS in production; catalog + DEV approval is the per-app allowlist).
+`entry_url` must pass `AppEntryUrlGuard` (HTTPS by default; `http://localhost` in local dev; exact `http://…` origins only when listed in `APPHUB_ALLOWED_RUNTIME_ORIGINS`). Catalog + DEV approval is the per-app allowlist.
 
 ### Iframe example
 

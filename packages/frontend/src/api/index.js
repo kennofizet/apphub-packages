@@ -41,6 +41,8 @@ export function createAppHubApi(backendUrl, token, options = {}) {
       client.get('/integration-docs/internal', { headers: hostHeaders() }),
     apps: (params) => client.get('/apps', { params }),
     launch: (slug, payload) => client.post(`/apps/${encodeURIComponent(slug)}/launch`, payload ?? {}),
+    refreshLaunch: (slug, payload) =>
+      client.post(`/apps/${encodeURIComponent(slug)}/launch/refresh`, payload ?? {}),
     recordBridgeConsent: (slug, payload) =>
       client.post(`/apps/${encodeURIComponent(slug)}/bridge-consents`, payload ?? {}),
     revokeBridgeConsents: (slug) =>

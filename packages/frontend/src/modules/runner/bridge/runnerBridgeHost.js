@@ -11,7 +11,7 @@ import {
   findParentBridgeEvent,
   normalizeParentBridgeCatalog,
 } from './parentBridgeCatalog.js'
-import { draftParentBridgeFixture } from './parentBridgeDraftFixtures.js'
+import { parentBridgeDemoFixture } from './parentBridgeDemoFixtures.js'
 import {
   assertParentBridgePayloadSize,
   isValidParentBridgeActionName,
@@ -55,7 +55,8 @@ function isBridgeMessage(data) {
  *   getColorScheme?: () => string | null,
  *   isOpaqueHostedSandbox?: () => boolean,
  *   getParentBridgeCatalog?: () => object | null,
- *   isDraftApp?: () => boolean,
+ *   getParentBridgeDemoFixtures?: () => Record<string, unknown> | null,
+ *   allowParentBridgeDemo?: () => boolean,
  *   forwardParentCall?: (id: string, action: string, args: object, meta: object) => Promise<unknown>,
  *   forwardParentEvent?: (name: string, payload: object, meta: object) => void,
  *   hasProductParent?: () => boolean,
@@ -68,11 +69,20 @@ export function createRunnerBridgeHost(options) {
   let sessionGranted = new Set()
   let stopped = false
 
-  function isDraftApp() {
-    return options.isDraftApp?.() === true
+  function allowParentBridgeDemo() {
+    return options.allowParentBridgeDemo?.() === true
   }
 
-  /** Soft failures where draft fixtures may stand in for real parent data. */
+  function parentBridgeDemoFixtures() {
+    const raw = options.getParentBridgeDemoFixtures?.()
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  }
+
+  function demoFixtureFor(action) {
+    return parentBridgeDemoFixture(action, parentBridgeDemoFixtures())
+  }
+
+  /** Soft failures where demo fixtures may stand in for real parent data. */
   function isParentBridgeSoftFail(message) {
     const msg = String(message ?? '')
     return (
@@ -344,8 +354,8 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         const normalizedArgs = actionArgs && typeof actionArgs === 'object' && !Array.isArray(actionArgs)
           ? actionArgs
           : {}
-        // forceReal: skip draft Hub fixtures and always use real parent / strict errors
-        const allowDraftFixture = isDraftApp() && callOptions.forceReal !== true
+        // forceReal: skip Hub demo fixtures and always use real parent / strict errors
+        const allowDemoFixture = allowParentBridgeDemo() && callOptions.forceReal !== true
 
         if (!action) {
           reply(id, false, null, 'Action required')
@@ -365,8 +375,8 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!tokenScopes.has(entry.scope)) {
-          if (allowDraftFixture) {
-            reply(id, true, draftParentBridgeFixture(action))
+          if (allowDemoFixture) {
+            reply(id, true, demoFixtureFor(action))
             return
           }
           reply(id, false, null, 'Scope not granted')
@@ -374,8 +384,8 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!options.hasProductParent?.()) {
-          if (allowDraftFixture) {
-            reply(id, true, draftParentBridgeFixture(action))
+          if (allowDemoFixture) {
+            reply(id, true, demoFixtureFor(action))
             return
           }
           reply(id, false, null, 'PARENT_UNAVAILABLE')
@@ -383,8 +393,8 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!options.forwardParentCall) {
-          if (allowDraftFixture) {
-            reply(id, true, draftParentBridgeFixture(action))
+          if (allowDemoFixture) {
+            reply(id, true, demoFixtureFor(action))
             return
           }
           reply(id, false, null, 'PARENT_UNAVAILABLE')
@@ -407,8 +417,8 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
           reply(id, true, result)
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Bridge error'
-          if (allowDraftFixture && isParentBridgeSoftFail(message)) {
-            reply(id, true, draftParentBridgeFixture(action))
+          if (allowDemoFixture && isParentBridgeSoftFail(message)) {
+            reply(id, true, demoFixtureFor(action))
             return
           }
           reply(id, false, null, message)
@@ -441,7 +451,7 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!tokenScopes.has(entry.scope)) {
-          if (isDraftApp()) {
+          if (allowParentBridgeDemo()) {
             reply(id, true, undefined)
             return
           }
@@ -450,7 +460,7 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         }
 
         if (!options.hasProductParent?.() || !options.forwardParentEvent) {
-          if (isDraftApp()) {
+          if (allowParentBridgeDemo()) {
             reply(id, true, undefined)
             return
           }

@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { defaultAppStoreCatalog } from '../../app-store/data/defaultCatalog.js'
 import { normalizeCatalogApp } from '../../app-store/utils/normalizeCatalogApp.js'
 import { resolvePublisherTestVersion } from '../../../utils/publisherTestVersion.js'
+import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { parseApiError } from '../../notifications/utils/parseApiError.js'
 import { parseDropFiles } from '../utils/dropPackageParser.js'
 import { simulateInstallProgress } from './simulateInstallProgress.js'
@@ -161,7 +162,10 @@ export function createDesktopDropInstall(options = {}) {
             rejected_version: null,
             entry_url: catalogApp.entry_url,
             healthcheck_url: catalogApp.healthcheck_url,
-            permissions: catalogApp.permissions ?? job.intent.permissions ?? [],
+            permissions: mergePermissionLists(
+              catalogApp.permissions,
+              job.intent.permissions,
+            ),
           },
           { x: job.x, y: job.y, method: 'publish' },
         )
@@ -291,4 +295,13 @@ function hasFiles(event) {
   if (!event.dataTransfer) return false
   const types = [...event.dataTransfer.types]
   return types.includes('Files') || types.includes('application/x-moz-file')
+}
+
+/** Prefer zip-declared scopes when catalog still reflects the live (approved) version. */
+function mergePermissionLists(catalogPermissions, intentPermissions) {
+  const merged = [
+    ...resolveAppPermissions({ permissions: catalogPermissions }),
+    ...resolveAppPermissions({ permissions: intentPermissions }),
+  ]
+  return [...new Set(merged)]
 }

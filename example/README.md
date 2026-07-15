@@ -144,7 +144,7 @@ Or `POST /apps/register` with JSON:
 | Field | Required | Notes |
 |-------|----------|--------|
 | `runtime_type` | yes | Must be `iframe` |
-| `entry_url` | yes | HTTPS in production; `http://localhost` when `APPHUB_ALLOW_LOCALHOST_API_URLS` or `APP_ENV=local` |
+| `entry_url` | yes | HTTPS in production; `http://localhost` when `APPHUB_ALLOW_LOCALHOST_API_URLS` or `APP_ENV=local`; other `http://` only if that exact origin is in `APPHUB_ALLOWED_RUNTIME_ORIGINS` |
 | `version` | yes | Same semver rules as hosted zip publish |
 
 DEV approves in Dev Tools — that approval is the trust gate. Hub loads the registered `entry_url` at launch (no per-domain env list).

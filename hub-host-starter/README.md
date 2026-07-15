@@ -116,6 +116,17 @@ window.addEventListener('message', (e) => {
 
 When a publisher child app calls `AppHubBridge.callParent(action, args)`, Hub forwards to your product window on channel `apphub:product`. Install the listener from [example/product-shell/product-bridge-listener.js](../example/product-shell/product-bridge-listener.js) in your **product** app (not in this Hub host). Configure handlers in host Laravel `config/apphub-parent-bridge.php`.
 
+For **draft / pending** testing, set `defaults.demo_data` (or per-action `demo_data`) in that config — list payloads must stay plain PHP lists so they JSON-encode as arrays. After DEV approves a version, owner parent consents sync automatically (relaunch once).
+
+**Launch session (short token, longer open window)**
+
+| Env | Role |
+|-----|------|
+| `APPHUB_LAUNCH_TOKEN_TTL` | Short `launch_token` lifetime (60–180s, default 180) |
+| `APPHUB_LAUNCH_SESSION_MAX_TTL` | Absolute session max from first launch (default 28800 = 8h) |
+
+Hub runner calls `POST …/apps/{slug}/launch/refresh` with Core auth while the window is open (~half TTL).
+
 **Security (production)**
 
 | Layer | What to configure |

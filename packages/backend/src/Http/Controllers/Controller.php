@@ -5,6 +5,7 @@ namespace Kennofizet\AppHub\Http\Controllers;
 use Kennofizet\AppHub\Core\Model\BaseModelResponse;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppCatalogService;
 use Kennofizet\PackagesCore\Core\Model\BaseModelActions;
+use Kennofizet\PackagesCore\Models\User;
 use Kennofizet\PackagesCore\Traits\GlobalDataTrait;
 use Illuminate\Http\JsonResponse;
 
@@ -56,6 +57,37 @@ abstract class Controller
         }
 
         return null;
+    }
+
+    /**
+     * Resolve authenticated packages-core User for the current request.
+     * Works with older packages-core (no currentUser()) and newer ones that provide it.
+     */
+    protected static function resolveAuthenticatedUser(): ?User
+    {
+        if (method_exists(BaseModelActions::class, 'currentUser')) {
+            /** @var User|null $user */
+            $user = BaseModelActions::currentUser();
+
+            return $user;
+        }
+
+        $userId = (int) (self::currentUserId() ?? 0);
+        if ($userId < 1) {
+            return null;
+        }
+
+        if (method_exists(BaseModelActions::class, 'resolveUserById')) {
+            /** @var User|null $user */
+            $user = BaseModelActions::resolveUserById($userId);
+
+            return $user;
+        }
+
+        return User::query()
+            ->withoutGlobalScope('by_server_user')
+            ->byId($userId)
+            ->first();
     }
 
     protected function ensureValidSlug(string $slug): ?JsonResponse

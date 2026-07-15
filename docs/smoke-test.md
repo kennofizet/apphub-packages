@@ -30,6 +30,10 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 15 | **Report test error** in `demo-simple` or `demo-iframe` | Message confirms send; `apphub_app_usage_logs` row with `action=error` |
 | 16 | **Send desktop notify** in demo (`desktop.notify` + `api_urls` + proxy) | `POST …/bridge/notify` via proxy; bell + toast |
 | 17 | **Parent bridge** (`callParent`) with product iframe + listener | `callParent('project.list')` → data or `null`; install dialog shows **Pending DEV review** on `parent.*` |
+| 18 | Draft/pending **Demo** banner + demo list | Runner shows Demo badge; `callParent('project.list')` returns array fixtures (`DEMO-A` / `DEMO-B`) |
+| 19 | DEV approve then relaunch | `scopes_granted` includes `parent.*` without reinstall; Demo badge gone |
+| 20 | Keep app open > 3 minutes | Hub auto `launch/refresh`; `callParent` / bridge still works (no “Launch session not active”) |
+| 21 | Uninstall while window open | Next `launch/refresh` fails; reopen required; revoked scopes gone from bridge |
 
 ### Smoke #17 — parent bridge (config-driven)
 
@@ -49,7 +53,10 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 4. Child calls `AppHubBridge.callParent('project.list', { query: { page: 1 } })`.
 5. Default stub handler returns `{ ok: true, result: null }` — replace handler class in config for real data.
 6. `GET …/parent-bridge/catalog` lists host actions/scopes (integrator dev docs).
-7. Before DEV approve: `callParent` uses draft fixtures or `SCOPE_NOT_GRANTED` on token.
+7. Before DEV approve (draft or pending version upgrade): `callParent` uses `parent_bridge_demo` from launch (host `defaults.demo_data` / `demo_data` config). List fixtures remain JSON arrays. Runner shows **Demo** badge. Use `forceReal: true` for strict `SCOPE_NOT_GRANTED`.
+8. After DEV approve: owner parent consents sync server-side — **relaunch once**; `scopes_granted` includes `parent.*` without reinstall dialog.
+9. Keep window open past token TTL (~180s): Hub calls `POST …/launch/refresh` (~every 90s) so session stays active until `APPHUB_LAUNCH_SESSION_MAX_TTL` (default 8h). Refresh recomputes `scopes_granted` from live consent (revoked scopes drop without relaunch).
+10. Uninstall / revoke consent: launch sessions are deleted — open windows cannot `launch/refresh` or keep revoked bridge scopes until reinstall.
 
 **Security checks (all must pass in production)**
 
@@ -58,6 +65,8 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 - `productOrigin` in Hub matches `APPHUB_ALLOWED_PRODUCT_ORIGINS`
 - Action has non-null `permission` and passes `hubBridgeCan()` via host permission checker
 - Payload under `max_args_bytes`; per-action rate limit enforced
+- `launch/refresh` requires Core user auth — not callables from child apps with launch_token alone
+- Uninstall/revoke invalidates launch sessions; refresh recomputes scopes from live consent (no stale scopes for session max TTL)
 
 ### Smoke #16 — desktop.notify
 

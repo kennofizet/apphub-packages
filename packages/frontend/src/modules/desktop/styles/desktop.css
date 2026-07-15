@@ -1626,6 +1626,48 @@
   background: #000;
 }
 
+.apphub-runner__runtime {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 400px;
+  height: 100%;
+}
+
+.apphub-runner__runtime .apphub-runner__frame {
+  flex: 1;
+  min-height: 0;
+}
+
+.apphub-runner__demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: rgba(251, 191, 36, 0.12);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.35);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.apphub-runner__demo-banner-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.apphub-runner__demo-banner-text {
+  color: #fcd34d;
+}
+
 .apphub-runner__msg,
 .apphub-runner__error {
   padding: 24px;

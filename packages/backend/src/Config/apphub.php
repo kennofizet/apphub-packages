@@ -7,6 +7,12 @@ return [
     'launch_token_ttl' => (int) env('APPHUB_LAUNCH_TOKEN_TTL', 180),
     'launch_token_ttl_min' => 60,
     'launch_token_ttl_max' => 180,
+    /**
+     * Absolute max lifetime of a launch session (seconds), measured from created_at.
+     * Short launch_token TTL still applies; Hub may refresh the token while this window is open
+     * and the user still has a valid Core session (X-Knf-Token).
+     */
+    'launch_session_max_ttl' => max(300, (int) env('APPHUB_LAUNCH_SESSION_MAX_TTL', 28_800)),
 
     /** Host integrator only — not packages-core zone/server managers. */
     'host_access_secret' => env('APPHUB_HOST_ACCESS_SECRET', ''),
@@ -17,7 +23,11 @@ return [
         FILTER_VALIDATE_BOOL,
     ),
 
-    /** Optional enterprise host cap for iframe entry_url (non-empty = only these origins at register/launch). */
+    /**
+     * Optional enterprise host cap for iframe entry_url (non-empty = only these origins at register/launch).
+     * May include exact http:// origins for intranet-only tools (e.g. http://tools.internal:8080).
+     * Plain HTTP is never allowed via allow_any_publisher_runtime_origin — list each http origin here.
+     */
     'allowed_runtime_origins' => array_values(array_filter(array_map(
         static fn (string $v): string => trim($v),
         explode(',', (string) env('APPHUB_ALLOWED_RUNTIME_ORIGINS', '')),
@@ -25,7 +35,7 @@ return [
 
     /**
      * When enterprise list is empty: allow any HTTPS publisher origin after catalog entry_url + DEV approval.
-     * Production defaults false — set APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true to opt in.
+     * Does not allow plain HTTP. Production defaults false — set APPHUB_ALLOW_ANY_PUBLISHER_RUNTIME_ORIGIN=true to opt in.
      */
     'allow_any_publisher_runtime_origin' => filter_var(
         env(

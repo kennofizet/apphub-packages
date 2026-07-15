@@ -9,7 +9,6 @@ use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeCatalog;
 use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeDispatcher;
 use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeRegistry;
 use Kennofizet\AppHub\Modules\Bridge\ParentBridge\ParentBridgeSecurityGate;
-use Kennofizet\PackagesCore\Core\Model\BaseModelActions;
 
 class ParentBridgeController extends Controller
 {
@@ -54,8 +53,8 @@ class ParentBridgeController extends Controller
             'session_id' => 'nullable|uuid',
         ]);
 
-        $user = BaseModelActions::currentUser();
-        $userId = (int) (BaseModelActions::currentUserId() ?? 0);
+        $user = self::resolveAuthenticatedUser();
+        $userId = (int) (self::currentUserId() ?? 0);
         if ($user === null || $userId < 1) {
             return $this->apiErrorResponse('Authentication required', 401);
         }
@@ -96,8 +95,8 @@ class ParentBridgeController extends Controller
             'session_id' => 'nullable|uuid',
         ]);
 
-        $user = BaseModelActions::currentUser();
-        $userId = (int) (BaseModelActions::currentUserId() ?? 0);
+        $user = self::resolveAuthenticatedUser();
+        $userId = (int) (self::currentUserId() ?? 0);
         if ($user === null || $userId < 1) {
             return $this->apiErrorResponse('Authentication required', 401);
         }

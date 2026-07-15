@@ -268,6 +268,7 @@ function createApiFacade() {
     bootstrap: (...args) => impl?.bootstrap?.(...args),
     apps: (...args) => impl?.apps?.(...args),
     launch: (...args) => impl?.launch?.(...args),
+    refreshLaunch: (...args) => impl?.refreshLaunch?.(...args),
     recordBridgeConsent: (...args) => impl?.recordBridgeConsent?.(...args),
     revokeBridgeConsents: (...args) => impl?.revokeBridgeConsents?.(...args),
     createInstallIntent: (...args) => impl?.createInstallIntent?.(...args),

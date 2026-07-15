@@ -11,6 +11,7 @@ use Kennofizet\AppHub\Modules\Catalog\Models\App;
 use Kennofizet\AppHub\Modules\Catalog\Models\AppZoneAccess;
 use Kennofizet\AppHub\Modules\Catalog\Services\AppVersionService;
 use Kennofizet\AppHub\Modules\Catalog\Support\AppSemver;
+use Kennofizet\AppHub\Modules\Launch\Services\LaunchTokenService;
 use Kennofizet\PackagesCore\Models\ZoneUser;
 
 final class AppBridgeConsentService
@@ -104,6 +105,16 @@ final class AppBridgeConsentService
                 ->pluck('scope')
                 ->all();
 
+            if ($storedParent === [] && (int) ($app->owner_user_id ?? 0) === $userId) {
+                $this->syncPublisherConsentsForApprovedVersion($app, $effectiveVersion);
+                $storedParent = AppBridgeParentConsent::query()
+                    ->where('app_id', $app->id)
+                    ->where('user_id', $userId)
+                    ->where('bundle_version', $effectiveVersion)
+                    ->pluck('scope')
+                    ->all();
+            }
+
             foreach ($storedParent as $scope) {
                 if (!is_string($scope)) {
                     continue;
@@ -160,6 +171,8 @@ final class AppBridgeConsentService
             ->where('user_id', $userId)
             ->delete();
 
+        app(LaunchTokenService::class)->invalidateSessionsForUser($app, $userId);
+
         return $basic + $parent;
     }
 
@@ -179,6 +192,8 @@ final class AppBridgeConsentService
         AppBridgeParentVersionApproval::query()
             ->where('app_id', $app->id)
             ->delete();
+
+        app(LaunchTokenService::class)->invalidateSessionsForApp($app);
 
         return $basic + $parent;
     }
@@ -235,6 +250,22 @@ final class AppBridgeConsentService
                 'approved_at' => now(),
             ],
         );
+
+        $this->syncPublisherConsentsForApprovedVersion($app, $version);
+    }
+
+    /**
+     * Ensure the app owner has server-side install consents for the approved bundle version.
+     * Publishers often test in draft/pending before DEV approval without a fresh install dialog.
+     */
+    public function syncPublisherConsentsForApprovedVersion(App $app, string $bundleVersion): void
+    {
+        $ownerId = (int) ($app->owner_user_id ?? 0);
+        if ($ownerId < 1) {
+            return;
+        }
+
+        $this->recordManifestConsents($app, $ownerId, $bundleVersion);
     }
 
     public function isParentBridgeDevApproved(App $app, string $bundleVersion): bool

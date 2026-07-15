@@ -36,13 +36,27 @@ function isLocalhostHttp(parsed) {
     && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
 }
 
-/** HTTPS or localhost HTTP (local dev). */
-export function isEntryUrlFormatAllowed(url) {
+/**
+ * HTTPS, localhost HTTP (local dev), or plain HTTP when origin is on the enterprise allowlist.
+ * @param {string} url
+ * @param {string[]} [allowedOrigins] host APPHUB_ALLOWED_RUNTIME_ORIGINS / installAppHubModule.allowedRuntimeOrigins
+ */
+export function isEntryUrlFormatAllowed(url, allowedOrigins = []) {
   const parsed = parseLaunchUrl(url)
   if (!parsed) return false
   if (BLOCKED_PROTOCOLS.has(parsed.protocol)) return false
   if (isLocalhostHttp(parsed)) return true
-  return parsed.protocol === 'https:'
+  if (parsed.protocol === 'https:') return true
+  if (parsed.protocol === 'http:' && Array.isArray(allowedOrigins) && allowedOrigins.length > 0) {
+    return allowedOrigins.some((entry) => {
+      try {
+        return new URL(entry).origin === parsed.origin
+      } catch {
+        return false
+      }
+    })
+  }
+  return false
 }
 
 /**
@@ -67,7 +81,7 @@ export function passesEnterpriseRuntimeOrigins(origin, allowedOrigins = []) {
  * Per-app allowlist is apps.entry_url in the database (DEV approves).
  */
 export function isCatalogEntryUrlAllowed(entryUrl, allowedOrigins = []) {
-  if (!isEntryUrlFormatAllowed(entryUrl)) return false
+  if (!isEntryUrlFormatAllowed(entryUrl, allowedOrigins)) return false
   const origin = entryUrlOrigin(entryUrl)
   return passesEnterpriseRuntimeOrigins(origin, allowedOrigins)
 }
@@ -91,7 +105,7 @@ export function isAllowedLaunchUrl(url, allowedOrigins = [], options = {}) {
 
   const parsed = parseLaunchUrl(url)
   if (!parsed) return false
-  if (!isEntryUrlFormatAllowed(url)) return false
+  if (!isEntryUrlFormatAllowed(url, allowedOrigins)) return false
 
   const catalogOrigin = entryUrlOrigin(options.catalogEntryUrl ?? '')
   if (catalogOrigin && parsed.origin !== catalogOrigin) {

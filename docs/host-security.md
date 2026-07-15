@@ -34,7 +34,7 @@ Misconfigured proxies let attackers spoof `api_urls` checks by forging `X-Forwar
 | `APPHUB_REQUIRE_BRIDGE_PROXY_SECRET` | `true` in production/staging when loopback `api_urls` allowed |
 | `APPHUB_NOTIFY_MAX_RECIPIENTS` | `100` |
 | `APPHUB_ALLOWED_HUB_ORIGINS` | your Hub SPA origin(s) |
-| `APPHUB_ALLOWED_RUNTIME_ORIGINS` | optional enterprise cap for iframe `entry_url` |
+| `APPHUB_ALLOWED_RUNTIME_ORIGINS` | optional enterprise cap for iframe `entry_url`; list exact `http://…` origins only when intranet HTTP is required (HTTPS preferred) |
 
 ---
 
