@@ -1,6 +1,6 @@
 {
   "name": "@kennofizet/apphub-frontend",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "description": "App Hub Vue 3 UI — Windows-style desktop shell and modular apps (App Store default).",
   "main": "./src/index.js",
   "module": "./src/index.js",
