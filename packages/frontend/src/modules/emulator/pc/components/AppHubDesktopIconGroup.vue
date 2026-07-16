@@ -9,7 +9,7 @@
     }"
     :style="{ left: `${x}px`, top: `${y}px` }"
     :title="title"
-    @mousedown.stop="emit('pointer-down', $event)"
+    @pointerdown.stop="emit('pointer-down', $event)"
     @click.stop="emit('click')"
     @contextmenu.prevent.stop="emit('context-menu', $event)"
   >

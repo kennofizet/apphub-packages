@@ -33,13 +33,13 @@
     return res.json().catch(() => ({}))
   }
 
-  function bridgeHeaders(token, slug) {
+  function bridgeHeaders(token, slug, context) {
     const headers = {
       Accept: 'application/json',
       'X-AppHub-Launch-Token': token,
       'X-AppHub-App-Slug': slug,
     }
-    const sessionId = bridgeContext?.session_id
+    const sessionId = context?.session_id
     if (typeof sessionId === 'string' && sessionId.trim()) {
       headers['X-AppHub-Session-Id'] = sessionId.trim()
     }
@@ -115,7 +115,7 @@
       const res = await fetch(`${base}${path}`, {
         ...init,
         headers: {
-          ...bridgeHeaders(token, slug),
+          ...bridgeHeaders(token, slug, bridgeContext),
           ...(init.headers || {}),
         },
       })

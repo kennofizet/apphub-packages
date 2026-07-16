@@ -26,6 +26,7 @@ export function applyDesktopSettings(target, source) {
   if (sanitized.theme !== undefined) target.theme = sanitized.theme
   if (sanitized.groupNames) target.groupNames = sanitized.groupNames
   if (sanitized.builtinPositions) target.builtinPositions = sanitized.builtinPositions
+  if (sanitized.mobileDockIds) target.mobileDockIds = sanitized.mobileDockIds
 }
 
 export function saveDesktopSettings(settings) {

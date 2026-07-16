@@ -67,7 +67,7 @@
           }"
           :style="{ left: `${item.x}px`, top: `${item.y}px` }"
           :title="`${item.app.name} — ${labels.desktop_icon_move_hint}`"
-          @mousedown.stop="onPlacedIconPointerDown(item.app, $event)"
+          @pointerdown.stop="onPlacedIconPointerDown(item.app, $event)"
           @dblclick.stop="onOpenIcon(item.app)"
           @contextmenu.prevent.stop="onIconContextMenu(item.app, $event)"
         >

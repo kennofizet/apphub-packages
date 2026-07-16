@@ -1,46 +1,47 @@
 <template>
-  <footer class="apphub-mobile-dock" @click.stop>
-    <div v-if="windows.length" class="apphub-mobile-dock__apps" role="toolbar" :aria-label="tasksLabel">
+  <footer
+    class="apphub-mobile-dock"
+    :class="{
+      'apphub-mobile-dock--drop-active': dropActive,
+      'apphub-mobile-dock--full': full,
+    }"
+    @click.stop
+  >
+    <div class="apphub-mobile-dock__apps" role="toolbar" :aria-label="tasksLabel">
       <button
-        v-for="win in windows"
-        :key="win.id"
+        v-for="app in apps"
+        :key="app.id"
         type="button"
         class="apphub-mobile-dock__app"
         :class="{
-          'apphub-mobile-dock__app--active': win.id === activeId,
-          'apphub-mobile-dock__app--minimized': win.minimized,
+          'apphub-mobile-dock__app--dragging': draggingId === app.id,
+          'apphub-mobile-dock__app--holding': holdingId === app.id,
         }"
-        :title="win.title"
-        @click="emit('task-click', win)"
+        :title="app.name"
+        @pointerdown.stop="emit('app-pointer-down', app, $event)"
+        @click="emit('open-app', app)"
       >
-        <span class="apphub-mobile-dock__app-icon" aria-hidden="true">{{ win.icon }}</span>
-      </button>
-    </div>
-
-    <div class="apphub-mobile-dock__trail">
-      <slot name="notifications" />
-      <button
-        v-if="shutdownAction"
-        type="button"
-        class="apphub-mobile-dock__shutdown"
-        :title="shutdownLabel"
-        :aria-label="shutdownLabel"
-        @click.stop="emit('shutdown')"
-      >
-        ⏻
+        <AppHubCatalogIcon
+          :app="app"
+          emoji-class="apphub-mobile-dock__app-icon"
+          img-class="apphub-mobile-dock__app-icon apphub-mobile-dock__app-icon--image"
+        />
       </button>
     </div>
   </footer>
 </template>
 
 <script setup>
+import AppHubCatalogIcon from '../../../../components/AppHubCatalogIcon.vue'
+
 defineProps({
-  windows: { type: Array, default: () => [] },
-  activeId: { type: [String, Number], default: null },
+  apps: { type: Array, default: () => [] },
   tasksLabel: { type: String, default: '' },
-  shutdownAction: { type: String, default: '' },
-  shutdownLabel: { type: String, default: '' },
+  dropActive: { type: Boolean, default: false },
+  full: { type: Boolean, default: false },
+  draggingId: { type: [String, Number], default: null },
+  holdingId: { type: [String, Number], default: null },
 })
 
-const emit = defineEmits(['task-click', 'shutdown'])
+const emit = defineEmits(['open-app', 'app-pointer-down'])
 </script>

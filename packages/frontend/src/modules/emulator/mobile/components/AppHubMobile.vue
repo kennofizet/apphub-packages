@@ -17,6 +17,17 @@
     :class="{
       'apphub-desktop--drop-target': isMainScreen,
       'apphub-desktop--light': activeTheme === 'light',
+      'apphub-desktop--mobile-windowed': !isFullscreen,
+      'apphub-desktop--mobile-app-open': hasOpenMobileApp,
+      'apphub-desktop--edge-swiping': edgeSwipeActive,
+      'apphub-desktop--edge-committing': edgeSwipeCommitting,
+    }"
+    :style="{
+      '--apphub-edge-swipe-x': `${edgeSwipeDistance}px`,
+      '--apphub-edge-content-x': `${edgeSwipeDistance * 0.22}px`,
+      '--apphub-edge-swipe-progress': edgeSwipeProgress,
+      '--apphub-edge-app-opacity': 1 - edgeSwipeProgress * 0.22,
+      '--apphub-edge-indicator-scale': 0.72 + edgeSwipeProgress * 0.28,
     }"
     data-apphub-device="mobile"
     :data-apphub-phone="deviceMode.state.phone || undefined"
@@ -27,18 +38,54 @@
     @drop.capture.prevent="onDesktopDrop"
   >
     <div class="apphub-desktop__wallpaper" :class="{ 'apphub-desktop__wallpaper--drop': dropInstall.state.dragActive }" />
+    <div
+      class="apphub-mobile-brightness-dimmer"
+      :style="{ opacity: (1 - mobileBrightness) * 0.68 }"
+      aria-hidden="true"
+    />
 
     <header
+      v-if="!hasOpenMobileApp"
       class="apphub-mobile-status"
-      :class="{ 'apphub-mobile-status--iphone': deviceMode.state.phone === 'iphone' }"
-      aria-hidden="true"
+      :class="{
+        'apphub-mobile-status--iphone': deviceMode.state.phone === 'iphone',
+        'apphub-mobile-status--windowed': !isFullscreen,
+      }"
+      @pointerdown="onMobileStatusPointerDown"
+      @pointermove="onMobileStatusPointerMove"
+      @pointerup="onMobileStatusPointerEnd"
+      @pointercancel="onMobileStatusPointerCancel"
     >
-      <span class="apphub-mobile-status__time">{{ shell.state.clock }}</span>
-      <span v-if="deviceMode.state.phone === 'iphone'" class="apphub-mobile-status__island" />
+      <span v-if="isFullscreen" class="apphub-mobile-status__time">{{ shell.state.clock }}</span>
+      <span
+        v-if="isFullscreen && deviceMode.state.phone === 'iphone'"
+        class="apphub-mobile-status__island"
+        aria-hidden="true"
+      />
       <span class="apphub-mobile-status__trail">
-        <span class="apphub-mobile-status__dots" />
-        <span class="apphub-mobile-status__wifi" />
-        <span class="apphub-mobile-status__battery" />
+        <button
+          v-if="fullscreenSupported"
+          type="button"
+          class="apphub-mobile-status__fullscreen"
+          :class="{ 'apphub-mobile-status__fullscreen--active': isFullscreen }"
+          :title="isFullscreen ? labels.mobile_exit_fullscreen : labels.mobile_enter_fullscreen"
+          :aria-label="isFullscreen ? labels.mobile_exit_fullscreen : labels.mobile_enter_fullscreen"
+          :disabled="fullscreenBusy"
+          @pointerdown.stop
+          @click.stop="toggleMobileFullscreen"
+        >
+          <svg v-if="!isFullscreen" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" />
+          </svg>
+          <svg v-else viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4" />
+          </svg>
+        </button>
+        <template v-if="isFullscreen">
+          <span class="apphub-mobile-status__dots" aria-hidden="true" />
+          <span class="apphub-mobile-status__wifi" aria-hidden="true" />
+          <span class="apphub-mobile-status__battery" aria-hidden="true" />
+        </template>
       </span>
     </header>
 
@@ -66,6 +113,7 @@
           :dragging="isGroupDragging(item.apps)"
           :holding="isGroupHolding(item.apps)"
           :drop-highlight="isDropTargetCell(item.x, item.y)"
+          :style="mobileGridStyle(item)"
           @pointer-down="onGroupPointerDown(item, $event)"
           @click="onGroupClick(item)"
           @context-menu="onGroupContextMenu(item, $event)"
@@ -80,9 +128,13 @@
             'apphub-desktop__icon--holding': iconDrag.isHolding(item.app.id),
             'apphub-desktop__icon--drop-target': isDropTargetCell(item.x, item.y),
           }"
-          :style="{ left: `${item.x}px`, top: `${item.y}px` }"
+          :style="{
+            left: `${item.x}px`,
+            top: `${item.y}px`,
+            ...mobileGridStyle(item),
+          }"
           :title="`${item.app.name} — ${labels.desktop_icon_move_hint}`"
-          @mousedown.stop="onPlacedIconPointerDown(item.app, $event)"
+          @pointerdown.stop="onPlacedIconPointerDown(item.app, $event)"
           @click.stop="onDesktopIconActivate(item.app)"
           @contextmenu.prevent.stop="onIconContextMenu(item.app, $event)"
         >
@@ -244,23 +296,67 @@
     </div>
 
     <AppHubMobileDock
-      :windows="taskbarWindows"
-      :active-id="wm.state.activeId"
+      v-if="!hasOpenMobileApp"
+      :apps="mobileDockApps"
       :tasks-label="labels.taskbar_pins"
-      :shutdown-action="shutdownAction"
-      :shutdown-label="labels.desktop_shutdown"
-      @task-click="onTaskClick"
-      @shutdown="onShutdownClick"
-    >
-      <template #notifications>
-        <AppHubTaskbarNotificationBell />
-      </template>
-    </AppHubMobileDock>
+      :drop-active="mobileDockDropActive"
+      :full="mobileDockApps.length >= 5"
+      :dragging-id="mobileDockDraggingId"
+      :holding-id="mobileDockHoldingId"
+      @app-pointer-down="onMobileDockAppPointerDown"
+      @open-app="onMobileDockAppActivate"
+    />
 
-    <div class="apphub-mobile-home-indicator" aria-hidden="true" />
+    <div v-if="!hasOpenMobileApp" class="apphub-mobile-home-indicator" aria-hidden="true" />
+
+    <div
+      v-if="edgeSwipeEnabled"
+      class="apphub-mobile-edge-zone"
+      aria-hidden="true"
+      @pointerdown="onEdgePointerDown"
+      @pointermove="onEdgePointerMove"
+      @pointerup="onEdgePointerEnd"
+      @pointercancel="onEdgePointerCancel"
+      @touchstart.stop.prevent="onEdgeTouchStart"
+      @touchmove.stop.prevent="onEdgeTouchMove"
+      @touchend.stop.prevent="onEdgeTouchEnd"
+      @touchcancel.stop.prevent="onEdgeTouchCancel"
+    />
+
+    <div
+      v-if="edgeSwipeActive"
+      class="apphub-mobile-edge-indicator"
+      :class="{ 'apphub-mobile-edge-indicator--power': !activeMobileWindow }"
+      aria-hidden="true"
+    >
+      <AppHubCatalogIcon
+        v-if="activeMobileWindow"
+        :app="{
+          name: activeMobileWindow.title,
+          icon: activeMobileWindow.icon,
+          icon_url: activeMobileWindow.icon_url,
+        }"
+        emoji-class="apphub-mobile-edge-indicator__emoji"
+        img-class="apphub-mobile-edge-indicator__image"
+      />
+      <span v-else>⏻</span>
+    </div>
 
     <AppHubDesktopNotifications />
-    <AppHubNotificationDrawer />
+    <AppHubMobileControlCenter
+      :phone="deviceMode.state.phone"
+      :fullscreen-supported="fullscreenSupported"
+      :is-fullscreen="isFullscreen"
+      :active-theme="activeTheme"
+      :theme-toggle="showThemeToggle"
+      :clock="shell.state.clock"
+      :brightness="mobileBrightness"
+      :pulling="mobileStatusPullActive"
+      :pull-progress="mobileStatusPullProgress"
+      @toggle-fullscreen="toggleMobileFullscreen"
+      @toggle-theme="toggleMobileTheme"
+      @brightness-change="setMobileBrightness"
+    />
   </div>
 </template>
 
@@ -283,8 +379,6 @@ import {
   DESKTOP_NOTIFICATIONS_KEY,
 } from '../../../notifications/index.js'
 import {
-  AppHubNotificationDrawer,
-  AppHubTaskbarNotificationBell,
   createUserNotificationCenter,
   USER_NOTIFICATION_CENTER_KEY,
 } from '../../../user-notifications/index.js'
@@ -292,6 +386,7 @@ import { AppHubWindowFrame, useWindowManager } from '../../../window-manager/ind
 import { useDeviceMode } from '../../../responsive/index.js'
 import AppHubDesktopDropLayer from '../../pc/components/AppHubDesktopDropLayer.vue'
 import AppHubMobileDock from './AppHubMobileDock.vue'
+import AppHubMobileControlCenter from './AppHubMobileControlCenter.vue'
 import AppHubDuplicateAppDialog from '../../pc/components/AppHubDuplicateAppDialog.vue'
 import AppHubInstallPermissionsDialog from '../../pc/components/AppHubInstallPermissionsDialog.vue'
 import AppHubDesktopIconContextMenu from '../../pc/components/AppHubDesktopIconContextMenu.vue'
@@ -328,7 +423,7 @@ import {
   loadDesktopSession,
   saveDesktopSession,
 } from '../../pc/utils/desktopSession.js'
-import { clampPointToLayer, nextIconGridSlot, snapPoint } from '../../pc/utils/desktopGrid.js'
+import { clampPointToLayer, ICON_GRID, nextIconGridSlot, snapPoint } from '../../pc/utils/desktopGrid.js'
 import { DESKTOP_HUB_SETTINGS_KEY } from '../../pc/composables/useDesktopHubSettings.js'
 import { applyDesktopSettings, loadDesktopSettings, saveDesktopSettings } from '../../pc/utils/desktopSettings.js'
 import { loadHubKeyboardSettings, matchSnapShortcut, saveHubKeyboardSettings } from '../../pc/utils/hubKeyboardSettings.js'
@@ -438,6 +533,18 @@ const appStore = useAppStore()
 const desktopRoot = ref(null)
 const workAreaRef = ref(null)
 const iconsLayerRef = ref(null)
+const fullscreenSupported = ref(false)
+const isFullscreen = ref(false)
+const fullscreenBusy = ref(false)
+const mobileBrightness = ref(1)
+const mobileStatusPullActive = ref(false)
+const mobileStatusPullProgress = ref(0)
+const mobileDockDropActive = ref(false)
+const edgeSwipeActive = ref(false)
+const edgeSwipeCommitting = ref(false)
+const edgeSwipeDistance = ref(0)
+let edgeSwipe = null
+let mobileStatusPull = null
 
 provide(DESKTOP_HOST_KEY, workAreaRef)
 
@@ -477,6 +584,8 @@ function formatLabel(key, params = {}) {
 
 const labels = computed(() => ({
   desktop_start: t('desktop_start', lang.value),
+  mobile_enter_fullscreen: t('mobile_enter_fullscreen', lang.value),
+  mobile_exit_fullscreen: t('mobile_exit_fullscreen', lang.value),
   desktop_app_store: t('desktop_app_store', lang.value),
   desktop_app_store_hint: t('desktop_app_store_hint', lang.value),
   guide_app_name: t('guide_app_name', lang.value),
@@ -596,6 +705,16 @@ const visibleWindows = computed(() =>
 )
 const taskbarWindows = computed(() =>
   (wm.taskbarWindows?.value ?? wm.taskbarWindows ?? []).filter((w) => w?.id),
+)
+const activeMobileWindow = computed(() => {
+  const active = visibleWindows.value.find((win) => win.id === wm.state.activeId)
+  if (active) return active
+  return [...visibleWindows.value].sort((a, b) => (b.zIndex ?? 0) - (a.zIndex ?? 0))[0] ?? null
+})
+const hasOpenMobileApp = computed(() => !!activeMobileWindow.value)
+const edgeSwipeEnabled = computed(() => hasOpenMobileApp.value || !!shutdownAction.value)
+const edgeSwipeProgress = computed(() =>
+  Math.max(0, Math.min(1, edgeSwipeDistance.value / Math.max(96, window.innerWidth * 0.32))),
 )
 
 const shutdownAction = computed(() => {
@@ -1105,6 +1224,14 @@ const iconList = shell.iconList
 
 const builtinIcons = computed(() => iconList.filter((a) => a?.builtin))
 const startMenuCatalogApps = computed(() => iconList.filter((a) => a?.id))
+const mobileDockIds = computed(() =>
+  Array.isArray(desktopSettings.mobileDockIds) ? desktopSettings.mobileDockIds.slice(0, 5) : [],
+)
+const mobileDockIdSet = computed(() => new Set(mobileDockIds.value))
+const mobileDockApps = computed(() => {
+  const byId = new Map(startMenuCatalogApps.value.map((app) => [app.id, app]))
+  return mobileDockIds.value.map((id) => byId.get(id)).filter(Boolean)
+})
 
 const startMenuFavoriteApps = computed(() =>
   resolveStartMenuFavoriteApps(startMenuCatalogApps.value, startMenuFavorites),
@@ -1165,7 +1292,27 @@ function getAllPlacedApps() {
   return [...builtins, ...users]
 }
 
-const desktopLayout = computed(() => buildDesktopItems(getAllPlacedApps()))
+function getHomePlacedApps() {
+  return getAllPlacedApps().filter((app) => !mobileDockIdSet.value.has(app.id))
+}
+
+const desktopLayout = computed(() => buildDesktopItems(getHomePlacedApps()))
+
+function mobileGridStyle(item) {
+  const column = Math.max(
+    1,
+    Math.min(4, Math.round((item.x - ICON_GRID.paddingX) / ICON_GRID.cellW) + 1),
+  )
+  const row = Math.max(
+    1,
+    Math.round((item.y - ICON_GRID.paddingY) / ICON_GRID.cellH) + 1,
+  )
+
+  return {
+    gridColumn: column,
+    gridRow: row,
+  }
+}
 
 const dragFolderPreview = computed(() => {
   const target = iconDrag.dropTarget.value
@@ -1204,8 +1351,14 @@ function schedulePersist() {
 const iconDrag = useDesktopIconDrag({
   getLayerEl: () => iconsLayerRef.value,
   getSnapToGrid: () => desktopSettings.snapToGrid,
-  getDesktopApps: () => getAllPlacedApps(),
+  getDesktopApps: () => getHomePlacedApps(),
   findApp: (id) => findAppForDrag(id),
+  resolvePointerPosition: resolveMobilePointerPosition,
+  resolveExternalDrop: resolveMobileDockDrop,
+  onExternalDrop: handleMobileExternalDrop,
+  onDragEnd: () => {
+    mobileDockDropActive.value = false
+  },
   onMoved: (details) => {
     if (details?.fromCell && details?.toCell) {
       migrateGroupDisplayName(
@@ -1221,6 +1374,147 @@ const iconDrag = useDesktopIconDrag({
     schedulePersist()
   },
 })
+
+const mobileDockDraggingId = computed(() =>
+  iconDrag.drag.value?.mode === 'dock' && iconDrag.drag.value?.moved
+    ? iconDrag.drag.value.ids[0] ?? null
+    : null,
+)
+const mobileDockHoldingId = computed(() =>
+  iconDrag.drag.value?.mode === 'dock' &&
+  iconDrag.drag.value?.ready &&
+  !iconDrag.drag.value?.moved
+    ? iconDrag.drag.value.ids[0] ?? null
+    : null,
+)
+
+function resolveMobileDockDrop(event, apps, session) {
+  const dock = desktopRoot.value?.querySelector('.apphub-mobile-dock')
+  if (!dock || !apps?.length) {
+    mobileDockDropActive.value = false
+    return null
+  }
+
+  const rect = dock.getBoundingClientRect()
+  const inside =
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top - 12 &&
+    event.clientY <= rect.bottom + 12
+
+  if (session?.mode === 'dock') {
+    mobileDockDropActive.value = inside
+    if (inside) {
+      const relativeX = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left))
+      const targetIndex = Math.min(
+        mobileDockIds.value.length - 1,
+        Math.floor((relativeX / Math.max(1, rect.width)) * mobileDockIds.value.length),
+      )
+      return { type: 'mobile-dock-reorder', targetIndex }
+    }
+    return {
+      type: 'mobile-home',
+      position: resolveMobilePointerPosition(event, { x: ICON_GRID.paddingX, y: ICON_GRID.paddingY }),
+    }
+  }
+
+  const newApps = apps.filter((app) => !mobileDockIdSet.value.has(app.id))
+  const hasCapacity = mobileDockIds.value.length + newApps.length <= 5
+  mobileDockDropActive.value = inside && hasCapacity
+  return mobileDockDropActive.value ? { type: 'mobile-dock' } : null
+}
+
+function handleMobileExternalDrop(target, apps) {
+  closeOpenFolder()
+  if (target?.type === 'mobile-dock') {
+    addAppsToMobileDock(apps)
+    return
+  }
+  if (target?.type === 'mobile-dock-reorder') {
+    reorderMobileDockApp(apps?.[0]?.id, target.targetIndex)
+    return
+  }
+  if (target?.type === 'mobile-home') {
+    moveDockAppsToHome(apps, target.position)
+  }
+}
+
+function addAppsToMobileDock(apps) {
+  const next = [...mobileDockIds.value]
+  for (const app of apps ?? []) {
+    if (!app?.id || next.includes(app.id)) continue
+    if (next.length >= 5) break
+    next.push(app.id)
+  }
+  desktopSettings.mobileDockIds = next
+  mobileDockDropActive.value = false
+  schedulePersist()
+}
+
+function reorderMobileDockApp(appId, targetIndex) {
+  if (!appId) return
+  const next = mobileDockIds.value.filter((id) => id !== appId)
+  next.splice(Math.max(0, Math.min(targetIndex, next.length)), 0, appId)
+  desktopSettings.mobileDockIds = next.slice(0, 5)
+  mobileDockDropActive.value = false
+  schedulePersist()
+}
+
+function moveDockAppsToHome(apps, position) {
+  const movedIds = new Set()
+  for (const app of apps ?? []) {
+    const mutableApp = findAppForDrag(app.id)
+    if (!mutableApp) continue
+    mutableApp.desktopX = position.x
+    mutableApp.desktopY = position.y
+    movedIds.add(app.id)
+  }
+  desktopSettings.mobileDockIds = mobileDockIds.value.filter((id) => !movedIds.has(id))
+  mobileDockDropActive.value = false
+  schedulePersist()
+}
+
+function onMobileDockAppPointerDown(app, event) {
+  if (event.button !== 0) return
+  event.preventDefault()
+  closeOpenFolder()
+  iconDrag.onPointerDown(app, event, { mode: 'dock', requiresHold: true })
+}
+
+function onMobileDockAppActivate(app) {
+  if (iconDrag.lastWasDrag.value) {
+    iconDrag.lastWasDrag.value = false
+    return
+  }
+  onOpenIcon(app)
+}
+
+function resolveMobilePointerPosition(event, fallback) {
+  const layer = iconsLayerRef.value
+  if (!layer) return fallback
+
+  const rect = layer.getBoundingClientRect()
+  const style = window.getComputedStyle(layer)
+  const paddingLeft = Number.parseFloat(style.paddingLeft) || 0
+  const paddingRight = Number.parseFloat(style.paddingRight) || 0
+  const paddingTop = Number.parseFloat(style.paddingTop) || 0
+  const contentWidth = Math.max(1, layer.clientWidth - paddingLeft - paddingRight)
+  const columns = 4
+  const columnWidth = contentWidth / columns
+  const firstItem = layer.querySelector(
+    ':scope > .apphub-desktop__icon--placed, :scope > .apphub-desktop__icon--group',
+  )
+  const rowHeight = firstItem?.offsetHeight || ICON_GRID.cellH
+  const localX = event.clientX - rect.left - paddingLeft
+  const localY = event.clientY - rect.top + layer.scrollTop - paddingTop
+  const column = Math.max(0, Math.min(columns - 1, Math.floor(localX / columnWidth)))
+  const row = Math.max(0, Math.floor(localY / rowHeight))
+
+  return {
+    x: ICON_GRID.paddingX + column * ICON_GRID.cellW,
+    y: ICON_GRID.paddingY + row * ICON_GRID.cellH,
+  }
+}
 
 function findAppForDrag(id) {
   const user = shell.findUserApp(id)
@@ -1287,7 +1581,7 @@ function onPlacedIconPointerDown(app, event) {
   if (event.button !== 0) return
   event.preventDefault()
   closeOpenFolder()
-  iconDrag.onPointerDown(app, event, { mode: 'single' })
+  iconDrag.onPointerDown(app, event, { mode: 'single', requiresHold: true })
 }
 
 function onGroupClick(item) {
@@ -1310,6 +1604,7 @@ function onFolderItemPointerDown(app, event) {
   event.preventDefault()
   iconDrag.onPointerDown(app, event, {
     mode: 'folder',
+    requiresHold: true,
     onTap: () => onOpenIcon(app),
   })
 }
@@ -1383,6 +1678,72 @@ function assignDefaultIconPositions() {
     app.desktopY = pos.y
     occupied.push(pos)
   })
+}
+
+function ensureMobileDockDefaults() {
+  if (Array.isArray(desktopSettings.mobileDockIds)) return
+  desktopSettings.mobileDockIds = startMenuCatalogApps.value
+    .filter((app) => app?.id)
+    .slice(0, 4)
+    .map((app) => app.id)
+  schedulePersist()
+}
+
+function fillMobileScreenBlanks() {
+  const layer = iconsLayerRef.value
+  if (!layer) return
+
+  const style = window.getComputedStyle(layer)
+  const paddingTop = Number.parseFloat(style.paddingTop) || 0
+  const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+  const visibleRows = Math.max(
+    1,
+    Math.floor((layer.clientHeight - paddingTop - paddingBottom) / ICON_GRID.cellH),
+  )
+  const columns = 4
+  const items = buildDesktopItems(getHomePlacedApps())
+  const occupied = new Set()
+  const outsideItems = []
+
+  for (const item of items) {
+    const column = Math.round((item.x - ICON_GRID.paddingX) / ICON_GRID.cellW)
+    const row = Math.round((item.y - ICON_GRID.paddingY) / ICON_GRID.cellH)
+    const inside = column >= 0 && column < columns && row >= 0 && row < visibleRows
+
+    if (inside) occupied.add(`${column},${row}`)
+    else outsideItems.push(item)
+  }
+
+  let moved = false
+  let nextCellIndex = 0
+
+  for (const item of outsideItems) {
+    while (occupied.has(`${nextCellIndex % columns},${Math.floor(nextCellIndex / columns)}`)) {
+      nextCellIndex += 1
+    }
+
+    const column = nextCellIndex % columns
+    const row = Math.floor(nextCellIndex / columns)
+    const x = ICON_GRID.paddingX + column * ICON_GRID.cellW
+    const y = ICON_GRID.paddingY + row * ICON_GRID.cellH
+    const apps = item.type === 'group' ? item.apps : [item.app]
+
+    for (const app of apps) {
+      const mutableApp = findAppForDrag(app.id)
+      if (!mutableApp) continue
+      mutableApp.desktopX = x
+      mutableApp.desktopY = y
+      moved = true
+    }
+
+    occupied.add(`${column},${row}`)
+    nextCellIndex += 1
+  }
+
+  if (moved) {
+    syncBuiltinPositionsToSettings()
+    schedulePersist()
+  }
 }
 
 function askDuplicateChoice(app, existing) {
@@ -1623,6 +1984,10 @@ function resolveAppIdFromWindow(win) {
 }
 
 function onDesktopIconActivate(app) {
+  if (iconDrag.lastWasDrag.value) {
+    iconDrag.lastWasDrag.value = false
+    return
+  }
   if (iconDrag.isDragging?.(app?.id)) return
   onOpenIcon(app)
 }
@@ -1934,7 +2299,215 @@ function onDocumentFocusIn(event) {
   if (id) wm.focusWindow(id)
 }
 
+function beginEdgeSwipe(clientX, pointerId) {
+  if (edgeSwipe || edgeSwipeCommitting.value) return
+  const now = performance.now()
+  edgeSwipe = {
+    pointerId,
+    startX: clientX,
+    currentX: clientX,
+    lastX: clientX,
+    lastTime: now,
+    velocityX: 0,
+  }
+  edgeSwipeActive.value = true
+  edgeSwipeDistance.value = 0
+}
+
+function updateEdgeSwipe(clientX) {
+  if (!edgeSwipe) return
+  const now = performance.now()
+  const elapsed = Math.max(1, now - edgeSwipe.lastTime)
+  const instantVelocity = (clientX - edgeSwipe.lastX) / elapsed
+  edgeSwipe.velocityX = edgeSwipe.velocityX * 0.55 + instantVelocity * 0.45
+  edgeSwipe.currentX = clientX
+  edgeSwipe.lastX = clientX
+  edgeSwipe.lastTime = now
+  edgeSwipeDistance.value = Math.max(0, clientX - edgeSwipe.startX)
+}
+
+function resetEdgeSwipe() {
+  edgeSwipeActive.value = false
+  edgeSwipeCommitting.value = false
+  edgeSwipeDistance.value = 0
+  edgeSwipe = null
+}
+
+function shouldCommitEdgeSwipe() {
+  if (!edgeSwipe) return false
+  const farEnough = edgeSwipeProgress.value >= 0.72
+  const fastEnough = edgeSwipeDistance.value >= 24 && edgeSwipe.velocityX >= 0.65
+  return farEnough || fastEnough
+}
+
+function finishEdgeSwipe(commit) {
+  if (!edgeSwipe) return
+  if (!commit) {
+    resetEdgeSwipe()
+    return
+  }
+
+  const windowId = activeMobileWindow.value?.id ?? null
+  edgeSwipeCommitting.value = true
+  edgeSwipeDistance.value = Math.max(edgeSwipeDistance.value, window.innerWidth * 0.45)
+  window.setTimeout(() => {
+    if (windowId) {
+      wm.closeWindow(windowId)
+      schedulePersist()
+    } else {
+      onShutdownClick()
+    }
+    resetEdgeSwipe()
+  }, 190)
+}
+
+function onEdgePointerDown(event) {
+  if (event.pointerType === 'touch' || event.button !== 0) return
+  beginEdgeSwipe(event.clientX, event.pointerId)
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+}
+
+function onEdgePointerMove(event) {
+  if (!edgeSwipe || edgeSwipe.pointerId !== event.pointerId) return
+  updateEdgeSwipe(event.clientX)
+  if (edgeSwipeDistance.value > 0) event.preventDefault()
+}
+
+function onEdgePointerEnd(event) {
+  if (!edgeSwipe || edgeSwipe.pointerId !== event.pointerId) return
+  updateEdgeSwipe(event.clientX)
+  finishEdgeSwipe(shouldCommitEdgeSwipe())
+}
+
+function onEdgePointerCancel(event) {
+  if (!edgeSwipe || edgeSwipe.pointerId !== event.pointerId) return
+  finishEdgeSwipe(false)
+}
+
+function edgeTouchById(touches, id) {
+  return Array.from(touches ?? []).find((touch) => touch.identifier === id) ?? null
+}
+
+function onEdgeTouchStart(event) {
+  const touch = event.changedTouches?.[0]
+  if (!touch) return
+  beginEdgeSwipe(touch.clientX, `touch-${touch.identifier}`)
+  if (edgeSwipe) edgeSwipe.touchId = touch.identifier
+}
+
+function onEdgeTouchMove(event) {
+  if (!edgeSwipe || edgeSwipe.touchId == null) return
+  const touch = edgeTouchById(event.touches, edgeSwipe.touchId)
+  if (touch) updateEdgeSwipe(touch.clientX)
+}
+
+function onEdgeTouchEnd(event) {
+  if (!edgeSwipe || edgeSwipe.touchId == null) return
+  const touch = edgeTouchById(event.changedTouches, edgeSwipe.touchId)
+  if (touch) updateEdgeSwipe(touch.clientX)
+  finishEdgeSwipe(shouldCommitEdgeSwipe())
+}
+
+function onEdgeTouchCancel() {
+  if (!edgeSwipe || edgeSwipe.touchId == null) return
+  finishEdgeSwipe(false)
+}
+
+function currentFullscreenElement() {
+  return document.fullscreenElement ?? document.webkitFullscreenElement ?? null
+}
+
+function onMobileStatusPointerDown(event) {
+  if (event.button !== 0 || userNotificationCenter.state.drawerOpen) return
+  mobileStatusPull = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    currentY: event.clientY,
+  }
+  mobileStatusPullActive.value = true
+  mobileStatusPullProgress.value = 0
+  event.currentTarget?.setPointerCapture?.(event.pointerId)
+}
+
+function onMobileStatusPointerMove(event) {
+  if (!mobileStatusPull || event.pointerId !== mobileStatusPull.pointerId) return
+  mobileStatusPull.currentY = event.clientY
+  const dx = Math.abs(event.clientX - mobileStatusPull.startX)
+  const dy = event.clientY - mobileStatusPull.startY
+  if (dy <= 0 || dy <= dx) return
+
+  event.preventDefault()
+  const pullDistance = Math.max(180, window.innerHeight * 0.72)
+  mobileStatusPullProgress.value = Math.min(1, dy / pullDistance)
+}
+
+function onMobileStatusPointerEnd(event) {
+  if (!mobileStatusPull || event.pointerId !== mobileStatusPull.pointerId) return
+  const dy = mobileStatusPull.currentY - mobileStatusPull.startY
+  if (dy >= 64 || mobileStatusPullProgress.value >= 0.16) {
+    userNotificationCenter.openDrawer()
+  }
+  mobileStatusPullActive.value = false
+  mobileStatusPullProgress.value = 0
+  mobileStatusPull = null
+}
+
+function onMobileStatusPointerCancel(event) {
+  if (!mobileStatusPull || event.pointerId !== mobileStatusPull.pointerId) return
+  mobileStatusPullActive.value = false
+  mobileStatusPullProgress.value = 0
+  mobileStatusPull = null
+}
+
+function syncMobileFullscreenState() {
+  isFullscreen.value = currentFullscreenElement() === desktopRoot.value
+}
+
+function toggleMobileTheme() {
+  onThemeChange(activeTheme.value === 'light' ? 'dark' : 'light')
+}
+
+function setMobileBrightness(value) {
+  mobileBrightness.value = Math.max(0.25, Math.min(1, Number(value) || 1))
+}
+
+async function toggleMobileFullscreen() {
+  if (fullscreenBusy.value || !desktopRoot.value) return
+  fullscreenBusy.value = true
+
+  try {
+    if (currentFullscreenElement()) {
+      const exit = document.exitFullscreen ?? document.webkitExitFullscreen
+      await exit?.call(document)
+    } else {
+      const request =
+        desktopRoot.value.requestFullscreen ?? desktopRoot.value.webkitRequestFullscreen
+      await request?.call(desktopRoot.value)
+    }
+  } catch {
+    // Fullscreen can still be denied by an embedding iframe's Permissions Policy.
+  } finally {
+    syncMobileFullscreenState()
+    fullscreenBusy.value = false
+  }
+}
+
 onMounted(async () => {
+  const standalone =
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  const root = desktopRoot.value
+  const hasStandardFullscreen = typeof root?.requestFullscreen === 'function'
+  fullscreenSupported.value = !standalone && (
+    hasStandardFullscreen
+      ? document.fullscreenEnabled === true
+      : typeof root?.webkitRequestFullscreen === 'function'
+  )
+  syncMobileFullscreenState()
+  document.addEventListener('fullscreenchange', syncMobileFullscreenState)
+  document.addEventListener('webkitfullscreenchange', syncMobileFullscreenState)
+
   if (!desktopReady.value) return
   await initDesktopShell()
 })
@@ -1985,6 +2558,8 @@ async function initDesktopShell() {
     shell.restoreSession(session, wm)
     ensureBuiltinPositions()
     assignDefaultIconPositions()
+    ensureMobileDockDefaults()
+    fillMobileScreenBlanks()
     await tryInitialOpenSlug()
     await refreshPublisherCatalogIfReady()
     await startUserNotificationInbox()
@@ -1993,6 +2568,8 @@ async function initDesktopShell() {
 
   ensureBuiltinPositions()
   assignDefaultIconPositions()
+  ensureMobileDockDefaults()
+  fillMobileScreenBlanks()
 
   if (props.initialOpenSlug) {
     await tryInitialOpenSlug()
@@ -2028,6 +2605,9 @@ async function startUserNotificationInbox() {
 }
 
 onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', syncMobileFullscreenState)
+  document.removeEventListener('webkitfullscreenchange', syncMobileFullscreenState)
+
   if (!initDesktopShell.done) return
 
   if (clockTimer) clearInterval(clockTimer)

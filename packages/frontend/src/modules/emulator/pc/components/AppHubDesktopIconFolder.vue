@@ -25,7 +25,7 @@
               preview && previewNewIds.includes(app.id),
           }"
           :tabindex="preview ? -1 : 0"
-          @mousedown.stop="!preview && emit('item-pointer-down', app, $event)"
+          @pointerdown.stop="!preview && emit('item-pointer-down', app, $event)"
           @dblclick.stop="!preview && emit('open-app', app)"
           @contextmenu.prevent.stop="!preview && emit('item-context-menu', app, $event)"
         >

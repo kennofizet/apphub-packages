@@ -15,6 +15,7 @@ export function useDesktopIconDrag(options) {
   const lastWasDrag = ref(false)
 
   let holdTimer = null
+  let activePointerId = null
 
   function getLayerRect() {
     return options.getLayerEl()?.getBoundingClientRect() ?? null
@@ -50,8 +51,9 @@ export function useDesktopIconDrag(options) {
   }
 
   function removeListeners() {
-    window.removeEventListener('mousemove', onPointerMove)
-    window.removeEventListener('mouseup', onPointerUp)
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('pointercancel', onPointerCancel)
   }
 
   function updateDropTarget(pos, draggedApps) {
@@ -91,7 +93,7 @@ export function useDesktopIconDrag(options) {
 
     const ids = apps.map((a) => a.id)
     const mode = meta.mode ?? 'single'
-    const requiresHold = mode === 'group'
+    const requiresHold = meta.requiresHold ?? mode === 'group'
 
     drag.value = {
       ids,
@@ -105,6 +107,7 @@ export function useDesktopIconDrag(options) {
       ready: !requiresHold,
       onTap: meta.onTap ?? null,
     }
+    activePointerId = event.pointerId
 
     if (requiresHold) {
       holdTimer = setTimeout(() => {
@@ -112,12 +115,16 @@ export function useDesktopIconDrag(options) {
       }, HOLD_MS)
     }
 
-    window.addEventListener('mousemove', onPointerMove)
-    window.addEventListener('mouseup', onPointerUp)
+    event.currentTarget?.setPointerCapture?.(event.pointerId)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerCancel)
   }
 
   function onPointerMove(event) {
+    if (event.pointerId !== activePointerId) return
     if (!drag.value?.ready) return
+    event.preventDefault()
 
     const dx = event.clientX - drag.value.startX
     const dy = event.clientY - drag.value.startY
@@ -131,8 +138,20 @@ export function useDesktopIconDrag(options) {
 
     const rawX = drag.value.anchorX + dx
     const rawY = drag.value.anchorY + dy
-    const pos = resolvePosition(rawX, rawY)
+    const fallbackPos = resolvePosition(rawX, rawY)
+    const pos = options.resolvePointerPosition?.(event, fallbackPos) ?? fallbackPos
     const draggedApps = getApps(drag.value.ids)
+    const externalDrop = options.resolveExternalDrop?.(event, draggedApps, drag.value) ?? null
+    drag.value.externalDrop = externalDrop
+
+    if (externalDrop) {
+      for (const app of draggedApps) {
+        app.desktopX = drag.value.anchorX
+        app.desktopY = drag.value.anchorY
+      }
+      dropTarget.value = null
+      return
+    }
 
     for (const app of draggedApps) {
       app.desktopX = pos.x
@@ -153,7 +172,8 @@ export function useDesktopIconDrag(options) {
     moveAppsToCell(draggedApps, pos.x, pos.y)
   }
 
-  function onPointerUp() {
+  function onPointerUp(event) {
+    if (event?.pointerId !== activePointerId) return
     clearHoldTimer()
     removeListeners()
 
@@ -161,7 +181,9 @@ export function useDesktopIconDrag(options) {
     const wasDrag = session?.moved
     lastWasDrag.value = !!wasDrag
 
-    if (wasDrag) {
+    if (wasDrag && session.externalDrop) {
+      options.onExternalDrop?.(session.externalDrop, getApps(session.ids), session)
+    } else if (wasDrag) {
       finalizeDrop()
       const draggedApps = getApps(session.ids)
       const primary = draggedApps[0]
@@ -177,6 +199,18 @@ export function useDesktopIconDrag(options) {
 
     drag.value = null
     dropTarget.value = null
+    activePointerId = null
+    options.onDragEnd?.()
+  }
+
+  function onPointerCancel(event) {
+    if (event?.pointerId !== activePointerId) return
+    clearHoldTimer()
+    removeListeners()
+    drag.value = null
+    dropTarget.value = null
+    activePointerId = null
+    options.onDragEnd?.()
   }
 
   function isDragging(appId) {
@@ -192,6 +226,8 @@ export function useDesktopIconDrag(options) {
     removeListeners()
     drag.value = null
     dropTarget.value = null
+    activePointerId = null
+    options.onDragEnd?.()
   }
 
   return {
