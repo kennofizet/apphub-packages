@@ -1,0 +1,251 @@
+/**
+ * Mobile = phone home screen chrome (not a shrunk Windows desktop).
+ * Status bar + app icon grid + floating dock.
+ */
+
+.apphub-desktop[data-apphub-device='mobile'] {
+  --ah-mobile-status: 36px;
+  --ah-mobile-dock: 72px;
+  --ah-mobile-dock-inset: 14px;
+  --ah-mobile-home: 18px;
+  --ah-mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ah-mobile-safe-top: env(safe-area-inset-top, 0px);
+}
+
+/* —— Status bar (time / signal) —— */
+.apphub-mobile-status {
+  position: absolute;
+  z-index: 36;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--ah-mobile-status) + var(--ah-mobile-safe-top));
+  padding: var(--ah-mobile-safe-top) 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.apphub-mobile-status__time {
+  min-width: 4.5rem;
+}
+
+.apphub-mobile-status__trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 4.5rem;
+  justify-content: flex-end;
+}
+
+.apphub-mobile-status__dots {
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+  background:
+    linear-gradient(#fff, #fff) 0 50% / 3px 3px no-repeat,
+    linear-gradient(#fff, #fff) 5px 50% / 3px 5px no-repeat,
+    linear-gradient(#fff, #fff) 10px 50% / 3px 7px no-repeat,
+    linear-gradient(#fff, #fff) 15px 50% / 3px 9px no-repeat;
+  opacity: 0.95;
+}
+
+.apphub-mobile-status__wifi {
+  width: 14px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  opacity: 0.95;
+  position: relative;
+}
+
+.apphub-mobile-status__wifi::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 3px;
+  height: 3px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.apphub-mobile-status__battery {
+  width: 22px;
+  height: 11px;
+  border: 1.5px solid #fff;
+  border-radius: 3px;
+  position: relative;
+  opacity: 0.95;
+}
+
+.apphub-mobile-status__battery::before {
+  content: '';
+  position: absolute;
+  inset: 2px 6px 2px 2px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.apphub-mobile-status__battery::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 3px;
+  width: 2px;
+  height: 4px;
+  border-radius: 0 1px 1px 0;
+  background: #fff;
+}
+
+.apphub-mobile-status__island {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--ah-mobile-safe-top) + 8px);
+  transform: translateX(-50%);
+  width: min(118px, 32%);
+  height: 28px;
+  border-radius: 20px;
+  background: #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.apphub-desktop--light .apphub-mobile-status {
+  color: #111;
+  text-shadow: none;
+}
+
+.apphub-desktop--light .apphub-mobile-status__dots,
+.apphub-desktop--light .apphub-mobile-status__wifi,
+.apphub-desktop--light .apphub-mobile-status__battery,
+.apphub-desktop--light .apphub-mobile-status__wifi::before,
+.apphub-desktop--light .apphub-mobile-status__battery::before,
+.apphub-desktop--light .apphub-mobile-status__battery::after {
+  border-color: #111;
+  background-color: #111;
+  color: #111;
+}
+
+.apphub-desktop--light .apphub-mobile-status__dots {
+  background:
+    linear-gradient(#111, #111) 0 50% / 3px 3px no-repeat,
+    linear-gradient(#111, #111) 5px 50% / 3px 5px no-repeat,
+    linear-gradient(#111, #111) 10px 50% / 3px 7px no-repeat,
+    linear-gradient(#111, #111) 15px 50% / 3px 9px no-repeat;
+}
+
+.apphub-desktop--light .apphub-mobile-status__battery::before,
+.apphub-desktop--light .apphub-mobile-status__battery::after,
+.apphub-desktop--light .apphub-mobile-status__wifi::before {
+  background: #111;
+}
+
+/* —— Home icon grid (ignore PC absolute placement) —— */
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons-layer {
+  top: calc(var(--ah-mobile-status) + var(--ah-mobile-safe-top) + 8px);
+  bottom: calc(var(--ah-mobile-dock) + var(--ah-mobile-home) + var(--ah-mobile-safe-bottom) + 20px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 10px 12px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons-layer > .apphub-desktop__icon--placed,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons-layer > .apphub-desktop__icon--group {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 25%;
+  width: 25%;
+  max-width: 25%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 4px 8px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icon-img-wrap,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icon-img,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__group-preview {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icon-label {
+  margin-top: 6px;
+  max-width: 100%;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons-layer > .apphub-icon-folder.preview {
+  display: none !important;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__workarea {
+  top: calc(var(--ah-mobile-status) + var(--ah-mobile-safe-top));
+  bottom: calc(var(--ah-mobile-dock) + var(--ah-mobile-home) + var(--ah-mobile-safe-bottom) + 8px);
+}
+
+.apphub-mobile-home-indicator {
+  position: absolute;
+  z-index: 37;
+  left: 50%;
+  bottom: max(6px, calc(var(--ah-mobile-safe-bottom) * 0.4 + 4px));
+  transform: translateX(-50%);
+  width: 128px;
+  height: 5px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.apphub-desktop--light .apphub-mobile-home-indicator {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Fullscreen apps */
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__titlebar {
+  min-height: 44px;
+  cursor: default;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__btn--desktop-only,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__resize {
+  display: none !important;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-dev-origin-bar {
+  display: none !important;
+}

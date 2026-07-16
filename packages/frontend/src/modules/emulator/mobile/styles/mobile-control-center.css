@@ -1,0 +1,528 @@
+.apphub-mobile-control-center {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+}
+
+.apphub-mobile-control-center__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(3, 7, 18, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.apphub-mobile-control-center__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100dvh;
+  min-width: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 24px 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.96);
+  border-radius: 0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42);
+  backdrop-filter: saturate(150%) blur(24px);
+  -webkit-backdrop-filter: saturate(150%) blur(24px);
+  transition: transform 0.34s cubic-bezier(0.22, 0.8, 0.24, 1);
+  will-change: transform;
+}
+
+.apphub-mobile-control-center__grabber-hit {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 44px;
+  margin: -6px auto -8px;
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  background: transparent;
+}
+
+.apphub-mobile-control-center__grabber {
+  width: 38px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.apphub-mobile-control-center__hero,
+.apphub-mobile-control-center__hero-trail,
+.apphub-mobile-control-center__section-header,
+.apphub-mobile-control-center__notification-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.apphub-mobile-control-center__hero {
+  padding: 10px 12px 2px;
+  align-items: flex-start;
+}
+
+.apphub-mobile-control-center__hero-trail {
+  align-items: flex-start;
+}
+
+.apphub-mobile-control-center__clock {
+  display: block;
+  font-size: clamp(3rem, 14vw, 4.4rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+}
+
+.apphub-mobile-control-center__date {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.apphub-mobile-control-center__status-icons {
+  margin-top: 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.apphub-mobile-control-center__section-header h3,
+.apphub-mobile-control-center__notification h4,
+.apphub-mobile-control-center__notification p {
+  margin: 0;
+}
+
+.apphub-mobile-control-center__tools {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.apphub-mobile-control-center__tool {
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.apphub-mobile-control-center__tool--active {
+  background: #7567ff;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.apphub-mobile-control-center__tool:disabled {
+  opacity: 0.5;
+}
+
+.apphub-mobile-control-center__tool-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.apphub-mobile-control-center__tool > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.apphub-mobile-control-center__tool strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apphub-mobile-control-center__tool small {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apphub-mobile-control-center__brightness {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.apphub-mobile-control-center__brightness > span:first-child {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 1.2rem;
+}
+
+.apphub-mobile-control-center__brightness-track {
+  min-width: 0;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.13);
+  color: #f8fafc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.apphub-mobile-control-center__brightness-track input {
+  width: 100%;
+  accent-color: #7567ff;
+}
+
+.apphub-mobile-control-center__brightness-track > span:last-child {
+  font-size: 1.2rem;
+}
+
+.apphub-mobile-control-center__notifications {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apphub-mobile-control-center__section-header h3 {
+  font-size: 0.9rem;
+}
+
+.apphub-mobile-control-center__section-header button,
+.apphub-mobile-control-center__more {
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 10px;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.18);
+  font-size: 0.72rem;
+}
+
+.apphub-mobile-control-center__notification-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.apphub-mobile-control-center__notification-body::-webkit-scrollbar {
+  display: none;
+}
+
+.apphub-mobile-control-center__notification-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.apphub-mobile-control-center__notification {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.apphub-mobile-control-center__notification--unread {
+  border-color: rgba(96, 165, 250, 0.42);
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.apphub-mobile-control-center__notification-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1.15rem;
+}
+
+.apphub-mobile-control-center__notification-content {
+  min-width: 0;
+}
+
+.apphub-mobile-control-center__notification-meta strong,
+.apphub-mobile-control-center__notification-meta time {
+  overflow: hidden;
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apphub-mobile-control-center__notification-meta time {
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.apphub-mobile-control-center__notification h4 {
+  margin-top: 3px;
+  font-size: 0.8rem;
+}
+
+.apphub-mobile-control-center__notification p {
+  margin-top: 3px;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.apphub-mobile-control-center__notification--swiping {
+  transition: none;
+}
+
+.apphub-mobile-control-center__empty {
+  padding: 28px 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.apphub-mobile-control-center__more {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.apphub-mobile-control-center__clear-all {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: 2px auto 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+.apphub-mobile-control-center__bottom-close-zone {
+  flex: 0 0 auto;
+  width: 100%;
+  height: calc(28px + env(safe-area-inset-bottom, 0px));
+  margin: -10px 0 -16px;
+  padding: 0 0 env(safe-area-inset-bottom, 0px);
+  border: 0;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  background: transparent;
+}
+
+.apphub-mobile-control-center__bottom-close-zone > span {
+  width: 54px;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.apphub-mobile-control-center--iphone .apphub-mobile-control-center__panel {
+  background: rgba(28, 28, 30, 0.88);
+  border-radius: 0;
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+}
+
+.apphub-mobile-control-center--iphone .apphub-mobile-control-center__tool {
+  border-radius: 22px;
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__panel {
+  border-radius: 0;
+  color: #f8fafc;
+  background: rgba(24, 29, 39, 0.96);
+  backdrop-filter: saturate(120%) blur(28px);
+  -webkit-backdrop-filter: saturate(120%) blur(28px);
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__tool {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__tool--active {
+  color: #fff;
+  background: #7567ff;
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__grabber {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__bottom-close-zone > span {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__clear-all {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.apphub-mobile-control-center--android .apphub-mobile-control-center__notification {
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apphub-mobile-control-center-enter-active .apphub-mobile-control-center__panel,
+.apphub-mobile-control-center-leave-active .apphub-mobile-control-center__panel {
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apphub-mobile-control-center--pulling .apphub-mobile-control-center__panel,
+.apphub-mobile-control-center--pulling .apphub-mobile-control-center__backdrop {
+  transition: none;
+}
+
+.apphub-mobile-control-center-enter-from .apphub-mobile-control-center__panel,
+.apphub-mobile-control-center-leave-to .apphub-mobile-control-center__panel {
+  transform: translateY(-100%);
+}
+
+.apphub-mobile-control-center-enter-active .apphub-mobile-control-center__backdrop,
+.apphub-mobile-control-center-leave-active .apphub-mobile-control-center__backdrop {
+  transition: opacity 0.25s ease;
+}
+
+.apphub-mobile-control-center-enter-from .apphub-mobile-control-center__backdrop,
+.apphub-mobile-control-center-leave-to .apphub-mobile-control-center__backdrop {
+  opacity: 0;
+}
+
+.apphub-mobile-notification-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.apphub-mobile-notification-leave-to,
+.apphub-mobile-control-center__notification--removing {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.apphub-desktop--light .apphub-mobile-control-center__panel {
+  color: #0f172a;
+  background: rgba(248, 250, 252, 0.94);
+}
+
+.apphub-desktop--light .apphub-mobile-control-center__tool,
+.apphub-desktop--light .apphub-mobile-control-center__notification {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.apphub-desktop--light .apphub-mobile-control-center__brightness > span:first-child {
+  color: #292724;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.apphub-desktop--light .apphub-mobile-control-center__brightness-track {
+  color: #34343a;
+  border-color: rgba(50, 47, 44, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 4px 14px rgba(50, 47, 44, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__panel {
+  color: #292724;
+  background: rgba(224, 219, 214, 0.94);
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__tool {
+  color: #292724;
+  border-color: rgba(50, 47, 44, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__tool--active {
+  color: #fff;
+  background: #7567ff;
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__notification {
+  color: #292724;
+  border-color: rgba(50, 47, 44, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__notification-meta strong,
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__notification-meta time,
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__notification p {
+  color: #5f5a55;
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__grabber,
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__bottom-close-zone > span {
+  background: rgba(50, 47, 44, 0.38);
+}
+
+.apphub-desktop--light
+  .apphub-mobile-control-center--android
+  .apphub-mobile-control-center__clear-all {
+  background: rgba(255, 255, 255, 0.62);
+}

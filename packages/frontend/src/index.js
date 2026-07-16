@@ -1,6 +1,4 @@
-import './modules/desktop/styles/desktop.css'
-import './modules/desktop/styles/theme.css'
-import './modules/desktop/styles/scrollbars.css'
+import './modules/emulator/index.js'
 import './components/confirm/confirm-dialog.css'
 import { reactive } from 'vue'
 import { createAppHubApi } from './api/index.js'
@@ -15,6 +13,10 @@ import {
   createWindowManagerState,
   provideWindowManager,
 } from './modules/window-manager/index.js'
+import {
+  createDeviceModeState,
+  provideDeviceMode,
+} from './modules/responsive/index.js'
 import {
   evaluateOriginSafety,
   parseDevUserFromBootstrap,
@@ -425,6 +427,11 @@ function syncZoneContext(store) {
 }
 
 function ensureModuleState(app, store) {
+  if (!store.deviceMode) {
+    store.deviceMode = createDeviceModeState()
+    provideDeviceMode(app, store.deviceMode)
+  }
+
   if (store.windowManager && store.appStore) {
     return
   }
@@ -462,6 +469,7 @@ export function installAppHubModule(vueApp, options = {}) {
     coreApi: null,
     zoneContext: null,
     windowManager: null,
+    deviceMode: null,
     appStore: null,
   }
   registerAppHubStore(vueApp, store)
@@ -521,4 +529,5 @@ export function isAppHubOriginBlocked(vueApp) {
 export * from './modules/app-store/index.js'
 export * from './modules/window-manager/index.js'
 export * from './modules/runner/index.js'
+export * from './modules/responsive/index.js'
 

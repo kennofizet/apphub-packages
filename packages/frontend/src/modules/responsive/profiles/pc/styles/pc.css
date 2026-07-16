@@ -1,0 +1,4 @@
+/* PC / desktop shell tweaks — selectors scoped by data-apphub-device="pc" */
+.apphub-desktop[data-apphub-device='pc'] {
+  /* reserved: desktop-only layout hooks */
+}

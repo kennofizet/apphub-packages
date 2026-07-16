@@ -55,7 +55,20 @@ export function sanitizeDesktopSettings(parsed) {
     theme: theme === 'dark' || theme === 'light' || theme === 'auto' ? theme : undefined,
     groupNames: sanitizeGroupNames(parsed.groupNames),
     builtinPositions: sanitizeBuiltinPlacements(parsed.builtinPositions),
+    mobileDockIds: sanitizeMobileDockIds(parsed.mobileDockIds),
   }
+}
+
+function sanitizeMobileDockIds(value) {
+  if (!Array.isArray(value)) return undefined
+  const out = []
+  for (const item of value) {
+    const id = clampString(item, 80)
+    if (!id || out.includes(id)) continue
+    out.push(id)
+    if (out.length >= 5) break
+  }
+  return out
 }
 
 function sanitizeBuiltinPlacements(value) {

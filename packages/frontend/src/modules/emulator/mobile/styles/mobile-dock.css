@@ -1,0 +1,276 @@
+/* Mobile floating dock — separate from PC .apphub-desktop__taskbar. */
+
+.apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(30, 41, 59, 0.68), rgba(15, 23, 42, 0.58));
+  --apphub-dock-border: rgba(255, 255, 255, 0.14);
+  --apphub-dock-shadow: 0 12px 36px rgba(0, 0, 0, 0.34);
+  --apphub-dock-item-bg: rgba(255, 255, 255, 0.1);
+  --apphub-dock-item-hover: rgba(255, 255, 255, 0.17);
+  --apphub-dock-item-active: rgba(96, 165, 250, 0.24);
+  --apphub-dock-accent: #60a5fa;
+  --apphub-dock-color: #f8fafc;
+  position: absolute;
+  z-index: 30;
+  left: var(--ah-mobile-dock-inset, 14px);
+  right: var(--ah-mobile-dock-inset, 14px);
+  bottom: calc(var(--ah-mobile-home, 18px) + var(--ah-mobile-safe-bottom, 0px) + 6px);
+  min-height: var(--ah-mobile-dock, 72px);
+  height: var(--ah-mobile-dock, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 7px 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--apphub-dock-border);
+  border-radius: 26px;
+  color: var(--apphub-dock-color);
+  background: var(--apphub-dock-bg);
+  backdrop-filter: blur(30px) saturate(1.35);
+  -webkit-backdrop-filter: blur(30px) saturate(1.35);
+  box-shadow: var(--apphub-dock-shadow);
+  pointer-events: auto;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.apphub-desktop--light .apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(241, 245, 249, 0.62));
+  --apphub-dock-border: rgba(255, 255, 255, 0.68);
+  --apphub-dock-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  --apphub-dock-item-bg: rgba(15, 23, 42, 0.07);
+  --apphub-dock-item-hover: rgba(15, 23, 42, 0.12);
+  --apphub-dock-item-active: rgba(59, 130, 246, 0.16);
+  --apphub-dock-accent: #2563eb;
+  --apphub-dock-color: #172033;
+}
+
+.apphub-mobile-dock--actions-only {
+  left: auto;
+  width: auto;
+  min-width: 0;
+  min-height: 62px;
+  height: 62px;
+  padding: 6px 8px;
+  border-radius: 22px;
+}
+
+.apphub-mobile-dock--drop-active {
+  border-color: var(--apphub-dock-accent);
+  box-shadow:
+    var(--apphub-dock-shadow),
+    0 0 0 3px color-mix(in srgb, var(--apphub-dock-accent) 24%, transparent);
+  transform: scale(1.025);
+}
+
+.apphub-mobile-dock--full.apphub-mobile-dock--drop-active {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.apphub-mobile-dock__apps {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.apphub-mobile-dock__apps::-webkit-scrollbar {
+  display: none;
+}
+
+.apphub-mobile-dock__app {
+  position: relative;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  color: var(--apphub-dock-color);
+  background: var(--apphub-dock-item-bg);
+  font-size: 1.3rem;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    opacity 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.apphub-mobile-dock__app:hover,
+.apphub-mobile-dock__app:focus-visible {
+  background: var(--apphub-dock-item-hover);
+}
+
+.apphub-mobile-dock__app:active {
+  transform: scale(0.92);
+}
+
+.apphub-mobile-dock__app--active {
+  border-color: color-mix(in srgb, var(--apphub-dock-accent) 50%, transparent);
+  background: var(--apphub-dock-item-active);
+}
+
+.apphub-mobile-dock__app--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--apphub-dock-accent);
+  transform: translateX(-50%);
+}
+
+.apphub-mobile-dock__app--minimized {
+  opacity: 0.55;
+}
+
+.apphub-mobile-dock__app--holding {
+  transform: scale(1.08);
+  animation: apphub-mobile-dock-wiggle 120ms ease-in-out infinite alternate;
+}
+
+.apphub-mobile-dock__app--dragging {
+  z-index: 2;
+  opacity: 0.58;
+  transform: scale(0.9);
+}
+
+@keyframes apphub-mobile-dock-wiggle {
+  from { rotate: -1.5deg; }
+  to { rotate: 1.5deg; }
+}
+
+.apphub-mobile-dock__app-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.apphub-mobile-dock__app-icon--image {
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.apphub-mobile-dock__trail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 4px;
+  border-left: 1px solid var(--apphub-dock-border);
+}
+
+.apphub-mobile-dock--actions-only .apphub-mobile-dock__trail {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.apphub-mobile-dock__shutdown {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(248, 113, 113, 0.26);
+  border-radius: 15px;
+  background: rgba(220, 38, 38, 0.18);
+  color: #fca5a5;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.apphub-mobile-dock__shutdown:hover,
+.apphub-mobile-dock__shutdown:focus-visible {
+  color: #fff;
+  background: #dc2626;
+}
+
+.apphub-mobile-dock__shutdown:active {
+  transform: scale(0.92);
+}
+
+.apphub-mobile-dock .apphub-taskbar-notif {
+  width: 46px;
+  height: 46px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  color: var(--apphub-dock-color);
+  background: var(--apphub-dock-item-bg);
+}
+
+.apphub-mobile-dock .apphub-taskbar-notif:hover,
+.apphub-mobile-dock .apphub-taskbar-notif:focus-visible {
+  background: var(--apphub-dock-item-hover);
+}
+
+/* iPhone dock polish */
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(58, 58, 64, 0.58), rgba(28, 28, 32, 0.5));
+  --apphub-dock-border: rgba(255, 255, 255, 0.14);
+  border-radius: 32px;
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+}
+
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock__app,
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock .apphub-taskbar-notif {
+  border-radius: 16px;
+}
+
+.apphub-desktop--light[data-apphub-phone='iphone'] .apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(238, 238, 244, 0.62));
+  --apphub-dock-border: rgba(255, 255, 255, 0.72);
+  --apphub-dock-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  --apphub-dock-item-bg: rgba(15, 23, 42, 0.06);
+  --apphub-dock-item-hover: rgba(15, 23, 42, 0.11);
+  --apphub-dock-item-active: rgba(37, 99, 235, 0.14);
+  --apphub-dock-accent: #2563eb;
+  --apphub-dock-color: #111827;
+}
+
+/* Android dock polish */
+.apphub-desktop[data-apphub-phone='android'] .apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(45, 43, 49, 0.86), rgba(28, 27, 31, 0.8));
+  --apphub-dock-border: rgba(255, 255, 255, 0.1);
+  --apphub-dock-item-bg: rgba(255, 255, 255, 0.09);
+  --apphub-dock-item-hover: rgba(255, 255, 255, 0.15);
+  --apphub-dock-item-active: rgba(208, 188, 255, 0.2);
+  --apphub-dock-accent: #d0bcff;
+  --apphub-dock-color: #f5eff7;
+  border-radius: 24px;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+
+.apphub-desktop--light[data-apphub-phone='android'] .apphub-mobile-dock {
+  --apphub-dock-bg:
+    linear-gradient(135deg, rgba(255, 250, 255, 0.88), rgba(235, 229, 238, 0.8));
+  --apphub-dock-border: rgba(73, 69, 79, 0.12);
+  --apphub-dock-shadow: 0 8px 24px rgba(28, 27, 31, 0.18);
+  --apphub-dock-item-bg: rgba(73, 69, 79, 0.08);
+  --apphub-dock-item-hover: rgba(73, 69, 79, 0.14);
+  --apphub-dock-item-active: rgba(103, 80, 164, 0.16);
+  --apphub-dock-accent: #6750a4;
+  --apphub-dock-color: #1d1b20;
+}

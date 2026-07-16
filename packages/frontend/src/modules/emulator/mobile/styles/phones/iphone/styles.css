@@ -1,0 +1,63 @@
+/**
+ * iPhone home — Island status, frosted dock, rounded app icons.
+ * Builds on shared mobile phone-home layout in ../styles/mobile.css
+ */
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] {
+  --ah-mobile-status: 48px;
+  --ah-mobile-dock: 78px;
+  --ah-mobile-dock-inset: 16px;
+  --ah-mobile-home: 22px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-mobile-status--iphone {
+  height: calc(var(--ah-mobile-status) + var(--ah-mobile-safe-top));
+  padding-top: var(--ah-mobile-safe-top);
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-desktop__icons-layer {
+  top: calc(var(--ah-mobile-status) + var(--ah-mobile-safe-top) + 10px);
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-desktop__icon-img-wrap,
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-desktop__icon-img,
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-desktop__group-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__titlebar {
+  position: relative;
+  justify-content: center;
+  background: rgba(28, 28, 30, 0.92);
+  backdrop-filter: saturate(180%) blur(16px);
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__title {
+  text-align: center;
+  font-weight: 600;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__controls {
+  position: absolute;
+  right: 4px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__icon {
+  position: absolute;
+  left: 10px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__btn--close {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-win__btn--close:hover {
+  background: #ff453a;
+}

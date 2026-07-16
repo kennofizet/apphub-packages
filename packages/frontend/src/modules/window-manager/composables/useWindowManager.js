@@ -37,6 +37,8 @@ import {
 } from '../utils/windowSnap.js'
 
 import { layoutFromSession } from '../utils/sessionLayout.js'
+import { detectDeviceMode } from '../../responsive/detectDevice.js'
+import { DEVICE_MOBILE } from '../../responsive/constants.js'
 
 
 
@@ -139,6 +141,14 @@ export function createWindowManagerState() {
           offsetIndex: state.windows.length,
 
         })
+
+    if (detectDeviceMode() === DEVICE_MOBILE) {
+      Object.assign(layout, {
+        display: 'fullscreen',
+        snap: 'fullscreen',
+        ...fullscreenBounds(),
+      })
+    }
 
 
 
@@ -347,7 +357,15 @@ export function createWindowManagerState() {
 
     if (!win) return
 
-
+    // Mobile chrome stays fullscreen — no floating restore.
+    if (detectDeviceMode() === DEVICE_MOBILE) {
+      if (win.display !== 'fullscreen') {
+        applyFullscreen(win)
+        persistLayout(win)
+      }
+      bringToFront(id)
+      return
+    }
 
     if (win.display === 'fullscreen') {
 
@@ -387,6 +405,20 @@ export function createWindowManagerState() {
 
     bringToFront(id)
 
+  }
+
+  /** When viewport switches to mobile, expand every open window to fullscreen. */
+  function applyMobileFullscreenToAll() {
+    for (const win of state.windows) {
+      if (win.minimized) continue
+      if (win.display === 'fullscreen') {
+        Object.assign(win, fullscreenBounds())
+        continue
+      }
+      captureFloatingBounds(win)
+      applyFullscreen(win)
+      persistLayout(win)
+    }
   }
 
 
@@ -605,6 +637,8 @@ export function createWindowManagerState() {
     focusWindow,
 
     toggleWindowDisplay,
+
+    applyMobileFullscreenToAll,
 
     snapActiveWindow,
 

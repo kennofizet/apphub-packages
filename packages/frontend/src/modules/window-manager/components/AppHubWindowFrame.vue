@@ -27,14 +27,20 @@
       <div class="apphub-win__controls" @mousedown.stop @dblclick.stop>
         <button
           type="button"
-          class="apphub-win__btn"
+          class="apphub-win__btn apphub-win__btn--desktop-only"
           :title="window.display === 'fullscreen' ? labels.window_restore : labels.window_fullscreen"
           @mousedown.stop
           @click.stop="onToggleDisplay"
         >
           {{ window.display === 'fullscreen' ? '⤢' : '⛶' }}
         </button>
-        <button type="button" class="apphub-win__btn" :title="labels.window_minimize" @mousedown.stop @click.stop="onMinimize">—</button>
+        <button
+          type="button"
+          class="apphub-win__btn apphub-win__btn--desktop-only"
+          :title="labels.window_minimize"
+          @mousedown.stop
+          @click.stop="onMinimize"
+        >—</button>
         <button type="button" class="apphub-win__btn apphub-win__btn--close" :title="labels.window_close" @mousedown.stop @click.stop="onClose">×</button>
       </div>
     </header>
@@ -48,7 +54,7 @@
       />
     </section>
 
-    <template v-if="window.display !== 'fullscreen'">
+    <template v-if="window.display !== 'fullscreen' && !isMobileChrome">
       <div
         v-for="edge in resizeEdges"
         :key="edge"
@@ -71,6 +77,7 @@ import {
   WINDOW_FRAME_ACTIVATE_KEY,
 } from '../composables/useWindowFrameActivation.js'
 import { applyWindowResize, clampWindowToWorkArea } from '../utils/windowLayout.js'
+import { useDeviceMode } from '../../responsive/index.js'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 const resizeEdges = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
@@ -94,6 +101,8 @@ const labels = computed(() => ({
 }))
 
 const wm = useWindowManager()
+const deviceMode = useDeviceMode()
+const isMobileChrome = computed(() => deviceMode.state.mode === 'mobile')
 const drag = ref(null)
 const resize = ref(null)
 const bodyRef = ref(null)
@@ -149,6 +158,7 @@ function onToggleDisplay() {
 }
 
 function onTitlebarDblClick(event) {
+  if (isMobileChrome.value) return
   if (event.target.closest('button, .apphub-win__controls')) return
   cleanupPointerHandlers()
   wm?.toggleWindowDisplay(props.window.id)
@@ -156,7 +166,7 @@ function onTitlebarDblClick(event) {
 }
 
 function onDragStart(event) {
-  if (!wm) return
+  if (!wm || isMobileChrome.value) return
   if (event.target.closest('button, .apphub-win__controls')) return
 
   wm.focusWindow(props.window.id)
@@ -213,7 +223,7 @@ function onDragEnd() {
 }
 
 function onResizeStart(edge, event) {
-  if (!wm || event.button !== 0) return
+  if (!wm || isMobileChrome.value || event.button !== 0) return
   const win = wm.state.windows.find((w) => w.id === props.window.id)
   if (!win || win.display === 'fullscreen') return
 

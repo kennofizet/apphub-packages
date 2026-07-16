@@ -1,4 +1,4 @@
-import runtimeDocumentScrollbarCss from '../modules/desktop/styles/runtime-document-scrollbars.css?raw'
+import runtimeDocumentScrollbarCss from '../modules/emulator/pc/styles/runtime-document-scrollbars.css?raw'
 
 export const RUNTIME_SCROLLBAR_STYLE_ID = 'apphub-runtime-scrollbars'
 

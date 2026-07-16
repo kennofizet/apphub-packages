@@ -7,6 +7,7 @@ Vue 3 **Windows-style desktop** for App Hub. Modular apps run in draggable windo
 | Module | Path | Role |
 |--------|------|------|
 | **desktop** | `src/modules/desktop` | Wallpaper, icons, taskbar, Start menu |
+| **responsive** | `src/modules/responsive` | PC / mobile detect + per-phone styles & actions |
 | **window-manager** | `src/modules/window-manager` | Open / close / focus / minimize windows |
 | **app-store** | `src/modules/app-store` | Built-in **App Store** (default Hub app) |
 

@@ -1,0 +1,28 @@
+/**
+ * Android home — Material dock (less frosted, squarer icons).
+ */
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] {
+  --ah-mobile-status: 32px;
+  --ah-mobile-dock: 72px;
+  --ah-mobile-dock-inset: 12px;
+  --ah-mobile-home: 16px;
+  font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] .apphub-mobile-status__island {
+  display: none;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] .apphub-desktop__icon-img-wrap,
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] .apphub-desktop__icon-img {
+  border-radius: 12px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] .apphub-win__titlebar {
+  background: #1c1b1f;
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] .apphub-win__btn--close {
+  border-radius: 8px;
+}
