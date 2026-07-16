@@ -1,4 +1,4 @@
-import { safeParseJson, sanitizeDesktopSettings } from '../../../utils/safeStorage.js'
+import { safeParseJson, sanitizeDesktopSettings } from '../../../../utils/safeStorage.js'
 
 const SETTINGS_KEY = 'apphub-desktop-settings'
 

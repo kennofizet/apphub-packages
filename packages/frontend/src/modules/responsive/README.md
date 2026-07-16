@@ -70,6 +70,14 @@ Export named functions from `actions.js`. Phone actions override mobile keys wit
 
 ## Mobile chrome behavior
 
-- Taskbar: taller + icon-only tasks; Start opens full-bleed sheet
-- Windows: open/stay fullscreen; no drag/resize; hide restore/minimize (close only)
-- Resize to mobile: open windows expand via `applyMobileFullscreenToAll`
+Phone home layout (not a shrunk Windows desktop):
+
+- **Status bar** at top (clock + signal/battery; Island on iPhone)
+- **App icon grid** (4 columns; ignores PC absolute icon positions)
+- **Floating dock** (`AppHubMobileDock`) — open apps + notifications (+ shutdown if enabled)
+  - No Start button, no pins, no Draft Store / Dev Tools defaults
+  - PC keeps `.apphub-desktop__taskbar` unchanged
+- **Home indicator** under the dock
+- Windows: fullscreen; no drag/resize; close only
+- Dev origin bar + Start menu: PC only
+- Resize to mobile: `applyMobileFullscreenToAll`

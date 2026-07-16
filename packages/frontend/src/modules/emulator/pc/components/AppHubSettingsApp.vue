@@ -31,8 +31,8 @@
 
 <script setup>
 import { computed, inject, ref } from 'vue'
-import { t } from '../../../i18n/index.js'
-import { resolveLang } from '../../../i18n/resolveLang.js'
+import { t } from '../../../../i18n/index.js'
+import { resolveLang } from '../../../../i18n/resolveLang.js'
 import AppHubSettingsKeyboardPanel from './settings/AppHubSettingsKeyboardPanel.vue'
 import AppHubSettingsScreenPanel from './settings/AppHubSettingsScreenPanel.vue'
 import AppHubSettingsStartMenuPanel from './settings/AppHubSettingsStartMenuPanel.vue'

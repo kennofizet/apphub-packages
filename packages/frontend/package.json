@@ -12,6 +12,7 @@
       "default": "./src/index.js"
     },
     "./modules/desktop": "./src/modules/desktop/index.js",
+    "./modules/emulator": "./src/modules/emulator/index.js",
     "./modules/app-store": "./src/modules/app-store/index.js",
     "./modules/window-manager": "./src/modules/window-manager/index.js",
     "./modules/responsive": "./src/modules/responsive/index.js"

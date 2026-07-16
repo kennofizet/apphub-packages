@@ -1,4 +1,4 @@
-import { safeParseJson } from '../../../utils/safeStorage.js'
+import { safeParseJson } from '../../../../utils/safeStorage.js'
 import {
   BUILTIN_APP_STORE_ID,
   BUILTIN_GUIDE_ID,

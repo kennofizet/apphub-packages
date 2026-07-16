@@ -39,9 +39,9 @@
 
 <script setup>
 import { computed, inject } from 'vue'
-import { t } from '../../../i18n/index.js'
-import { resolveLang } from '../../../i18n/resolveLang.js'
-import { useDevOriginToggle } from '../../../composables/useDevOriginToggle.js'
+import { t } from '../../../../i18n/index.js'
+import { resolveLang } from '../../../../i18n/resolveLang.js'
+import { useDevOriginToggle } from '../../../../composables/useDevOriginToggle.js'
 import {
   ORIGIN_UNSAFE_DIRECT_PRODUCT_MOUNT,
   ORIGIN_UNSAFE_NOT_CONFIGURED,
@@ -49,7 +49,7 @@ import {
   ORIGIN_UNSAFE_RUNTIME_SAME_ORIGIN,
   ORIGIN_UNSAFE_SAME_ORIGIN_EMBED,
   ORIGIN_UNSAFE_WRONG_ORIGIN,
-} from '../../../utils/originSafety.js'
+} from '../../../../utils/originSafety.js'
 
 const props = defineProps({
   reason: { type: String, default: null },

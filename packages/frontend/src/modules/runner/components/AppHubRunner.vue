@@ -123,7 +123,7 @@ import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
 import { parentBridgeScopeLabel } from '../../../utils/parentBridgeScopePrompts.js'
 import { useDesktopNotifications } from '../../notifications/index.js'
 import { useUserNotificationCenter } from '../../user-notifications/index.js'
-import AppHubInstallPermissionsDialog from '../../desktop/components/AppHubInstallPermissionsDialog.vue'
+import AppHubInstallPermissionsDialog from '../../emulator/pc/components/AppHubInstallPermissionsDialog.vue'
 import {
   RUNTIME_HOSTED,
   iframeSandboxAttrs,

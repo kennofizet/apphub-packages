@@ -1,0 +1,121 @@
+/* Mobile floating dock — separate from PC .apphub-desktop__taskbar */
+
+.apphub-mobile-dock {
+  position: absolute;
+  z-index: 30;
+  left: var(--ah-mobile-dock-inset, 14px);
+  right: var(--ah-mobile-dock-inset, 14px);
+  bottom: calc(var(--ah-mobile-home, 18px) + var(--ah-mobile-safe-bottom, 0px) + 6px);
+  min-height: var(--ah-mobile-dock, 72px);
+  height: var(--ah-mobile-dock, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(28px) saturate(1.6);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  pointer-events: auto;
+}
+
+.apphub-desktop--light .apphub-mobile-dock {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.apphub-mobile-dock__apps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.apphub-mobile-dock__app {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.apphub-mobile-dock__app--active {
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.55);
+}
+
+.apphub-mobile-dock__app--minimized {
+  opacity: 0.55;
+}
+
+.apphub-mobile-dock__app-icon {
+  line-height: 1;
+}
+
+.apphub-mobile-dock__trail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.apphub-mobile-dock__shutdown {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: rgba(232, 17, 35, 0.75);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.apphub-mobile-dock__shutdown:hover {
+  background: #e81123;
+}
+
+.apphub-mobile-dock .apphub-taskbar-notif {
+  width: 48px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+}
+
+/* iPhone dock polish */
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock {
+  border-radius: 32px;
+  background: rgba(40, 40, 45, 0.55);
+  backdrop-filter: saturate(180%) blur(30px);
+}
+
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock__app,
+.apphub-desktop[data-apphub-phone='iphone'] .apphub-mobile-dock .apphub-taskbar-notif {
+  border-radius: 16px;
+}
+
+/* Android dock polish */
+.apphub-desktop[data-apphub-phone='android'] .apphub-mobile-dock {
+  border-radius: 24px;
+  background: #1c1b1f;
+  backdrop-filter: none;
+}

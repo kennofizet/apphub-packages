@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { isRunningRejectedVersion, isTestingPendingVersion } from '../../../utils/publisherTestVersion.js'
+import { isRunningRejectedVersion, isTestingPendingVersion } from '../../../../utils/publisherTestVersion.js'
 
 function showsPendingTest(app) {
   return isTestingPendingVersion(app)

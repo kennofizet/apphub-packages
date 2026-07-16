@@ -1,6 +1,6 @@
-import { clampString, isValidSlug } from '../../../utils/safeStorage.js'
-import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
-import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
+import { clampString, isValidSlug } from '../../../../utils/safeStorage.js'
+import { resolveAppPermissions } from '../../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../../utils/resolveAppApiUrls.js'
 
 const MAX_MANIFEST_BYTES = 64 * 1024
 

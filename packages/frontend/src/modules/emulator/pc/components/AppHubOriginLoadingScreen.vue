@@ -10,8 +10,8 @@
 
 <script setup>
 import { computed, inject } from 'vue'
-import { t } from '../../../i18n/index.js'
-import { resolveLang } from '../../../i18n/resolveLang.js'
+import { t } from '../../../../i18n/index.js'
+import { resolveLang } from '../../../../i18n/resolveLang.js'
 
 const moduleOptions = inject('apphubOptions', {})
 const lang = computed(() => resolveLang(moduleOptions?.language, 'vi'))

@@ -1,4 +1,4 @@
-import { safeParseJson, sanitizeDesktopSession } from '../../../utils/safeStorage.js'
+import { safeParseJson, sanitizeDesktopSession } from '../../../../utils/safeStorage.js'
 
 const SESSION_KEY = 'apphub-desktop-session'
 

@@ -1,4 +1,4 @@
-import { safeParseJson } from '../../../utils/safeStorage.js'
+import { safeParseJson } from '../../../../utils/safeStorage.js'
 import { sortOpenLogByTime } from './recentApps.js'
 
 const STORAGE_KEY = 'apphub-start-menu-favorites'

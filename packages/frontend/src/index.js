@@ -1,6 +1,4 @@
-import './modules/desktop/styles/desktop.css'
-import './modules/desktop/styles/theme.css'
-import './modules/desktop/styles/scrollbars.css'
+import './modules/emulator/index.js'
 import './components/confirm/confirm-dialog.css'
 import { reactive } from 'vue'
 import { createAppHubApi } from './api/index.js'

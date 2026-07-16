@@ -13,15 +13,12 @@
   <div
     v-else
     ref="desktopRoot"
-    class="apphub-desktop"
+    class="apphub-desktop apphub-desktop--pc"
     :class="{
       'apphub-desktop--drop-target': isMainScreen,
       'apphub-desktop--light': activeTheme === 'light',
-      'apphub-desktop--mobile': deviceMode.state.mode === 'mobile',
-      'apphub-desktop--pc': deviceMode.state.mode === 'pc',
     }"
-    :data-apphub-device="deviceMode.state.mode"
-    :data-apphub-phone="deviceMode.state.phone || undefined"
+    data-apphub-device="pc"
     @click="onDesktopClick"
     @dragenter.capture.prevent="onDesktopDragEnter"
     @dragover.capture.prevent="onDesktopDragOver"
@@ -251,7 +248,10 @@
       @shutdown="onShutdownClick"
     />
 
-    <footer class="apphub-desktop__taskbar" @click.stop>
+    <footer
+      class="apphub-desktop__taskbar"
+      @click.stop
+    >
       <AppHubStartButton
         :active="shell.state.startOpen"
         :title="labels.desktop_start"
@@ -316,30 +316,29 @@
 
 <script setup>
 import { computed, getCurrentInstance, inject, nextTick, onMounted, onUnmounted, provide, reactive, ref, watch } from 'vue'
-import { getHostApiForApp, isBackendReadyForApp } from '../../../composables/useAppHubHostApi.js'
-import { getAppHubStore } from '../../../moduleStore.js'
+import { getHostApiForApp, isBackendReadyForApp } from '../../../../composables/useAppHubHostApi.js'
+import { getAppHubStore } from '../../../../moduleStore.js'
 import {
   CATALOG_MODE_DRAFT,
   CATALOG_MODE_PUBLISHER,
   CATALOG_MODE_STORE,
-} from '../../app-store/constants/catalogModes.js'
-import { useAppStore } from '../../app-store/index.js'
-import { resolveLang } from '../../../i18n/resolveLang.js'
-import { isThemeLocked, resolveTheme } from '../../../i18n/resolveTheme.js'
-import { t } from '../../../i18n/index.js'
+} from '../../../app-store/constants/catalogModes.js'
+import { useAppStore } from '../../../app-store/index.js'
+import { resolveLang } from '../../../../i18n/resolveLang.js'
+import { isThemeLocked, resolveTheme } from '../../../../i18n/resolveTheme.js'
+import { t } from '../../../../i18n/index.js'
 import {
   AppHubDesktopNotifications,
   createDesktopNotificationsState,
   DESKTOP_NOTIFICATIONS_KEY,
-} from '../../notifications/index.js'
+} from '../../../notifications/index.js'
 import {
   AppHubNotificationDrawer,
   AppHubTaskbarNotificationBell,
   createUserNotificationCenter,
   USER_NOTIFICATION_CENTER_KEY,
-} from '../../user-notifications/index.js'
-import { AppHubWindowFrame, useWindowManager } from '../../window-manager/index.js'
-import { useDeviceMode } from '../../responsive/index.js'
+} from '../../../user-notifications/index.js'
+import { AppHubWindowFrame, useWindowManager } from '../../../window-manager/index.js'
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
 import AppHubStartMenu from './AppHubStartMenu.vue'
@@ -356,23 +355,23 @@ import AppHubOriginBlockScreen from './AppHubOriginBlockScreen.vue'
 import AppHubOriginLoadingScreen from './AppHubOriginLoadingScreen.vue'
 import AppHubDesktopDevOriginBar from './AppHubDesktopDevOriginBar.vue'
 import { createDesktopDropInstall } from '../composables/useDesktopDropInstall.js'
-import { clampPerPage } from '../../../utils/catalogPagination.js'
+import { clampPerPage } from '../../../../utils/catalogPagination.js'
 import {
   isRejectedDraftSubmission,
   isRunningRejectedVersion,
   isTestingPendingVersion,
   resolvePublisherTestVersion,
-} from '../../../utils/publisherTestVersion.js'
-import { evaluateOriginSafety } from '../../../utils/originSafety.js'
-import { normalizeShutdownAction, notifyHostParentAction } from '../../../utils/hostParentAction.js'
-import { bridgeScopeLabel, isParentBridgeScope } from '../../../utils/appBridgeScopes.js'
-import { parentBridgeScopeLabel, loadParentBridgeScopePrompts } from '../../../utils/parentBridgeScopePrompts.js'
-import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
-import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
+} from '../../../../utils/publisherTestVersion.js'
+import { evaluateOriginSafety } from '../../../../utils/originSafety.js'
+import { normalizeShutdownAction, notifyHostParentAction } from '../../../../utils/hostParentAction.js'
+import { bridgeScopeLabel, isParentBridgeScope } from '../../../../utils/appBridgeScopes.js'
+import { parentBridgeScopeLabel, loadParentBridgeScopePrompts } from '../../../../utils/parentBridgeScopePrompts.js'
+import { resolveAppPermissions } from '../../../../utils/resolveAppPermissions.js'
+import { resolveAppApiUrls } from '../../../../utils/resolveAppApiUrls.js'
 import {
   clearInstalledPermissions,
   saveInstalledPermissions,
-} from '../../../utils/installedAppPermissions.js'
+} from '../../../../utils/installedAppPermissions.js'
 import { createDesktopShell } from '../composables/useDesktopShell.js'
 import { useDesktopIconDrag } from '../composables/useDesktopIconDrag.js'
 import { buildDesktopItems, getGroupDisplayName, migrateGroupDisplayName, setGroupDisplayName } from '../utils/desktopIconGroups.js'
@@ -411,7 +410,7 @@ import {
   resolveSuggestedApps,
 } from '../utils/recentApps.js'
 import { nextDuplicateName } from '../utils/duplicateAppUtils.js'
-import AppHubCatalogIcon from '../../../components/AppHubCatalogIcon.vue'
+import AppHubCatalogIcon from '../../../../components/AppHubCatalogIcon.vue'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 
@@ -486,22 +485,12 @@ const showThemeToggle = computed(() => {
 })
 
 const wm = useWindowManager()
-const deviceMode = useDeviceMode()
 const appStore = useAppStore()
 const desktopRoot = ref(null)
 const workAreaRef = ref(null)
 const iconsLayerRef = ref(null)
 
 provide(DESKTOP_HOST_KEY, workAreaRef)
-
-watch(
-  () => deviceMode.state.mode,
-  (mode) => {
-    if (mode === 'mobile') {
-      wm.applyMobileFullscreenToAll?.()
-    }
-  },
-)
 
 const desktopSettings = reactive(loadDesktopSettings())
 const keyboardSettings = reactive(loadHubKeyboardSettings())

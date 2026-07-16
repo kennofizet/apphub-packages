@@ -104,11 +104,11 @@
 
 <script setup>
 import { computed, inject, nextTick, ref } from 'vue'
-import { resolveLang } from '../../../i18n/resolveLang.js'
-import { t } from '../../../i18n/index.js'
-import { useAppHubHostApi } from '../../../composables/useAppHubHostApi.js'
-import { publisherGuideSectionsFromIntegrationDocs } from '../../../utils/publisherGuideFromIntegrationDocs.js'
-import { resolveRuntimeApiBase } from '../../../utils/originSafety.js'
+import { resolveLang } from '../../../../i18n/resolveLang.js'
+import { t } from '../../../../i18n/index.js'
+import { useAppHubHostApi } from '../../../../composables/useAppHubHostApi.js'
+import { publisherGuideSectionsFromIntegrationDocs } from '../../../../utils/publisherGuideFromIntegrationDocs.js'
+import { resolveRuntimeApiBase } from '../../../../utils/originSafety.js'
 
 const tab = ref('user')
 const moduleOptions = inject('apphubOptions', {})
