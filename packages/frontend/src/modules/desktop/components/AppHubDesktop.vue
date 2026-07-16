@@ -17,7 +17,11 @@
     :class="{
       'apphub-desktop--drop-target': isMainScreen,
       'apphub-desktop--light': activeTheme === 'light',
+      'apphub-desktop--mobile': deviceMode.state.mode === 'mobile',
+      'apphub-desktop--pc': deviceMode.state.mode === 'pc',
     }"
+    :data-apphub-device="deviceMode.state.mode"
+    :data-apphub-phone="deviceMode.state.phone || undefined"
     @click="onDesktopClick"
     @dragenter.capture.prevent="onDesktopDragEnter"
     @dragover.capture.prevent="onDesktopDragOver"
@@ -334,6 +338,7 @@ import {
   USER_NOTIFICATION_CENTER_KEY,
 } from '../../user-notifications/index.js'
 import { AppHubWindowFrame, useWindowManager } from '../../window-manager/index.js'
+import { useDeviceMode } from '../../responsive/index.js'
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
 import AppHubStartMenu from './AppHubStartMenu.vue'
@@ -480,6 +485,7 @@ const showThemeToggle = computed(() => {
 })
 
 const wm = useWindowManager()
+const deviceMode = useDeviceMode()
 const appStore = useAppStore()
 const desktopRoot = ref(null)
 const workAreaRef = ref(null)

@@ -1,0 +1,8 @@
+/* iPhone-specific shell */
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] {
+  /* reserved: safe-area / notch */
+}
+
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='iphone'] .apphub-desktop__taskbar {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

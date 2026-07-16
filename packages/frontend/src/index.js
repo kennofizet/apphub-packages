@@ -16,6 +16,10 @@ import {
   provideWindowManager,
 } from './modules/window-manager/index.js'
 import {
+  createDeviceModeState,
+  provideDeviceMode,
+} from './modules/responsive/index.js'
+import {
   evaluateOriginSafety,
   parseDevUserFromBootstrap,
   parseOriginsFromBootstrap,
@@ -425,6 +429,11 @@ function syncZoneContext(store) {
 }
 
 function ensureModuleState(app, store) {
+  if (!store.deviceMode) {
+    store.deviceMode = createDeviceModeState()
+    provideDeviceMode(app, store.deviceMode)
+  }
+
   if (store.windowManager && store.appStore) {
     return
   }
@@ -462,6 +471,7 @@ export function installAppHubModule(vueApp, options = {}) {
     coreApi: null,
     zoneContext: null,
     windowManager: null,
+    deviceMode: null,
     appStore: null,
   }
   registerAppHubStore(vueApp, store)
@@ -521,4 +531,5 @@ export function isAppHubOriginBlocked(vueApp) {
 export * from './modules/app-store/index.js'
 export * from './modules/window-manager/index.js'
 export * from './modules/runner/index.js'
+export * from './modules/responsive/index.js'
 

@@ -1,0 +1,4 @@
+/* Android-specific shell */
+.apphub-desktop[data-apphub-device='mobile'][data-apphub-phone='android'] {
+  /* reserved */
+}

@@ -1,0 +1,10 @@
+/* Mobile shell — width/height mode. Phone-specific rules live under phones/*/
+.apphub-desktop[data-apphub-device='mobile'] {
+  /* reserved: mobile chrome (taskbar / start / icons) */
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__panel {
+  width: min(100%, calc(100% - 8px));
+  height: min(92%, calc(100% - 8px));
+  margin-left: 4px;
+}

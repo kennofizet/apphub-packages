@@ -13,7 +13,8 @@
     },
     "./modules/desktop": "./src/modules/desktop/index.js",
     "./modules/app-store": "./src/modules/app-store/index.js",
-    "./modules/window-manager": "./src/modules/window-manager/index.js"
+    "./modules/window-manager": "./src/modules/window-manager/index.js",
+    "./modules/responsive": "./src/modules/responsive/index.js"
   },
   "keywords": ["vue", "vue3", "apphub", "desktop", "frontend"],
   "author": "KennoFizet",
