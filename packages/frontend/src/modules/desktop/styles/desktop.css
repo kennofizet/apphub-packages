@@ -687,6 +687,9 @@
 }
 
 .apphub-desktop__task {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   max-width: 200px;
   min-width: 48px;
   padding: 0 12px;
@@ -702,6 +705,16 @@
   cursor: pointer;
   position: relative;
   transition: background 0.12s ease;
+}
+
+.apphub-desktop__task-icon {
+  flex: 0 0 auto;
+}
+
+.apphub-desktop__task-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .apphub-desktop__task:hover {

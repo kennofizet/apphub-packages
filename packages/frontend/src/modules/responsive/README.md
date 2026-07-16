@@ -64,6 +64,12 @@ Export named functions from `actions.js`. Phone actions override mobile keys wit
 
 ## Next (this branch)
 
-- Mobile layout for taskbar / start / windows
+- [x] Mobile layout for taskbar / start / windows
 - Host override: `installAppHubModule({ deviceMode: 'mobile' })` force
 - Finer breakpoints (tablet)
+
+## Mobile chrome behavior
+
+- Taskbar: taller + icon-only tasks; Start opens full-bleed sheet
+- Windows: open/stay fullscreen; no drag/resize; hide restore/minimize (close only)
+- Resize to mobile: open windows expand via `applyMobileFullscreenToAll`

@@ -1,10 +1,153 @@
-/* Mobile shell — width/height mode. Phone-specific rules live under phones/*/
+/* Mobile shell — viewport mode. Phone-specific overrides live under phones/*/
+
 .apphub-desktop[data-apphub-device='mobile'] {
-  /* reserved: mobile chrome (taskbar / start / icons) */
+  --ah-mobile-taskbar: 56px;
+  --ah-mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ah-mobile-safe-top: env(safe-area-inset-top, 0px);
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons-layer,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__workarea {
+  bottom: calc(var(--ah-mobile-taskbar) + var(--ah-mobile-safe-bottom));
+  top: var(--ah-mobile-safe-top);
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__taskbar {
+  height: calc(var(--ah-mobile-taskbar) + var(--ah-mobile-safe-bottom));
+  padding-bottom: var(--ah-mobile-safe-bottom);
+  gap: 2px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start-btn {
+  flex: 0 0 var(--ah-mobile-taskbar);
+  width: var(--ah-mobile-taskbar);
+  height: var(--ah-mobile-taskbar);
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__tasks {
+  gap: 2px;
+  padding: 4px 2px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__task {
+  min-width: 44px;
+  max-width: 52px;
+  padding: 0 6px;
+  font-size: 1.1rem;
+  justify-content: center;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__task-title {
+  display: none;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__taskbar-draft-store,
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__taskbar-dev-tools {
+  min-width: 44px;
+  max-width: 52px;
+  padding: 0 6px;
+  justify-content: center;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__taskbar-draft-store-label {
+  display: none;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__clock {
+  font-size: 0.7rem;
+  padding-left: 4px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icons {
+  padding: 12px 10px;
+  gap: 6px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icon {
+  width: 76px;
+  padding: 6px 2px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-desktop__icon-label {
+  font-size: 0.7rem;
+}
+
+/* Start menu — full-bleed sheet above taskbar */
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start {
+  bottom: calc(var(--ah-mobile-taskbar) + var(--ah-mobile-safe-bottom));
+  top: var(--ah-mobile-safe-top);
 }
 
 .apphub-desktop[data-apphub-device='mobile'] .apphub-start__panel {
-  width: min(100%, calc(100% - 8px));
-  height: min(92%, calc(100% - 8px));
-  margin-left: 4px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  border-radius: 12px 12px 0 0;
+  border-left: none;
+  border-right: none;
+  flex-direction: column;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__left {
+  flex: 1 1 auto;
+  width: 100%;
+  max-height: none;
+  border-right: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__right {
+  flex: 0 0 auto;
+  max-height: 42%;
+  padding: 12px 14px 14px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__grid {
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__hero {
+  padding: 10px 12px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-start__power {
+  padding: 8px 12px calc(8px + var(--ah-mobile-safe-bottom));
+}
+
+/* Windows — single-app fullscreen chrome */
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__titlebar {
+  min-height: 44px;
+  padding: 0 6px 0 10px;
+  cursor: default;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__btn {
+  width: 40px;
+  height: 36px;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__btn--desktop-only {
+  display: none;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win__resize {
+  display: none !important;
+}
+
+.apphub-desktop[data-apphub-device='mobile'] .apphub-win--resizable {
+  /* mobile never uses floating resize handles */
 }

@@ -267,7 +267,8 @@
           :class="{ active: win.id === wm.state.activeId, minimized: win.minimized }"
           @click="onTaskClick(win)"
         >
-          {{ win.icon }} {{ win.title }}
+          <span class="apphub-desktop__task-icon" aria-hidden="true">{{ win.icon }}</span>
+          <span class="apphub-desktop__task-title">{{ win.title }}</span>
         </button>
       </div>
 
@@ -492,6 +493,15 @@ const workAreaRef = ref(null)
 const iconsLayerRef = ref(null)
 
 provide(DESKTOP_HOST_KEY, workAreaRef)
+
+watch(
+  () => deviceMode.state.mode,
+  (mode) => {
+    if (mode === 'mobile') {
+      wm.applyMobileFullscreenToAll?.()
+    }
+  },
+)
 
 const desktopSettings = reactive(loadDesktopSettings())
 const keyboardSettings = reactive(loadHubKeyboardSettings())
