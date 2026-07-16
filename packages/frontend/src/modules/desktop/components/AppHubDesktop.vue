@@ -240,8 +240,11 @@
       :search-results-label="labels.start_menu_search_results"
       :suggested-label="labels.start_menu_suggested"
       :empty-label="labels.start_menu_empty"
+      :shutdown-action="shutdownAction"
+      :shutdown-label="labels.desktop_shutdown"
       @close="shell.state.startOpen = false"
       @open-app="onStartMenuOpenApp"
+      @shutdown="onShutdownClick"
     />
 
     <footer class="apphub-desktop__taskbar" @click.stop>
@@ -355,6 +358,7 @@ import {
   resolvePublisherTestVersion,
 } from '../../../utils/publisherTestVersion.js'
 import { evaluateOriginSafety } from '../../../utils/originSafety.js'
+import { normalizeShutdownAction, notifyHostParentAction } from '../../../utils/hostParentAction.js'
 import { bridgeScopeLabel, isParentBridgeScope } from '../../../utils/appBridgeScopes.js'
 import { parentBridgeScopeLabel, loadParentBridgeScopePrompts } from '../../../utils/parentBridgeScopePrompts.js'
 import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
@@ -414,9 +418,15 @@ const props = defineProps({
   theme: { type: String, default: 'auto' },
   /** Show Light mode in Start menu. Default: hidden when theme prop locks appearance */
   themeToggle: { type: Boolean, default: undefined },
+    /**
+     * Hub chrome shutdown (Start menu ⏻). When set, click posts apphub:host type=action to product parent.
+     * Prefer this prop when installAppHubModule runs after Desktop mount (dead inject default).
+     * String action name, or true → "shutdown".
+     */
+    shutdownAction: { type: [String, Boolean], default: undefined },
 })
 
-const moduleOptions = inject('apphubOptions', {})
+const moduleOptions = inject('apphubOptions', null)
 const rootApp = getCurrentInstance()?.appContext?.app
 
 const lang = computed(() => resolveLang(moduleOptions?.language, props.language))
@@ -464,8 +474,8 @@ const activeTheme = computed(() => {
 const showThemeToggle = computed(() => {
   if (props.themeToggle === true) return true
   if (props.themeToggle === false) return false
-  if (moduleOptions.themeToggle === true) return true
-  if (moduleOptions.themeToggle === false) return false
+  if (moduleOptions?.themeToggle === true) return true
+  if (moduleOptions?.themeToggle === false) return false
   return !isThemeLocked(props.theme, moduleOptions?.theme)
 })
 
@@ -581,6 +591,7 @@ const labels = computed(() => ({
   start_menu_suggested: t('start_menu_suggested', lang.value),
   start_menu_empty: t('start_menu_empty', lang.value),
   taskbar_pins: t('taskbar_pins', lang.value),
+  desktop_shutdown: t('desktop_shutdown', lang.value),
   icon_context_open: t('icon_context_open', lang.value),
   icon_context_rename: t('icon_context_rename', lang.value),
   icon_context_properties: t('icon_context_properties', lang.value),
@@ -632,6 +643,28 @@ const visibleWindows = computed(() =>
 const taskbarWindows = computed(() =>
   (wm.taskbarWindows?.value ?? wm.taskbarWindows ?? []).filter((w) => w?.id),
 )
+
+const shutdownAction = computed(() => {
+  // Prop wins (dedicated host can pass :shutdown-action). undefined = fall through.
+  if (props.shutdownAction !== undefined) {
+    return normalizeShutdownAction(props.shutdownAction)
+  }
+  // Prefer live module store — survives installAppHubModule after Desktop mount
+  // (inject default {} is a dead non-reactive object and never updates).
+  const store = rootApp ? getAppHubStore(rootApp) : null
+  const fromStore = normalizeShutdownAction(store?.options?.shutdownAction)
+  if (fromStore) return fromStore
+  return normalizeShutdownAction(moduleOptions?.shutdownAction)
+})
+
+function onShutdownClick() {
+  const action = shutdownAction.value
+  if (!action) return
+  const store = rootApp ? getAppHubStore(rootApp) : null
+  notifyHostParentAction(action, {
+    productOrigin: store?.options?.productOrigin || moduleOptions?.productOrigin || '',
+  })
+}
 
 const contextMenuOpenLabel = computed(() =>
   iconContextMenu.group ? labels.value.group_context_open : labels.value.icon_context_open,

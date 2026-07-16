@@ -193,6 +193,10 @@
   border-top-color: var(--ah-border-subtle);
 }
 
+.apphub-start__power {
+  border-top-color: var(--ah-border-subtle);
+}
+
 .apphub-start__hero {
   border-color: rgba(37, 99, 235, 0.25);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);

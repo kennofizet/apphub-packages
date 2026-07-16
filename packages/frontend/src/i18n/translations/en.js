@@ -31,6 +31,7 @@ export default {
   window_minimize: 'Minimize',
   window_fullscreen: 'Full screen',
   window_restore: 'Windowed mode',
+  desktop_shutdown: 'Shut down',
   app_store_title: 'App Store',
   app_store_search: 'Search apps',
   app_store_install: 'Get',

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.15.0",
+  "schema_version": "1.15.1",
   "package": {
     "name": "apphub",
     "version": "0.2.20",
@@ -696,6 +696,22 @@
         "launch_url_query": "Hub adds hub_origin and product_origin on hosted runtime URL after POST …/launch",
         "local_dev_defaults": "Hub http://localhost:5173, product http://localhost:3000 when APP_ENV=local",
         "misconfiguration_symptom": "launch OK, runtime/index.html OK, blank app window, no CSS/JS requests"
+      },
+      "hub_chrome_shutdown": {
+        "summary": "Optional Start-menu ⏻ button (bottom of apphub-start panel). When enabled, Hub notifies the product parent on click — parent owns close/exit handling.",
+        "enable": [
+          "installAppHubModule({ shutdownAction: true }) — default action name \"shutdown\"",
+          "installAppHubModule({ shutdownAction: 'hub.exit' }) — custom action string",
+          "Or parent → Hub config postMessage: { channel: 'apphub:host', type: 'config', shutdownAction: true | 'hub.exit', … }",
+          "Dedicated host may also pass :shutdown-action onto <AppHubDesktop>"
+        ],
+        "hub_to_parent": {
+          "channel": "apphub:host",
+          "type": "action",
+          "payload": "{ channel: 'apphub:host', type: 'action', action: '<shutdownAction>' }"
+        },
+        "parent_listen": "window.addEventListener('message', …) — filter e.origin === hubOrigin and e.data.channel === 'apphub:host' && e.data.type === 'action'",
+        "docs": "hub-host-starter/README.md (Parent → iframe postMessage + Hub chrome actions)"
       },
       "iframe_runtime_policy": {
         "summary": "Per-app apps.entry_url + DEV approval is the allowlist. Optional enterprise cap via APPHUB_ALLOWED_RUNTIME_ORIGINS (HTTPS preferred; exact http:// origins allowed only when listed).",

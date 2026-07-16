@@ -31,6 +31,7 @@ export default {
   window_minimize: 'Thu nhỏ',
   window_fullscreen: 'Toàn màn hình',
   window_restore: 'Chế độ cửa sổ',
+  desktop_shutdown: 'Tắt',
   app_store_title: 'App Store',
   app_store_search: 'Tìm ứng dụng',
   app_store_install: 'Tải',

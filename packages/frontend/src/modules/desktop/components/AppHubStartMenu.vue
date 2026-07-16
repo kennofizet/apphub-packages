@@ -62,6 +62,19 @@
             </ul>
           </template>
         </div>
+
+        <footer v-if="shutdownAction" class="apphub-start__power">
+          <button
+            type="button"
+            class="apphub-start__shutdown"
+            :title="shutdownLabel"
+            :aria-label="shutdownLabel"
+            @click.stop="onShutdown"
+          >
+            <span class="apphub-start__shutdown-icon" aria-hidden="true">⏻</span>
+            <span class="apphub-start__shutdown-label">{{ shutdownLabel }}</span>
+          </button>
+        </footer>
       </aside>
 
       <section class="apphub-start__right">
@@ -144,9 +157,12 @@ const props = defineProps({
   searchResultsLabel: { type: String, default: '' },
   suggestedLabel: { type: String, default: '' },
   emptyLabel: { type: String, default: '' },
+  /** Normalized action name; empty hides the Start-panel shutdown control */
+  shutdownAction: { type: String, default: '' },
+  shutdownLabel: { type: String, default: '' },
 })
 
-const emit = defineEmits(['close', 'open-app'])
+const emit = defineEmits(['close', 'open-app', 'shutdown'])
 
 const query = ref('')
 
@@ -177,6 +193,11 @@ const settingsApp = computed(() => findVisibleBuiltin('settings'))
 
 function onOpen(app) {
   emit('open-app', app)
+  emit('close')
+}
+
+function onShutdown() {
+  emit('shutdown')
   emit('close')
 }
 </script>

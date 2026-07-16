@@ -8,7 +8,7 @@
 |----------|-----|----------------|
 | `end_user` | Uses Hub desktop | Guide → **For users** |
 | **`publisher`** | App author | **`audiences.publisher.bridge`** — **usage only** |
-| `host_dev` | Host platform team | Package install + **`backend_security`** |
+| `host_dev` | Host platform team | Package install + **`backend_security`** + Hub chrome (`shutdownAction`) |
 | `agent` | AI helper | Publisher text = bridge usage; security stays internal |
 
 ---
@@ -71,6 +71,18 @@ When the product embeds Hub in an iframe and users open **hosted** apps, the bro
 
 Parent `postMessage` must include `productOrigin: window.location.origin`. Hub forwards `hub_origin` and `product_origin` on the hosted launch URL. Details: [hub-host-starter/README.md](../hub-host-starter/README.md).
 
+### Hub chrome shutdown (host_dev)
+
+Optional **⏻ Shut down** control at the bottom of the **Start** panel. Parent (or `installAppHubModule`) sets `shutdownAction`; Hub only posts the action — product owns exit/close.
+
+| How | Example |
+|-----|---------|
+| `installAppHubModule` | `shutdownAction: true` → action `"shutdown"`; or `shutdownAction: 'hub.exit'` |
+| Parent → Hub config | `{ channel: 'apphub:host', type: 'config', shutdownAction: true, … }` |
+| Hub → Parent on click | `{ channel: 'apphub:host', type: 'action', action: 'shutdown' }` |
+
+Parent listens for `apphub:host` / `type: 'action'` (same origin checks as other Hub messages). See [hub-host-starter/README.md](../hub-host-starter/README.md).
+
 ### Iframe entry_url policy (host_dev)
 
 | Laravel env | Role |
@@ -100,5 +112,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`; `1.15.1` hub chrome `shutdownAction`)
 - **Major**: breaking bridge or launch contract

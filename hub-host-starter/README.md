@@ -74,9 +74,24 @@ iframe.contentWindow.postMessage(
     themeToggle: false,
     // Required when product embeds Hub in an iframe — hosted apps need this for CSP frame-ancestors
     productOrigin: window.location.origin,
+    // Optional: show Hub Start-menu shutdown (⏻). Click → Hub posts action to parent.
+    // shutdownAction: true, // → action "shutdown"
+    // shutdownAction: 'hub.exit', // → custom action name
   },
   'https://apphub.yourcompany.com',
 )
+```
+
+**Parent listens for Hub chrome actions (e.g. shutdown)**
+
+```js
+window.addEventListener('message', (e) => {
+  if (e.origin !== hubOrigin) return
+  if (e.data?.channel === 'apphub:host' && e.data?.type === 'action') {
+    // e.data.action === 'shutdown' (or your custom string)
+    // close Hub iframe, navigate away, etc.
+  }
+})
 ```
 
 **Parent example (Vue)**
@@ -95,10 +110,15 @@ function pushHubConfig() {
       theme: settings.isDark ? 'dark' : 'light',
       themeToggle: false,
       productOrigin: window.location.origin,
+      // Optional: Hub Start menu ⏻ → posts { channel: 'apphub:host', type: 'action', action }
+      // shutdownAction: true,
     },
     hubOrigin,
   )
 }
+```
+
+Dedicated Hub host (`hub-host-starter`) also passes `:shutdown-action` onto `<AppHubDesktop>` so the button still shows if `installAppHubModule` runs after Desktop mount.
 
 watch(
   () => [authStore.token, settings.locale, settings.isDark],

@@ -22,6 +22,7 @@ function readInitialHostConfig() {
     theme: 'auto',
     themeToggle: false,
     productOrigin: '',
+    shutdownAction: '',
   }
 }
 
@@ -51,6 +52,13 @@ function applyHostMessage(config, data) {
   }
   if (typeof data.productOrigin === 'string' && data.productOrigin.trim()) {
     config.productOrigin = data.productOrigin.trim()
+  }
+  if (data.shutdownAction === true || data.shutdownAction === 1 || data.shutdownAction === '1') {
+    config.shutdownAction = 'shutdown'
+  } else if (typeof data.shutdownAction === 'string') {
+    config.shutdownAction = data.shutdownAction.trim()
+  } else if (data.shutdownAction === false || data.shutdownAction === 0 || data.shutdownAction === '0') {
+    config.shutdownAction = ''
   }
 }
 
@@ -88,6 +96,7 @@ export function useParentHostConfig(vueApp) {
       dedicatedHubHost: true,
       hubOrigin: typeof window !== 'undefined' ? window.location.origin : '',
       productOrigin: config.productOrigin || undefined,
+      shutdownAction: config.shutdownAction || undefined,
     })
   }
 
@@ -116,7 +125,14 @@ export function useParentHostConfig(vueApp) {
   }
 
   watch(
-    () => [config.token, config.language, config.theme, config.themeToggle, config.productOrigin],
+    () => [
+      config.token,
+      config.language,
+      config.theme,
+      config.themeToggle,
+      config.productOrigin,
+      config.shutdownAction,
+    ],
     () => syncModule(),
     { immediate: true },
   )

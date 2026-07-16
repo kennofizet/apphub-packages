@@ -27,6 +27,7 @@ import {
   loadBootstrapCache,
   saveBootstrapCache,
 } from './utils/bootstrapCache.js'
+import { normalizeShutdownAction } from './utils/hostParentAction.js'
 
 const bootstrapInflight = new WeakMap()
 
@@ -54,6 +55,12 @@ function buildPublicOptions(options = {}) {
     allowedProductOrigins: Array.isArray(options.allowedProductOrigins)
       ? options.allowedProductOrigins.filter((o) => typeof o === 'string' && o.trim() !== '')
       : [],
+    /**
+     * When set, Hub shows a Start-menu shutdown button (bottom of apphub-start panel).
+     * Click posts { channel: 'apphub:host', type: 'action', action } to the product parent.
+     * Pass a string action name, or `true` for default `"shutdown"`.
+     */
+    shutdownAction: normalizeShutdownAction(options.shutdownAction),
     runtimePublicUrl: typeof options.runtimePublicUrl === 'string' ? options.runtimePublicUrl.trim() : '',
     enforceDedicatedHubOrigin: options.enforceDedicatedHubOrigin !== false,
     enforceIsolatedHostedRuntime: options.enforceIsolatedHostedRuntime !== false,
@@ -324,6 +331,7 @@ function mergeInstallOptions(store, patch = {}) {
     hubOrigin: store.options.hubOrigin,
     productOrigin: store.options.productOrigin,
     allowedProductOrigins: store.options.allowedProductOrigins,
+    shutdownAction: store.options.shutdownAction,
     runtimePublicUrl: store.options.runtimePublicUrl,
     enforceDedicatedHubOrigin: store.options.enforceDedicatedHubOrigin,
     enforceIsolatedHostedRuntime: store.options.enforceIsolatedHostedRuntime,
@@ -358,6 +366,7 @@ function applyModuleOptions(store, options = {}) {
     hubOrigin: nextPublic.hubOrigin,
     productOrigin: nextPublic.productOrigin,
     allowedProductOrigins: nextPublic.allowedProductOrigins,
+    shutdownAction: nextPublic.shutdownAction,
     runtimePublicUrl: nextPublic.runtimePublicUrl,
     enforceDedicatedHubOrigin: nextPublic.enforceDedicatedHubOrigin,
     enforceIsolatedHostedRuntime: nextPublic.enforceIsolatedHostedRuntime,

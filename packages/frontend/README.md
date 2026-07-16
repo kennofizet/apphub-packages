@@ -36,6 +36,8 @@ const hostApi = installAppHubModule(app, {
   language: 'vi',
   theme: 'dark',
   themeToggle: false,
+  // Optional: Start menu ⏻ button — click posts { channel: 'apphub:host', type: 'action', action } to product parent
+  // shutdownAction: true, // or 'hub.exit'
   // Optional enterprise cap only — iframe apps use catalog entry_url + DEV approval by default.
   // allowedRuntimeOrigins: ['https://apps.yourcompany.com'],
 })

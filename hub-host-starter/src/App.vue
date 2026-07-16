@@ -30,6 +30,7 @@
       :language="config.language"
       :theme="config.theme"
       :theme-toggle="config.themeToggle"
+      :shutdown-action="config.shutdownAction || undefined"
       :initial-open-slug="initialOpenSlug"
     />
   </div>
