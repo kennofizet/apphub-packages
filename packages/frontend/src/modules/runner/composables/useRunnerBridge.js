@@ -54,6 +54,7 @@ export function useRunnerBridge(options) {
       requestScopeConsent: options.requestScopeConsent,
       onSessionScopeGranted: options.onSessionScopeGranted,
       onDesktopMessage: options.onDesktopMessage,
+      onApplyDesktopTheme: options.onApplyDesktopTheme,
       onPublisherNotifySent: options.onPublisherNotifySent,
       onTaskbarBadge: options.onTaskbarBadge,
       reportUsageError: options.reportUsageError,

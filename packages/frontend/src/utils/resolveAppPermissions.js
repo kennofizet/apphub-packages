@@ -1,4 +1,4 @@
-import { isValidBridgeScope } from './appBridgeScopes.js'
+import { isDeclaredBridgeScope } from './appBridgeScopes.js'
 
 /**
  * @param {unknown} app
@@ -18,9 +18,19 @@ export function resolveAppPermissions(app) {
     } else if (item && typeof item === 'object' && typeof item.scope === 'string') {
       scope = item.scope.trim()
     }
-    if (!scope || !isValidBridgeScope(scope) || scopes.includes(scope)) continue
+    if (!scope || !isDeclaredBridgeScope(scope) || scopes.includes(scope)) continue
     scopes.push(scope)
   }
 
+  return scopes
+}
+
+export function mergeAppPermissions(...apps) {
+  const scopes = []
+  for (const app of apps) {
+    for (const scope of resolveAppPermissions(app)) {
+      if (!scopes.includes(scope)) scopes.push(scope)
+    }
+  }
   return scopes
 }

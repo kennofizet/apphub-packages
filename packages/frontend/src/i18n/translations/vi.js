@@ -218,6 +218,7 @@ export default {
   bridge_perm_desktop_message: 'Cho phép {app} hiển thị tin nhắn trên desktop?',
   bridge_perm_desktop_badge: 'Cho phép {app} cập nhật badge trên taskbar?',
   bridge_perm_desktop_download: 'Cho phép {app} lưu file về máy của bạn?',
+  bridge_perm_desktop_theme: 'Cho phép {app} thay đổi giao diện desktop App Hub?',
   bridge_perm_parent_default: 'Cho phép {app} truy cập dữ liệu cha ({scope})?',
   bridge_perm_default: 'Cho phép {app} dùng "{scope}"?',
   bridge_perm_pending_dev_review: 'Chờ DEV duyệt — chỉ hoạt động sau khi duyệt phiên bản',

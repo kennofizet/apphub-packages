@@ -123,6 +123,7 @@ import { bridgeScopeLabel } from '../../../utils/appBridgeScopes.js'
 import { parentBridgeScopeLabel } from '../../../utils/parentBridgeScopePrompts.js'
 import { useDesktopNotifications } from '../../notifications/index.js'
 import { useUserNotificationCenter } from '../../user-notifications/index.js'
+import { DESKTOP_HUB_SETTINGS_KEY } from '../../emulator/pc/composables/useDesktopHubSettings.js'
 import AppHubInstallPermissionsDialog from '../../emulator/pc/components/AppHubInstallPermissionsDialog.vue'
 import {
   RUNTIME_HOSTED,
@@ -135,7 +136,7 @@ import {
   addInstalledPermission,
   hasInstalledPermission,
 } from '../../../utils/installedAppPermissions.js'
-import { resolveAppPermissions } from '../../../utils/resolveAppPermissions.js'
+import { mergeAppPermissions } from '../../../utils/resolveAppPermissions.js'
 import { resolveAppApiUrls } from '../../../utils/resolveAppApiUrls.js'
 import { isRunningRejectedVersion, isTestingPendingVersion } from '../../../utils/publisherTestVersion.js'
 import { useBridgeScopeConsent } from '../composables/useBridgeScopeConsent.js'
@@ -161,6 +162,7 @@ const props = defineProps({
 const api = useAppHubHostApi()
 const notifications = useDesktopNotifications()
 const inboxCenter = useUserNotificationCenter()
+const hubSettings = inject(DESKTOP_HUB_SETTINGS_KEY, null)
 const moduleOptions = inject('apphubOptions', {})
 const allowedOrigins = computed(() => moduleOptions?.enterpriseRuntimeOrigins ?? moduleOptions?.allowedRuntimeOrigins ?? [])
 const iframeRef = ref(null)
@@ -176,6 +178,10 @@ const backendUrl = computed(() => {
 const lang = computed(() => resolveLang(moduleOptions?.language, props.language))
 
 const colorScheme = computed(() => {
+  const fromHub = hubSettings?.colorScheme
+  if (fromHub === 'custom' || fromHub === 'dark' || fromHub === 'light' || fromHub === 'auto') {
+    return fromHub
+  }
   const theme = resolveTheme(moduleOptions?.theme)
   return theme ?? 'auto'
 })
@@ -216,11 +222,36 @@ function translateBridgeKey(key) {
 
 const moduleStore = useAppHubModuleStore()
 
+function catalogItemsForSlug(slug) {
+  const catalogs = moduleStore?.appStore?.catalogs
+  const items = [
+    ...(catalogs?.store?.items ?? []),
+    ...(catalogs?.draft?.items ?? []),
+  ]
+  return items.filter((item) => item?.slug === slug)
+}
+
 const manifestPermissions = computed(() => {
-  const fromProps = resolveAppPermissions({ permissions: props.permissions })
-  if (fromProps.length) return fromProps
-  const catalog = moduleStore?.appStore?.findCatalogItem?.(props.slug)
-  return resolveAppPermissions(catalog)
+  const catalogItems = catalogItemsForSlug(props.slug)
+  const bundleVersion = String(
+    launchContext.value?.bundle_version ?? props.installedVersion ?? '',
+  ).trim()
+  const versionMatches = bundleVersion
+    ? catalogItems.filter((item) =>
+        [item?.version, item?.pending_version, item?.rejected_version]
+          .some((version) => String(version ?? '').trim() === bundleVersion),
+      )
+    : catalogItems
+  const declaredCatalogItems = versionMatches.length ? versionMatches : catalogItems
+
+  // scopes_granted is always a server-validated subset of the launch bundle manifest.
+  // Union it so requestPermission / applyDesktopTheme stay declared when the desktop
+  // icon or store catalog still carries a stale permissions list.
+  return mergeAppPermissions(
+    { permissions: props.permissions },
+    ...declaredCatalogItems,
+    { permissions: launchContext.value?.scopes_granted ?? [] },
+  )
 })
 
 function onRuntimeScopeGranted(scope) {
@@ -309,6 +340,12 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
     if (!title && !body) return
     notifications?.info(body || title, body ? title : '')
   },
+  onApplyDesktopTheme(payload) {
+    if (!hubSettings?.applyDesktopTheme) {
+      throw new Error('Desktop theme API unavailable')
+    }
+    return hubSettings.applyDesktopTheme(payload)
+  },
   onPublisherNotifySent() {
     void inboxCenter?.loadInbox?.({ reset: true, announce: true })
   },
@@ -325,6 +362,8 @@ const { mount: mountBridge, sendReady: sendBridgeReady } = useRunnerBridge({
   allowParentBridgeDemo: () => allowParentBridgeDemo.value,
   getParentBridgeTimeoutMs: () => 30_000,
 })
+
+watch(colorScheme, () => sendBridgeReady())
 
 const preflightTargetLabel = computed(() => {
   if (isHosted.value) return props.slug
@@ -421,6 +460,7 @@ async function refreshLaunchSession() {
       launch_token: nextToken,
       session_id: data.session_id ?? sessionId,
       scopes_granted: scopesGranted,
+      bundle_version: data.bundle_version ?? launchContext.value?.bundle_version ?? null,
       slug: data.slug ?? props.slug,
     }
     sendBridgeReady()
@@ -544,6 +584,7 @@ async function doLaunch() {
     launchContext.value = {
       launch_token: launchToken,
       session_id: data.session_id ?? null,
+      bundle_version: data.bundle_version ?? props.installedVersion ?? null,
       scopes_granted: scopesGranted,
       slug: data.slug ?? props.slug,
       parent_bridge: data.parent_bridge ?? null,

@@ -165,22 +165,27 @@ final class AppVersionService
     private function permissionsForVersion(App $app, string $version): array
     {
         $version = trim($version);
-        if ($version !== '' && $version === (string) $app->version) {
-            $fromApp = AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
-            if ($fromApp !== []) {
-                return $fromApp;
-            }
-        }
+        $merged = [];
 
+        // Prefer the version row first so upgraded scopes (e.g. desktop.theme) are not
+        // hidden behind a non-empty but stale apps.manifest for the same version.
         $row = $version !== '' ? $this->findVersionRow($app, $version) : null;
         if ($row !== null && is_array($row->manifest)) {
-            $fromRow = AppBridgeScope::fromManifest($row->manifest);
-            if ($fromRow !== []) {
-                return $fromRow;
-            }
+            $merged = array_merge($merged, AppBridgeScope::fromManifest($row->manifest));
         }
 
-        return AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+        if ($version === '' || $version === (string) $app->version) {
+            $merged = array_merge(
+                $merged,
+                AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null),
+            );
+        }
+
+        if ($merged === []) {
+            return AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
+        }
+
+        return AppBridgeScope::normalizeList($merged);
     }
 
     /**

@@ -12,12 +12,17 @@
   --ah-surface-panel: rgba(37, 37, 37, 0.45);
   --ah-surface-input: rgba(255, 255, 255, 0.07);
   --ah-taskbar: rgba(0, 0, 0, 0.82);
+  --ah-taskbar-shadow: none;
   --ah-shadow: rgba(0, 0, 0, 0.45);
   --ah-icon-label-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  --ah-icon-drag-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   --ah-accent: #60a5fa;
+  --ah-accent-soft: rgba(96, 165, 250, 0.25);
+  --ah-accent-muted: rgba(96, 165, 250, 0.15);
   --ah-titlebar: linear-gradient(180deg, #2d3f5c 0%, #1e2d45 100%);
   --ah-titlebar-text: #fff;
   --ah-overlay: rgba(2, 6, 23, 0.55);
+  --ah-link: #93c5fd;
   --ah-draft-accent: #fde68a;
   --ah-draft-accent-strong: #fbbf24;
   --ah-draft-surface: #1e293b;
@@ -30,8 +35,70 @@
   --ah-scrollbar-thumb: rgba(148, 163, 184, 0.38);
   --ah-scrollbar-thumb-hover: rgba(203, 213, 225, 0.55);
   --ah-scrollbar-radius: 4px;
+  --ah-wallpaper:
+    radial-gradient(ellipse 80% 60% at 20% 10%, #3a7bd5 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 80%, #6b4bb4 0%, transparent 50%),
+    linear-gradient(160deg, #0c1929 0%, #1a3a5c 45%, #2d1f4e 100%);
+  --ah-wallpaper-filter: none;
+  --ah-wallpaper-drop-filter: brightness(1.08) saturate(1.15);
+  --ah-blur: blur(20px) saturate(1.15);
+  --ah-panel-blur: blur(24px) saturate(1.4);
+  --ah-radius: 8px;
+  --ah-radius-sm: 6px;
+  --ah-elevation-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --ah-elevation-shadow-active: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(96, 165, 250, 0.35);
+  --ah-panel-shadow:
+    0 -4px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --ah-focus-ring: 0 0 0 2px rgba(96, 165, 250, 0.35);
+  --ah-window-border: rgba(255, 255, 255, 0.15);
+  --ah-window-border-active: rgba(96, 165, 250, 0.6);
+  --ah-window-shadow: var(--ah-elevation-shadow);
+  --ah-window-shadow-active: var(--ah-elevation-shadow-active);
+  --ah-window-radius: var(--ah-radius);
+  --ah-start-hero-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);
+  --ah-start-hero-border: rgba(37, 99, 235, 0.25);
+  --ah-motion-fast: 0.15s;
+  --ah-motion-normal: 0.22s;
+  --ah-motion-slow: 0.45s;
+  --ah-ease-out: ease-out;
+  --ah-ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ah-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ah-motion-pop-duration: var(--ah-motion-slow);
+  --ah-motion-panel-duration: var(--ah-motion-normal);
+  --ah-motion-hover-duration: var(--ah-motion-fast);
+  --ah-success: #34d399;
+  --ah-danger: #f87171;
+  --ah-font: 'Segoe UI', system-ui, sans-serif;
+  --ah-font-size: 14px;
+  --ah-font-size-sm: 12px;
+  --ah-font-weight: 400;
+  --ah-letter-spacing: 0;
+  --ah-icon-size: 2rem;
+  --ah-icon-tile-width: 88px;
+  --ah-taskbar-height: 48px;
+  --ah-titlebar-height: 36px;
+  --ah-space-xs: 4px;
+  --ah-space-sm: 8px;
+  --ah-space-md: 14px;
+  --ah-space-lg: 24px;
+  --ah-dock-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.68), rgba(15, 23, 42, 0.58));
+  --ah-dock-border: rgba(255, 255, 255, 0.14);
+  --ah-dock-shadow: 0 12px 36px rgba(0, 0, 0, 0.34);
+  --ah-dock-radius: 26px;
+  --ah-drop-glow: rgba(59, 130, 246, 0.08);
+  --ah-drop-hint-bg: rgba(15, 23, 42, 0.82);
+  --ah-fx-pop-scale-from: 0.86;
+  --ah-fx-pop-scale-to: 1;
+  --ah-fx-panel-rise: 16px;
+  --ah-fx-panel-scale-from: 0.98;
+  --ah-fx-icon-lift: 1.06;
   color: var(--ah-text);
-  transition: color 0.2s ease;
+  font-family: var(--ah-font);
+  font-size: var(--ah-font-size);
+  font-weight: var(--ah-font-weight);
+  letter-spacing: var(--ah-letter-spacing);
+  transition: color var(--ah-motion-hover-duration) var(--ah-ease-out);
 }
 
 .apphub-desktop--light {
@@ -47,12 +114,17 @@
   --ah-surface-panel: #d8dfe9;
   --ah-surface-input: #f4f6fa;
   --ah-taskbar: rgba(220, 227, 236, 0.9);
+  --ah-taskbar-shadow: 0 -1px 0 rgba(255, 255, 255, 0.5) inset;
   --ah-shadow: rgba(26, 35, 50, 0.16);
   --ah-icon-label-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+  --ah-icon-drag-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
   --ah-accent: #1d6fd6;
+  --ah-accent-soft: rgba(29, 111, 214, 0.22);
+  --ah-accent-muted: rgba(29, 111, 214, 0.12);
   --ah-titlebar: linear-gradient(180deg, #f2f5fa 0%, #d4dce8 100%);
   --ah-titlebar-text: #1a2332;
   --ah-overlay: rgba(26, 35, 50, 0.42);
+  --ah-link: #1d6fd6;
   --ah-draft-accent: #b45309;
   --ah-draft-accent-strong: #d97706;
   --ah-draft-surface: #eef1f6;
@@ -62,19 +134,33 @@
   --ah-draft-icon-bg: #f1f5f9;
   --ah-scrollbar-thumb: rgba(100, 116, 139, 0.45);
   --ah-scrollbar-thumb-hover: rgba(71, 85, 105, 0.62);
-}
-
-.apphub-desktop--light .apphub-desktop__wallpaper {
-  background:
+  --ah-wallpaper:
     radial-gradient(ellipse 85% 65% at 18% 15%, rgba(59, 130, 246, 0.38) 0%, transparent 52%),
     radial-gradient(ellipse 65% 55% at 88% 78%, rgba(139, 92, 246, 0.24) 0%, transparent 48%),
     radial-gradient(ellipse 45% 35% at 55% 35%, rgba(14, 165, 233, 0.18) 0%, transparent 42%),
     linear-gradient(155deg, #9eb4cc 0%, #8aa3be 28%, #7a94b0 55%, #6b849f 100%);
-  transition: filter 0.25s ease, background 0.35s ease;
-}
-
-.apphub-desktop--light .apphub-desktop__wallpaper--drop {
-  filter: brightness(1.04) saturate(1.08);
+  --ah-wallpaper-drop-filter: brightness(1.04) saturate(1.08);
+  --ah-elevation-shadow:
+    0 8px 32px rgba(26, 35, 50, 0.14),
+    0 0 0 1px rgba(26, 35, 50, 0.06);
+  --ah-elevation-shadow-active:
+    0 8px 32px rgba(26, 35, 50, 0.16),
+    0 0 0 1px rgba(29, 111, 214, 0.35);
+  --ah-panel-shadow: 0 -4px 32px rgba(26, 35, 50, 0.16);
+  --ah-focus-ring: 0 0 0 2px rgba(29, 111, 214, 0.15);
+  --ah-window-border: rgba(26, 35, 50, 0.12);
+  --ah-window-border-active: rgba(29, 111, 214, 0.55);
+  --ah-window-shadow: var(--ah-elevation-shadow);
+  --ah-window-shadow-active: var(--ah-elevation-shadow-active);
+  --ah-start-hero-bg: linear-gradient(135deg, rgba(191, 219, 254, 0.85) 0%, rgba(147, 197, 253, 0.55) 100%);
+  --ah-start-hero-border: rgba(29, 111, 214, 0.35);
+  --ah-success: #059669;
+  --ah-danger: #dc2626;
+  --ah-dock-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(241, 245, 249, 0.62));
+  --ah-dock-border: rgba(255, 255, 255, 0.68);
+  --ah-dock-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  --ah-drop-glow: rgba(59, 130, 246, 0.08);
+  --ah-drop-hint-bg: rgba(232, 236, 242, 0.95);
 }
 
 .apphub-desktop--light .apphub-desktop__icon-label {
@@ -95,18 +181,15 @@
 
 .apphub-desktop--light .apphub-desktop__icon--placed.apphub-desktop__icon--dragging {
   background: rgba(255, 255, 255, 0.55);
-  border-color: rgba(29, 111, 214, 0.45);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  border-color: var(--ah-window-border-active);
+  box-shadow: var(--ah-icon-drag-shadow);
 }
 
 .apphub-desktop__taskbar {
   background: var(--ah-taskbar);
   border-top-color: var(--ah-border);
-}
-
-.apphub-desktop--light .apphub-desktop__taskbar {
-  backdrop-filter: blur(20px) saturate(1.15);
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.5) inset;
+  backdrop-filter: var(--ah-blur);
+  box-shadow: var(--ah-taskbar-shadow);
 }
 
 .apphub-desktop__clock {
@@ -146,7 +229,9 @@
 .apphub-start__panel {
   background: var(--ah-surface-elevated);
   border-color: var(--ah-border);
-  box-shadow: 0 -4px 32px var(--ah-shadow);
+  box-shadow: var(--ah-panel-shadow);
+  backdrop-filter: var(--ah-panel-blur);
+  border-radius: var(--ah-window-radius) var(--ah-window-radius) 0 0;
 }
 
 .apphub-start__left {
@@ -198,14 +283,9 @@
 }
 
 .apphub-start__hero {
-  border-color: rgba(37, 99, 235, 0.25);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);
+  border-color: var(--ah-start-hero-border);
+  background: var(--ah-start-hero-bg);
   color: var(--ah-text);
-}
-
-.apphub-desktop--light .apphub-start__hero {
-  background: linear-gradient(135deg, rgba(191, 219, 254, 0.85) 0%, rgba(147, 197, 253, 0.55) 100%);
-  border-color: rgba(29, 111, 214, 0.35);
 }
 
 .apphub-start__hero--guide {
@@ -243,8 +323,8 @@
 }
 
 .apphub-desktop--light .apphub-start__search:focus {
-  border-color: rgba(29, 111, 214, 0.55);
-  box-shadow: 0 0 0 2px rgba(29, 111, 214, 0.15);
+  border-color: var(--ah-window-border-active);
+  box-shadow: var(--ah-focus-ring);
 }
 
 .apphub-start__hero-hint {
@@ -261,6 +341,10 @@
   background: var(--ah-hover-strong);
   border-color: var(--ah-border);
   box-shadow: 0 6px 16px var(--ah-shadow);
+  transition:
+    background var(--ah-motion-hover-duration) var(--ah-ease-out),
+    box-shadow var(--ah-motion-hover-duration) var(--ah-ease-out),
+    border-color var(--ah-motion-hover-duration) var(--ah-ease-out);
 }
 
 .apphub-start__app-tile-icon {
@@ -268,8 +352,17 @@
 }
 
 .apphub-win {
-  border-color: var(--ah-border);
-  box-shadow: 0 12px 40px var(--ah-shadow);
+  border-color: var(--ah-window-border);
+  border-radius: var(--ah-window-radius) var(--ah-window-radius) 0 0;
+  box-shadow: var(--ah-window-shadow);
+  transition:
+    border-color var(--ah-motion-hover-duration) var(--ah-ease-out),
+    box-shadow var(--ah-motion-hover-duration) var(--ah-ease-out);
+}
+
+.apphub-win--active {
+  border-color: var(--ah-window-border-active);
+  box-shadow: var(--ah-window-shadow-active);
 }
 
 .apphub-win__titlebar {
@@ -314,19 +407,6 @@
 
 .apphub-desktop--light .apphub-store__btn {
   background: #1d6fd6;
-}
-
-.apphub-desktop--light .apphub-win {
-  box-shadow:
-    0 8px 32px rgba(26, 35, 50, 0.14),
-    0 0 0 1px rgba(26, 35, 50, 0.06);
-}
-
-.apphub-desktop--light .apphub-win--active {
-  border-color: rgba(29, 111, 214, 0.55);
-  box-shadow:
-    0 8px 32px rgba(26, 35, 50, 0.16),
-    0 0 0 1px rgba(29, 111, 214, 0.35);
 }
 
 .apphub-desktop--light .apphub-win__btn:hover {
@@ -404,7 +484,7 @@
 }
 
 .apphub-draft-store__publisher-docs-link {
-  color: #93c5fd;
+  color: var(--ah-link);
 }
 
 .apphub-draft-store__search {

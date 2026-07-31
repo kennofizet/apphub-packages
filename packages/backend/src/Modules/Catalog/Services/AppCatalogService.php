@@ -272,37 +272,35 @@ final class AppCatalogService
      */
     private function resolvePermissionsForCatalog(App $app, bool $preferPendingUpgrade = false): array
     {
+        $merged = [];
+
         if ($preferPendingUpgrade) {
             $pending = trim((string) ($app->pending_version ?? ''));
             if ($pending !== '') {
-                $fromPending = $this->permissionsFromVersion($app->id, $pending);
-                if ($fromPending !== []) {
-                    return $fromPending;
-                }
+                $merged = array_merge($merged, $this->permissionsFromVersion($app->id, $pending));
             }
         }
 
-        $fromApp = AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null);
-        if ($fromApp !== []) {
-            return $fromApp;
-        }
+        $merged = array_merge(
+            $merged,
+            AppBridgeScope::fromManifest(is_array($app->manifest) ? $app->manifest : null),
+        );
 
         $liveVersion = trim((string) ($app->version ?? ''));
         if ($liveVersion !== '') {
-            $fromLive = $this->permissionsFromVersion($app->id, $liveVersion);
-            if ($fromLive !== []) {
-                return $fromLive;
-            }
+            $merged = array_merge($merged, $this->permissionsFromVersion($app->id, $liveVersion));
         }
 
-        if (!$preferPendingUpgrade) {
+        // Store/public catalog must not leak pending-only scopes before DEV approval.
+        // Review/publisher modes already merged pending above.
+        if (!$preferPendingUpgrade && $merged === []) {
             $pending = trim((string) ($app->pending_version ?? ''));
             if ($pending !== '') {
-                return $this->permissionsFromVersion($app->id, $pending);
+                $merged = array_merge($merged, $this->permissionsFromVersion($app->id, $pending));
             }
         }
 
-        return [];
+        return AppBridgeScope::normalizeList($merged);
     }
 
     /**

@@ -1,15 +1,14 @@
 /* Mobile floating dock — separate from PC .apphub-desktop__taskbar. */
 
 .apphub-mobile-dock {
-  --apphub-dock-bg:
-    linear-gradient(135deg, rgba(30, 41, 59, 0.68), rgba(15, 23, 42, 0.58));
-  --apphub-dock-border: rgba(255, 255, 255, 0.14);
-  --apphub-dock-shadow: 0 12px 36px rgba(0, 0, 0, 0.34);
+  --apphub-dock-bg: var(--ah-dock-bg);
+  --apphub-dock-border: var(--ah-dock-border);
+  --apphub-dock-shadow: var(--ah-dock-shadow);
   --apphub-dock-item-bg: rgba(255, 255, 255, 0.1);
   --apphub-dock-item-hover: rgba(255, 255, 255, 0.17);
-  --apphub-dock-item-active: rgba(96, 165, 250, 0.24);
-  --apphub-dock-accent: #60a5fa;
-  --apphub-dock-color: #f8fafc;
+  --apphub-dock-item-active: var(--ah-accent-soft);
+  --apphub-dock-accent: var(--ah-accent);
+  --apphub-dock-color: var(--ah-text);
   position: absolute;
   z-index: 30;
   left: var(--ah-mobile-dock-inset, 14px);
@@ -24,26 +23,23 @@
   padding: 7px 10px;
   box-sizing: border-box;
   border: 1px solid var(--apphub-dock-border);
-  border-radius: 26px;
+  border-radius: var(--ah-dock-radius);
   color: var(--apphub-dock-color);
   background: var(--apphub-dock-bg);
-  backdrop-filter: blur(30px) saturate(1.35);
-  -webkit-backdrop-filter: blur(30px) saturate(1.35);
-  box-shadow: var(--apphub-dock-shadow);
+  backdrop-filter: var(--ah-panel-blur, blur(30px) saturate(1.35));
+  -webkit-backdrop-filter: var(--ah-panel-blur, blur(30px) saturate(1.35));
+  box-shadow: var(--apphub-dock-shadow, var(--ah-panel-shadow));
   pointer-events: auto;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    transform var(--ah-motion-hover-duration, 0.18s) var(--ah-ease-out, ease),
+    border-color var(--ah-motion-hover-duration, 0.18s) var(--ah-ease-out, ease),
+    box-shadow var(--ah-motion-hover-duration, 0.18s) var(--ah-ease-out, ease);
 }
 
 .apphub-desktop--light .apphub-mobile-dock {
-  --apphub-dock-bg:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(241, 245, 249, 0.62));
-  --apphub-dock-border: rgba(255, 255, 255, 0.68);
-  --apphub-dock-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
   --apphub-dock-item-bg: rgba(15, 23, 42, 0.07);
   --apphub-dock-item-hover: rgba(15, 23, 42, 0.12);
-  --apphub-dock-item-active: rgba(59, 130, 246, 0.16);
-  --apphub-dock-accent: #2563eb;
-  --apphub-dock-color: #172033;
+  --apphub-dock-item-active: var(--ah-accent-muted);
 }
 
 .apphub-mobile-dock--actions-only {

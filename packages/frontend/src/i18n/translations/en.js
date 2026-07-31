@@ -218,6 +218,7 @@ export default {
   bridge_perm_desktop_message: 'Allow {app} to show messages on your desktop?',
   bridge_perm_desktop_badge: 'Allow {app} to update its taskbar badge?',
   bridge_perm_desktop_download: 'Allow {app} to save files to your device?',
+  bridge_perm_desktop_theme: 'Allow {app} to change your App Hub desktop theme?',
   bridge_perm_parent_default: 'Allow {app} to access parent data ({scope})?',
   bridge_perm_default: 'Allow {app} to use "{scope}"?',
   bridge_perm_pending_dev_review: 'Pending DEV review — active after version approval',

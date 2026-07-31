@@ -41,8 +41,17 @@ Local-only install (no server listing): drop a manifest with `"type": "apphub-lo
 | `desktop.notify` | Toast / notification on desktop |
 | `desktop.message` | Banner on desktop work area |
 | `desktop.badge` | Taskbar badge on app button |
+| `desktop.download` | Save a file through the Hub parent |
+| `desktop.theme` | Apply an allowlisted custom Hub desktop token pack |
 
 Granted at **install** (server records consent). Desktop scopes can also be requested at runtime via `AppHubBridge.requestPermission`.
+
+`desktop.theme` only changes App Hub chrome. `AppHubBridge.applyDesktopTheme({ mode: 'custom', tokens, rules })`
+accepts known `--ah-*` tokens (colors, wallpaper, blur/glass, shadows, typography, spacing, dock,
+motion timing/easing, animation amplitudes) and optional sandboxed `rules` for allowlisted `.apphub-*`
+selectors/properties. Passing `dark`, `light`, or `auto` clears the pack. Arbitrary stylesheets,
+`url()`, and free-form `@keyframes` are rejected — reshape Hub motion with `--ah-fx-*` / `--ah-motion-*`
+tokens and target chrome via `rules`. Product-shell and parent-suite CSS are not modified.
 
 ### `api_urls`
 

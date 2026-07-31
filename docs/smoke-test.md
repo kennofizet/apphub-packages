@@ -32,6 +32,7 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 | 17 | **Parent bridge** (`callParent`) with product iframe + listener | `callParent('project.list')` → data or `null`; install dialog shows **Pending DEV review** on `parent.*` |
 | 18 | Draft/pending **Demo** banner + demo list | Runner shows Demo badge; `callParent('project.list')` returns array fixtures (`DEMO-A` / `DEMO-B`) |
 | 19 | DEV approve then relaunch | `scopes_granted` includes `parent.*` without reinstall; Demo badge gone |
+| 20 | Child calls `applyDesktopTheme` with `desktop.theme` consent | Hub tokens update immediately; reload preserves the pack for that Hub user; `mode: auto` clears it |
 | 20 | Keep app open > 3 minutes | Hub auto `launch/refresh`; `callParent` / bridge still works (no “Launch session not active”) |
 | 21 | Uninstall while window open | Next `launch/refresh` fails; reopen required; revoked scopes gone from bridge |
 
@@ -75,6 +76,14 @@ Manual pass on `____TEST/test` (or production host). Run after package upgrades 
 3. Open app → **Send desktop notify** (install must include `desktop.notify` on launch token).
 4. App calls `POST {api_urls}/bridge/notify` from demo (not Hub postMessage).
 5. Click **🔔** → drawer; dismiss with **×** or **Mark all read**.
+
+### Smoke #20 — desktop.theme
+
+1. Manifest includes `"desktop.theme"` in `permissions`.
+2. Call `AppHubBridge.applyDesktopTheme({ mode: 'custom', tokens: { 'ah-accent': '#2dd4bf', 'ah-wallpaper': 'linear-gradient(160deg, #04121f 0%, #0f2744 100%)', 'ah-fx-panel-rise': '28px', 'ah-motion-pop-duration': '0.7s' }, rules: [{ selector: '.apphub-win', props: { 'border-radius': '18px', transform: 'perspective(900px) rotateX(1deg)' } }] })` — wallpaper, motion amplitude, and window chrome rules should all apply.
+3. Confirm Hub chrome updates immediately and remains after reload for the same backend URL + Hub user.
+4. Confirm an unknown key rejects with `Unknown desktop theme token`.
+5. Call `AppHubBridge.applyDesktopTheme({ mode: 'auto' })`; custom inline tokens disappear and the built-in system-following theme returns.
 
 ### Smoke #15 — reportError
 

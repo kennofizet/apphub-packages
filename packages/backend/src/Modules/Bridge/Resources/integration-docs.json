@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.15.1",
+  "schema_version": "1.18.0",
   "package": {
     "name": "apphub",
     "version": "0.2.20",
@@ -205,7 +205,7 @@
           "publisher_api_base": "First manifest api_urls entry — convenience for calling your tool backend.",
           "app_version": "Installed/catalog version string when available.",
           "hub_locale": "Hub UI language code (e.g. en, vi) — default for app copy; apps may still offer their own locale picker.",
-          "color_scheme": "Hub theme preference: dark | light | auto (follow system when auto).",
+          "color_scheme": "Hub theme preference: dark | light | auto | custom. custom means an allowlisted per-user desktop token pack is active.",
           "display_user": "UI-only { id, name } from Hub GET /bootstrap — included in apphub:bridge:ready. Not cryptographically verified inside the iframe; use GET bridge/user from your publisher backend for authoritative identity."
         },
         "discovery": {
@@ -229,7 +229,7 @@
                 "caller_origin": "string|null — publisher entry origin when iframe",
                 "app_version": "string|null — installed version",
                 "hub_locale": "string|null — Hub UI language (en, vi, …)",
-                "color_scheme": "string|null — dark | light | auto",
+                "color_scheme": "string|null — dark | light | auto | custom",
                 "display_user": "{ id: number, name: string } optional — UI only from Hub bootstrap"
               }
             },
@@ -237,7 +237,7 @@
               "event": "apphub:bridge:call",
               "fields": {
                 "id": "string",
-                "method": "requestPermission|sendDesktopMessage|setTaskbarBadge|reportError|saveFile",
+                "method": "requestPermission|sendDesktopMessage|applyDesktopTheme|setTaskbarBadge|reportError|saveFile",
                 "args": "array"
               }
             },
@@ -282,6 +282,11 @@
             "scope": "desktop.download",
             "description": "Save exported files from hosted apps (opaque sandbox blocks blob downloads without this). Enables allow-downloads sandbox and AppHubBridge.saveFile().",
             "user_prompt": "Allow {app} to save files to your device?"
+          },
+          {
+            "scope": "desktop.theme",
+            "description": "Apply an allowlisted custom --ah-* token pack to the live App Hub desktop for the current Hub user.",
+            "user_prompt": "Allow {app} to change your App Hub desktop theme?"
           }
         ],
         "parent_scopes": {
@@ -325,7 +330,7 @@
           },
           "requestPermission": {
             "signature": "requestPermission(scope: string): Promise<boolean>",
-            "description": "Hub UI consent for desktop.message and desktop.badge during the session. user.* and desktop.notify are granted at install — not via runtime bridge calls."
+            "description": "Hub UI consent for desktop.message, desktop.badge, and desktop.theme during the session. user.* and desktop.notify are granted at install — not via runtime bridge calls."
           },
           "sendDesktopMessage": {
             "signature": "sendDesktopMessage(payload: DesktopMessage): Promise<void>",
@@ -340,6 +345,126 @@
               "duration_ms": "number optional",
               "priority": "normal | high optional"
             }
+          },
+          "applyDesktopTheme": {
+            "signature": "applyDesktopTheme({ mode, tokens?, rules? }): Promise<{ mode, tokens, rules }>",
+            "requires": [
+              "desktop.theme"
+            ],
+            "description": "Apply a deep App Hub desktop theme pack: design tokens (colors, wallpaper, glass/blur, elevation, typography, spacing, dock, motion timing/easing, and animation amplitudes) plus optional sandboxed CSS rules for allowlisted Hub chrome selectors. Packs persist per backend URL + Hub user. Passing dark/light/auto clears the pack. Does not style the parent product shell; selectors outside the Hub allowlist and unsafe CSS (url(), @import, arbitrary keyframes) are rejected.",
+            "payload_shape": {
+              "mode": "custom | dark | light | auto",
+              "tokens": "Optional for custom when rules are provided; object keyed by ah-* or --ah-* names.",
+              "rules": "Optional for custom when tokens are provided; array of { selector, props } targeting allowlisted .apphub-* chrome only."
+            },
+            "allowed_tokens": [
+              "--ah-text",
+              "--ah-text-secondary",
+              "--ah-text-muted",
+              "--ah-border",
+              "--ah-border-subtle",
+              "--ah-hover",
+              "--ah-hover-strong",
+              "--ah-surface",
+              "--ah-surface-elevated",
+              "--ah-surface-panel",
+              "--ah-surface-input",
+              "--ah-taskbar",
+              "--ah-taskbar-shadow",
+              "--ah-shadow",
+              "--ah-icon-label-shadow",
+              "--ah-icon-drag-shadow",
+              "--ah-accent",
+              "--ah-accent-soft",
+              "--ah-accent-muted",
+              "--ah-success",
+              "--ah-danger",
+              "--ah-titlebar",
+              "--ah-titlebar-text",
+              "--ah-overlay",
+              "--ah-link",
+              "--ah-draft-accent",
+              "--ah-draft-accent-strong",
+              "--ah-draft-surface",
+              "--ah-draft-hero-bg",
+              "--ah-draft-card-bg",
+              "--ah-draft-card-border",
+              "--ah-draft-icon-bg",
+              "--ah-scrollbar-size",
+              "--ah-scrollbar-track",
+              "--ah-scrollbar-thumb",
+              "--ah-scrollbar-thumb-hover",
+              "--ah-scrollbar-radius",
+              "--ah-wallpaper",
+              "--ah-wallpaper-filter",
+              "--ah-wallpaper-drop-filter",
+              "--ah-blur",
+              "--ah-panel-blur",
+              "--ah-radius",
+              "--ah-radius-sm",
+              "--ah-elevation-shadow",
+              "--ah-elevation-shadow-active",
+              "--ah-panel-shadow",
+              "--ah-focus-ring",
+              "--ah-window-border",
+              "--ah-window-border-active",
+              "--ah-window-shadow",
+              "--ah-window-shadow-active",
+              "--ah-window-radius",
+              "--ah-start-hero-bg",
+              "--ah-start-hero-border",
+              "--ah-font",
+              "--ah-font-size",
+              "--ah-font-size-sm",
+              "--ah-font-weight",
+              "--ah-letter-spacing",
+              "--ah-icon-size",
+              "--ah-icon-tile-width",
+              "--ah-taskbar-height",
+              "--ah-titlebar-height",
+              "--ah-space-xs",
+              "--ah-space-sm",
+              "--ah-space-md",
+              "--ah-space-lg",
+              "--ah-dock-bg",
+              "--ah-dock-border",
+              "--ah-dock-shadow",
+              "--ah-dock-radius",
+              "--ah-drop-glow",
+              "--ah-drop-hint-bg",
+              "--ah-motion-fast",
+              "--ah-motion-normal",
+              "--ah-motion-slow",
+              "--ah-ease-out",
+              "--ah-ease-standard",
+              "--ah-ease-spring",
+              "--ah-motion-pop-duration",
+              "--ah-motion-panel-duration",
+              "--ah-motion-hover-duration",
+              "--ah-fx-pop-scale-from",
+              "--ah-fx-pop-scale-to",
+              "--ah-fx-panel-rise",
+              "--ah-fx-panel-scale-from",
+              "--ah-fx-icon-lift"
+            ],
+            "allowed_rule_selectors": [
+              ".apphub-desktop",
+              ".apphub-desktop__wallpaper",
+              ".apphub-desktop__icon",
+              ".apphub-desktop__icon:hover",
+              ".apphub-desktop__icon-label",
+              ".apphub-desktop__taskbar",
+              ".apphub-win",
+              ".apphub-win--active",
+              ".apphub-win__titlebar",
+              ".apphub-win__body",
+              ".apphub-start__panel",
+              ".apphub-mobile-dock",
+              ".apphub-icon-menu",
+              ".apphub-icon-folder__panel"
+            ],
+            "allowed_rule_properties_note": "Visual/layout only: color, background*, border*, radius, shadows, filter/backdrop-filter, opacity, transform, transition/animation-timing, font*, spacing, width/height. No pointer-events, z-index, position, content, or url().",
+            "example": "await AppHubBridge.applyDesktopTheme({ mode: 'custom', tokens: { 'ah-accent': '#2dd4bf', 'ah-wallpaper': 'linear-gradient(160deg, #04121f, #0f2744)', 'ah-font': '\"Segoe UI\", system-ui, sans-serif', 'ah-fx-panel-rise': '28px', 'ah-motion-pop-duration': '0.7s' }, rules: [{ selector: '.apphub-win', props: { 'border-radius': '18px', transform: 'perspective(900px) rotateX(1deg)', 'box-shadow': '0 24px 60px rgba(45, 212, 191, 0.28)' } }, { selector: '.apphub-desktop__wallpaper', props: { filter: 'saturate(1.25) contrast(1.05)' } }] }); await AppHubBridge.applyDesktopTheme({ mode: 'auto' });"
           },
           "setTaskbarBadge": {
             "signature": "setTaskbarBadge(count: number | null): Promise<void>",

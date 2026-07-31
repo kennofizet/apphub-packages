@@ -97,6 +97,9 @@
     sendDesktopMessage(payload) {
       return postCall('sendDesktopMessage', [payload])
     },
+    applyDesktopTheme(payload) {
+      return postCall('applyDesktopTheme', [payload])
+    },
     setTaskbarBadge(count) {
       return postCall('setTaskbarBadge', [count])
     },

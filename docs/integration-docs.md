@@ -26,7 +26,7 @@ Publisher documentation explains **how to use** App Hub from an app:
 - `POST /apps/{slug}/bridge-consents` with `intent_token` after user Accept
 - `AppHubBridge` handshake — full `bridge:ready` context (`bridge_api_base`, `publisher_api_base`, `app_version`, …); listen again after Hub refreshes `launch_token`
 - `getDisplayUser()` for UI; publisher backend `GET bridge/user` for verified identity
-- `requestPermission`, `sendDesktopMessage`, `setTaskbarBadge` for Hub desktop UI (postMessage)
+- `requestPermission`, `sendDesktopMessage`, `applyDesktopTheme`, `setTaskbarBadge` for Hub desktop UI (postMessage)
 - `POST bridge/notify` from publisher backend (`api_urls`) for inbox notifications — same pattern as `GET bridge/user`
 - `reportError(error)` — logs runtime errors to usage (`action: error`); no extra permission
 
@@ -112,5 +112,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`; `1.15.1` hub chrome `shutdownAction`)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`; `1.15.1` hub chrome `shutdownAction`; `1.16.0` desktop.theme/applyDesktopTheme; `1.17.0` expanded desktop theme tokens; `1.18.0` deep desktop theme packs with typography/spacing/fx tokens + sandboxed Hub chrome CSS rules)
 - **Major**: breaking bridge or launch contract

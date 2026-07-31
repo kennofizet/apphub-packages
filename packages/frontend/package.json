@@ -5,6 +5,9 @@
   "main": "./src/index.js",
   "module": "./src/index.js",
   "type": "module",
+  "scripts": {
+    "test": "node tests/desktopThemePack.test.mjs && node tests/resolveAppPermissions.test.mjs"
+  },
   "exports": {
     ".": {
       "import": "./src/index.js",

@@ -27,4 +27,14 @@ final class AppBridgeScopeTest extends TestCase
 
         $this->assertSame(['user.profile', 'desktop.badge'], $scopes);
     }
+
+    public function test_desktop_theme_is_a_valid_bridge_scope(): void
+    {
+        $this->assertTrue(AppBridgeScope::isValid('desktop.theme'));
+        $this->assertContains('desktop.theme', AppBridgeScope::ALL);
+        $this->assertSame(
+            ['desktop.theme'],
+            AppBridgeScope::normalizeList(['desktop.theme', 'desktop.theme']),
+        );
+    }
 }

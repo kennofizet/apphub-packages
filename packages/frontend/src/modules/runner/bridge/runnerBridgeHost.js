@@ -19,6 +19,7 @@ import {
 } from './parentBridgeSecurity.js'
 import { scopeToRequestForMethod, isMethodScopeGranted } from './scopeRequirements.js'
 import { isParentBridgeScope } from '../../../utils/appBridgeScopes.js'
+import { normalizeDesktopThemeRequest } from '../../emulator/shared/desktopThemePack.js'
 
 const USER_SCOPES = new Set(['user.read', 'user.profile'])
 
@@ -42,6 +43,7 @@ function isBridgeMessage(data) {
  *   requestScopeConsent: (scope: string) => Promise<boolean>,
  *   onSessionScopeGranted?: (scope: string) => void,
  *   onDesktopMessage?: (payload: object) => void,
+ *   onApplyDesktopTheme?: (payload: { mode: string, tokens: Record<string, string> }) => unknown,
  *   onPublisherNotifySent?: () => void,
  *   onTaskbarBadge?: (count: number | null) => void,
  *   reportUsageError?: (metadata: Record<string, unknown>) => Promise<void>,
@@ -205,7 +207,8 @@ export function createRunnerBridgeHost(options) {
     if (USER_SCOPES.has(normalized)) {
       return tokenScopes.has(normalized)
     }
-    if (sessionGranted.has(normalized)) return true
+    // Install-time scopes already on the launch token (e.g. desktop.theme) must not re-prompt.
+    if (tokenScopes.has(normalized) || sessionGranted.has(normalized)) return true
 
     const ok = await options.requestScopeConsent(normalized)
     if (!ok) return false
@@ -233,6 +236,10 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
   }
 
   async function handleCall(id, method, args) {
+    // Refresh before any ensure*ScopeGranted check — scopes_granted can land after sendReady()
+    // (launch refresh) or be empty if the first ready raced ahead of launchContext.
+    syncTokenScopesFromContext()
+
     const ctx = options.getLaunchContext?.() ?? {}
     const token = ctx.launch_token
     const slug = options.appSlug
@@ -272,6 +279,21 @@ const SAVE_FILE_MAX_BYTES = 52_428_800
         const body = String(payload?.body ?? '').trim().slice(0, 2000)
         options.onDesktopMessage?.({ ...payload, title, body })
         reply(id, true, undefined)
+        return
+      }
+
+      if (method === 'applyDesktopTheme') {
+        if (!await ensureMethodScopeGranted(method)) {
+          reply(id, false, null, 'Scope not granted')
+          return
+        }
+        if (!options.onApplyDesktopTheme) {
+          reply(id, false, null, 'Desktop theme API unavailable')
+          return
+        }
+        const theme = normalizeDesktopThemeRequest(args?.[0])
+        const result = await options.onApplyDesktopTheme(theme)
+        reply(id, true, result ?? { mode: theme.mode })
         return
       }
 

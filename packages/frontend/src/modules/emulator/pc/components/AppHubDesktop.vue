@@ -17,7 +17,9 @@
     :class="{
       'apphub-desktop--drop-target': isMainScreen,
       'apphub-desktop--light': activeTheme === 'light',
+      'apphub-desktop--custom-theme': desktopThemeIsCustom,
     }"
+    :style="desktopThemeRootStyle"
     data-apphub-device="pc"
     @click="onDesktopClick"
     @dragenter.capture.prevent="onDesktopDragEnter"
@@ -366,7 +368,7 @@ import { evaluateOriginSafety } from '../../../../utils/originSafety.js'
 import { normalizeShutdownAction, notifyHostParentAction } from '../../../../utils/hostParentAction.js'
 import { bridgeScopeLabel, isParentBridgeScope } from '../../../../utils/appBridgeScopes.js'
 import { parentBridgeScopeLabel, loadParentBridgeScopePrompts } from '../../../../utils/parentBridgeScopePrompts.js'
-import { resolveAppPermissions } from '../../../../utils/resolveAppPermissions.js'
+import { mergeAppPermissions, resolveAppPermissions } from '../../../../utils/resolveAppPermissions.js'
 import { resolveAppApiUrls } from '../../../../utils/resolveAppApiUrls.js'
 import {
   clearInstalledPermissions,
@@ -411,6 +413,9 @@ import {
 } from '../utils/recentApps.js'
 import { nextDuplicateName } from '../utils/duplicateAppUtils.js'
 import AppHubCatalogIcon from '../../../../components/AppHubCatalogIcon.vue'
+import { desktopThemeStorageKey as resolveDesktopThemeStorageKey } from '../../shared/desktopThemeStorage.js'
+import { useDesktopThemePack } from '../../shared/useDesktopThemePack.js'
+import { usePreferredColorScheme } from '../../shared/usePreferredColorScheme.js'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 
@@ -470,10 +475,19 @@ const originBlockLabels = computed(() => ({
   parent_origin: t('origin_block_parent_origin', lang.value),
 }))
 
-const activeTheme = computed(() => {
+const preferredColorScheme = usePreferredColorScheme()
+
+function builtInThemeMode() {
   const locked = resolveTheme(props.theme) ?? resolveTheme(moduleOptions?.theme)
   if (locked) return locked
-  return desktopSettings.theme === 'light' ? 'light' : 'dark'
+  return ['dark', 'light', 'auto'].includes(desktopSettings.theme)
+    ? desktopSettings.theme
+    : 'auto'
+}
+
+const activeTheme = computed(() => {
+  const mode = builtInThemeMode()
+  return mode === 'auto' ? preferredColorScheme.value : mode
 })
 
 const showThemeToggle = computed(() => {
@@ -493,6 +507,24 @@ const iconsLayerRef = ref(null)
 provide(DESKTOP_HOST_KEY, workAreaRef)
 
 const desktopSettings = reactive(loadDesktopSettings())
+const desktopThemeStorageKey = computed(() => {
+  const store = rootApp ? getAppHubStore(rootApp) : null
+  return resolveDesktopThemeStorageKey(
+    store?.credentials?.backendUrl,
+    store?.zoneContext?.state?.user?.id,
+  )
+})
+const desktopTheme = useDesktopThemePack({
+  getStorageKey: () => desktopThemeStorageKey.value,
+  getBuiltInMode: builtInThemeMode,
+  isThemeLocked: () => isThemeLocked(props.theme, moduleOptions?.theme),
+  setBuiltInMode: (mode) => {
+    desktopSettings.theme = mode
+    schedulePersist()
+  },
+})
+const desktopThemeIsCustom = desktopTheme.hasCustomTheme
+const desktopThemeRootStyle = desktopTheme.customThemeStyle
 const keyboardSettings = reactive(loadHubKeyboardSettings())
 const startMenuPins = reactive(loadStartMenuPins())
 const startMenuFavorites = reactive(loadStartMenuFavorites())
@@ -818,8 +850,8 @@ async function askInstallPermissions(app, action = 'install') {
   let permissions = resolveAppPermissions(app)
   let apiUrls = resolveAppApiUrls(app)
   if (app?.slug) {
-    const catalog = appStore.findCatalogItem(app.slug)
-    if (!permissions.length) permissions = resolveAppPermissions(catalog)
+    const catalog = findFreshCatalogItem(app.slug)
+    permissions = mergeAppPermissions(app, catalog)
     if (!apiUrls.length) apiUrls = resolveAppApiUrls(catalog)
   }
   if (!permissions.length && !apiUrls.length) return true
@@ -1052,6 +1084,12 @@ function syncUserAppPublisherFields(catalogApp) {
   return true
 }
 
+function findFreshCatalogItem(slug) {
+  return appStore.catalogs.draft.items.find((item) => item.slug === slug)
+    ?? appStore.catalogs.store.items.find((item) => item.slug === slug)
+    ?? appStore.findCatalogItem(slug)
+}
+
 function iconShowsPendingTest(app) {
   if (!app || app.builtin || iconShowsDraftStatus(app)) return false
   const merged = resolveCatalogMergedApp(app)
@@ -1081,7 +1119,7 @@ function iconShowsRejectedTest(app) {
 function syncPublisherVersionBadgesFromCatalog() {
   for (const userApp of shell.state.userApps) {
     if (!userApp?.slug || userApp.builtin) continue
-    const catalog = appStore.findCatalogItem(userApp.slug)
+    const catalog = findFreshCatalogItem(userApp.slug)
     if (!catalog) continue
     syncUserAppPublisherFields(catalog)
   }
@@ -1479,8 +1517,8 @@ function onSnapGridChange(value) {
 }
 
 function onThemeChange(theme) {
-  desktopSettings.theme = theme === 'light' ? 'light' : 'dark'
-  schedulePersist()
+  const mode = ['dark', 'light', 'auto'].includes(theme) ? theme : 'dark'
+  desktopTheme.applyTheme({ mode })
 }
 
 function persistStartMenuPins() {
@@ -1529,9 +1567,12 @@ const hubSettings = reactive({
   recentOpenLog,
   desktopApps: startMenuCatalogApps,
   activeTheme,
+  colorScheme: desktopTheme.colorScheme,
+  customThemeStyle: desktopTheme.customThemeStyle,
   showThemeToggle,
   setSnapToGrid: onSnapGridChange,
   setTheme: onThemeChange,
+  applyDesktopTheme: desktopTheme.applyTheme,
   saveKeyboardSettings: () => saveHubKeyboardSettings(keyboardSettings),
   getDesktopApps: () => startMenuCatalogApps.value,
   getRecentApps: () => resolveRecentApps(startMenuCatalogApps.value, recentOpenLog.value),
@@ -1674,6 +1715,13 @@ function resolveAppIdFromWindow(win) {
 }
 
 function onOpenIcon(app) {
+  if (!app?.builtin && app?.slug) {
+    const catalog = findFreshCatalogItem(app.slug)
+    if (catalog && syncUserAppPublisherFields(catalog)) {
+      app = shell.findUserAppBySlug(app.slug) ?? app
+      schedulePersist()
+    }
+  }
   measureWorkArea()
   shell.openApp(app, wm)
   schedulePersist()

@@ -16,6 +16,8 @@ final class AppBridgeScope
 
     public const DESKTOP_DOWNLOAD = 'desktop.download';
 
+    public const DESKTOP_THEME = 'desktop.theme';
+
     /** @var list<string> */
     public const ALL = [
         self::USER_READ,
@@ -24,6 +26,7 @@ final class AppBridgeScope
         self::DESKTOP_MESSAGE,
         self::DESKTOP_BADGE,
         self::DESKTOP_DOWNLOAD,
+        self::DESKTOP_THEME,
     ];
 
     public static function isValid(string $scope): bool
@@ -34,6 +37,10 @@ final class AppBridgeScope
 
         if (self::isParentScope($scope)) {
             return true;
+        }
+
+        if (!function_exists('app') || !app()->bound('config')) {
+            return false;
         }
 
         $configured = config('apphub-parent-bridge.scopes', []);
