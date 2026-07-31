@@ -1,7 +1,7 @@
 {
   "slug": "demo-iframe-htmlz1z1",
   "name": "demo-iframe-htmlz1z1",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Self-hosted iframe app — serve this folder, then drop manifest.json on App Hub.",
   "icon": "🌐",
   "runtime_type": "iframe",

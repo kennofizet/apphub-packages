@@ -10,6 +10,7 @@ Use in publisher apps (copy or adapt — not shipped with `@kennofizet/apphub-fr
 
 - `reportError`
 - `sendDesktopMessage`
+- `applyDesktopTheme`
 - `setTaskbarBadge`
 - `requestPermission`
 

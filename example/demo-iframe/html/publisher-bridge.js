@@ -1,7 +1,7 @@
 /**
  * Publisher bridge helpers for App Hub demo apps.
  *
- * Hub postMessage: reportError, sendDesktopMessage, setTaskbarBadge, requestPermission
+ * Hub postMessage: reportError, sendDesktopMessage, applyDesktopTheme, setTaskbarBadge, requestPermission
  * Publisher HTTP (manifest api_urls → local-bridge-proxy): GET bridge/user, POST bridge/notify
  */
 ;(function initAppHubPublisherBridge(global) {
@@ -208,6 +208,10 @@
       return callBridge('emitToParent', [name, payload ?? {}])
     }
 
+    function applyDesktopTheme(payload) {
+      return callBridge('applyDesktopTheme', [payload])
+    }
+
     function requestBridgeReady() {
       if (global.parent === global) return
       global.parent.postMessage({ channel: BRIDGE_CHANNEL, event: EVENT_PING }, '*')
@@ -271,6 +275,7 @@
       fetchBridgeUser,
       fetchBridgeNotify,
       callBridge,
+      applyDesktopTheme,
       callParent,
       emitToParent,
       requestBridgeReady,
