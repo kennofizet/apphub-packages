@@ -21,7 +21,7 @@ const uninstall = installAppHubProductBridgeListener({
 ## Configure handlers (Laravel host)
 
 1. Publish config: `php artisan vendor:publish --tag=apphub-config`
-2. Edit `config/apphub-parent-bridge.php` — set `handler` / `listener` classes, `permission`, and `bridge_scope` per action
+2. Edit `config/apphub-parent-bridge.php` — set `handler` / `listener` classes, `permission`, `bridge_scope`, and publisher-facing `args` / `returns` per action (these auto-appear on `GET …/integration-docs` as `host_action_contracts`)
 3. Production: bind `APPHUB_PARENT_BRIDGE_PERMISSION_CHECKER` to a class that loads your `App\Models\User` and calls `hubBridgeCan()` — see [example/hub-bridge/HostParentBridgePermissionChecker.php](../hub-bridge/HostParentBridgePermissionChecker.php)
 4. Set `APPHUB_ALLOWED_PRODUCT_ORIGINS` so Hub only relays when `productOrigin` matches your product SPA
 5. Enable `APPHUB_PARENT_BRIDGE_REQUIRE_SESSION=true` in production so API calls require an active launch session

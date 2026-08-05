@@ -11,7 +11,7 @@ final class IntegrationDocsDesktopThemeTest extends TestCase
     {
         $docs = IntegrationDocs::read();
 
-        $this->assertSame('1.18.0', $docs['schema_version'] ?? null);
+        $this->assertSame('1.19.0', $docs['schema_version'] ?? null);
 
         $publisher = $docs['audiences']['publisher'] ?? [];
         $api = $publisher['bridge']['javascript_api']['applyDesktopTheme'] ?? null;

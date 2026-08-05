@@ -13,6 +13,7 @@ class IntegrationDocsController extends Controller
         try {
             $doc = IntegrationDocs::read();
             $doc = IntegrationDocs::withRuntimeParentScopes($doc);
+            $doc = IntegrationDocs::withRuntimeParentActions($doc);
 
             return response()->json(IntegrationDocs::forPublisher($doc));
         } catch (\JsonException) {
@@ -27,8 +28,10 @@ class IntegrationDocsController extends Controller
     {
         try {
             $doc = IntegrationDocs::read();
+            $doc = IntegrationDocs::withRuntimeParentScopes($doc);
+            $doc = IntegrationDocs::withRuntimeParentActions($doc);
 
-            return response()->json(IntegrationDocs::withRuntimeParentScopes($doc));
+            return response()->json($doc);
         } catch (\JsonException) {
             return $this->apiErrorResponse('Integration documentation unavailable', 500);
         } catch (\RuntimeException) {

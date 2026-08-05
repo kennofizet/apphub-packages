@@ -68,6 +68,23 @@ return [
      */
     'permission_checker' => env('APPHUB_PARENT_BRIDGE_PERMISSION_CHECKER', ''),
 
+    /**
+     * Publisher-facing integration-docs enrichment for host action contracts.
+     * actions[].args/returns already auto-merge into GET …/integration-docs —
+     * no need to replace IntegrationDocsController for the common case.
+     *
+     * @var array{publisher_actions_path?: string}
+     */
+    'integration_docs' => [
+        /**
+         * Optional path to publisher-safe enrichment JSON
+         * ({ "actions": { "inspection.save": { "summary": "…" } } }).
+         * Relative paths resolve from base_path(). Absolute paths allowed.
+         * Convention fallback: integration-docs/publisher/parent_bridge.actions.json
+         */
+        'publisher_actions_path' => env('APPHUB_PARENT_BRIDGE_PUBLISHER_ACTIONS_PATH', ''),
+    ],
+
     'security' => [
         'require_active_session' => env('APPHUB_PARENT_BRIDGE_REQUIRE_SESSION'),
         'require_permission_in_production' => env('APPHUB_PARENT_BRIDGE_REQUIRE_PERMISSION'),

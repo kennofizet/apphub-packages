@@ -112,5 +112,5 @@ Hosted zips receive an injected `localStorage` proxy (`apphub:storage` postMessa
 ## Versioning
 
 - **Patch**: doc clarifications
-- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`; `1.15.1` hub chrome `shutdownAction`; `1.16.0` desktop.theme/applyDesktopTheme; `1.17.0` expanded desktop theme tokens; `1.18.0` deep desktop theme packs with typography/spacing/fx tokens + sandboxed Hub chrome CSS rules)
+- **Minor**: new bridge methods, scopes, or publisher contract fields (e.g. `1.9.0` → `1.10.0` runtime_types + hosted_storage; `1.11.0` hosted_runtime_troubleshooting; `1.12.0` app icons, desktop.download/saveFile, hub_locale/color_scheme; `1.15.0` parent demo mode, launch refresh / `expires_in`; `1.15.1` hub chrome `shutdownAction`; `1.16.0` desktop.theme/applyDesktopTheme; `1.17.0` expanded desktop theme tokens; `1.18.0` deep desktop theme packs with typography/spacing/fx tokens + sandboxed Hub chrome CSS rules; `1.19.0` live host parent_bridge action contracts in GET integration-docs)
 - **Major**: breaking bridge or launch contract

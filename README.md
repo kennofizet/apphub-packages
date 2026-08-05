@@ -55,6 +55,28 @@ php artisan vendor:publish --tag=apphub-migrations
 php artisan migrate
 ```
 
+Publish `config/apphub-parent-bridge.php` and fill `scopes[]` + `actions[]` (`handler`, `bridge_scope`, `args`, `returns`).  
+`GET …/integration-docs` auto-exposes:
+
+- live `parent_scopes.scopes` from host `scopes[]`
+- live `parent_bridge.host_action_contracts.actions` from host `actions[].args/returns`  
+  (no `IntegrationDocsController` override needed for the common case)
+
+```php
+// config/apphub-parent-bridge.php
+'actions' => [
+    'project.list' => [
+        'handler' => App\HubBridge\ProjectListAction::class,
+        'bridge_scope' => 'parent.project.list',
+        'mode' => 'read',
+        'args' => [ /* ... */ ],
+        'returns' => [ /* ... */ ],
+    ],
+],
+// → visible at GET …/integration-docs
+//   audiences.publisher.bridge.parent_bridge.host_action_contracts.actions['project.list']
+```
+
 **Frontend**
 
 ```bash
@@ -71,5 +93,5 @@ installAppHubModule(app, {
 
 **Docs by audience**
 
-- **Publisher** (app in Hub window): `GET …/integration-docs` → `audiences.publisher.bridge`
+- **Publisher** (app in Hub window): `GET …/integration-docs` → `audiences.publisher.bridge` (+ live host action contracts)
 - **Host dev** (embed package): README + `audiences.host_dev`

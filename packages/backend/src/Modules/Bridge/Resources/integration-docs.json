@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.18.0",
+  "schema_version": "1.19.0",
   "package": {
     "name": "apphub",
     "version": "0.2.20",
@@ -507,6 +507,11 @@
         },
         "parent_bridge": {
           "summary": "Access parent production data and events via generic callParent / emitToParent — no per-domain methods in Hub core.",
+          "host_action_contracts": {
+            "live_from_host_config": false,
+            "reader_note": "When this product wires parent-bridge actions, GET …/integration-docs fills host_action_contracts.actions with live args/returns (name, scope, mode, schema_version). Read that map before calling callParent.",
+            "actions": {}
+          },
           "manifest_block": {
             "actions": "array of { name, scope, description?, args?, returns? } — name must match a supported platform action in the parent scopes list",
             "events": "array of { name, scope } — name must match a supported platform event"
@@ -853,8 +858,10 @@
         "summary": "Host integrator only — wire production handlers, permissions, install consent labels, and demo fixtures. Not shown to publishers.",
         "publish_config": "php artisan vendor:publish --tag=apphub-config → config/apphub-parent-bridge.php",
         "scopes_block": "scopes[].description + user_prompt — drives install dialog and publisher-facing GET integration-docs parent_scopes.scopes list",
+        "actions_contracts": "actions[].args + actions[].returns (+ optional mode/schema_version) auto-merge into publisher GET …/integration-docs → audiences.publisher.bridge.parent_bridge.host_action_contracts.actions — no IntegrationDocsController override needed for the common case",
+        "actions_enrichment": "Optional publisher notes JSON via integration_docs.publisher_actions_path or convention integration-docs/publisher/parent_bridge.actions.json (summary/profiles/nested only — never handlers/security)",
         "demo_data": "defaults.demo_data[action] — fake payloads for draft/pending publisher testing (list arrays must stay JSON arrays). Optional per-action actions[].demo_data override.",
-        "handlers": "actions[].handler + events[].listener — your App\\HubBridge\\ classes",
+        "handlers": "actions[].handler + events[].listener — your App\\HubBridge\\ classes (never exposed in publisher integration-docs)",
         "permission_checker": "APPHUB_PARENT_BRIDGE_PERMISSION_CHECKER → host RBAC class",
         "integrator_endpoints": [
           "GET parent-bridge/catalog — action/event catalog for your team",

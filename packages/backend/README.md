@@ -38,7 +38,8 @@ Default: `/api/knf/apphub` (see `config/packages-core.php` and published `config
 | **Public** | None (validator only) | `GET integration-docs`, hosted `…/runtime/{path}` |
 | **Host integrator** | `X-AppHub-Host-Access` | `GET integration-docs/internal` |
 
-Publisher-facing contract: `GET …/integration-docs` → JSON `audiences.publisher.bridge` (no login).
+Publisher-facing contract: `GET …/integration-docs` → JSON `audiences.publisher.bridge` (no login).  
+Host `config/apphub-parent-bridge.php` `scopes[]` and `actions[].args/returns` merge live into that payload (`parent_scopes` + `parent_bridge.host_action_contracts`). Do **not** replace `IntegrationDocsController` just to publish action schemas.
 
 ## Frontend pairing
 
