@@ -11,7 +11,7 @@ final class IntegrationDocsDesktopThemeTest extends TestCase
     {
         $docs = IntegrationDocs::read();
 
-        $this->assertSame('1.19.0', $docs['schema_version'] ?? null);
+        $this->assertSame('1.20.0', $docs['schema_version'] ?? null);
 
         $publisher = $docs['audiences']['publisher'] ?? [];
         $api = $publisher['bridge']['javascript_api']['applyDesktopTheme'] ?? null;
@@ -20,9 +20,14 @@ final class IntegrationDocsDesktopThemeTest extends TestCase
             ['desktop.theme'],
             $api['requires'] ?? null,
         );
+        $this->assertStringContainsString('skin?', (string) ($api['signature'] ?? ''));
+        $this->assertContains('cyber', $api['allowed_skins'] ?? []);
         $this->assertContains('--ah-accent', $api['allowed_tokens'] ?? []);
         $this->assertContains('--ah-fx-panel-rise', $api['allowed_tokens'] ?? []);
         $this->assertContains('.apphub-win', $api['allowed_rule_selectors'] ?? []);
+        $this->assertContains('.apphub-start__app-tile', $api['allowed_rule_selectors'] ?? []);
+        $this->assertContains('.apphub-icon-menu__item', $api['allowed_rule_selectors'] ?? []);
+        $this->assertStringContainsString('skin:', (string) ($api['example'] ?? ''));
 
         $permissions = $publisher['bridge']['permissions'] ?? [];
         $scopes = array_column($permissions, 'scope');

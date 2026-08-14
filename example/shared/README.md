@@ -10,7 +10,7 @@ Use in publisher apps (copy or adapt — not shipped with `@kennofizet/apphub-fr
 
 - `reportError`
 - `sendDesktopMessage`
-- `applyDesktopTheme`
+- `applyDesktopTheme` — `{ mode, skin?, tokens?, rules? }` (see `GET …/integration-docs` → `javascript_api.applyDesktopTheme`)
 - `setTaskbarBadge`
 - `requestPermission`
 

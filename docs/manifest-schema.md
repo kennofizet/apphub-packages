@@ -46,12 +46,16 @@ Local-only install (no server listing): drop a manifest with `"type": "apphub-lo
 
 Granted at **install** (server records consent). Desktop scopes can also be requested at runtime via `AppHubBridge.requestPermission`.
 
-`desktop.theme` only changes App Hub chrome. `AppHubBridge.applyDesktopTheme({ mode: 'custom', tokens, rules })`
-accepts known `--ah-*` tokens (colors, wallpaper, blur/glass, shadows, typography, spacing, dock,
-motion timing/easing, animation amplitudes) and optional sandboxed `rules` for allowlisted `.apphub-*`
-selectors/properties. Passing `dark`, `light`, or `auto` clears the pack. Arbitrary stylesheets,
-`url()`, and free-form `@keyframes` are rejected — reshape Hub motion with `--ah-fx-*` / `--ah-motion-*`
-tokens and target chrome via `rules`. Product-shell and parent-suite CSS are not modified.
+`desktop.theme` only changes App Hub chrome. `AppHubBridge.applyDesktopTheme({ mode: 'custom', skin?, tokens?, rules? })`
+accepts an optional structural **skin** (`classic` | `light` | `ocean` | `forest` | `dusk` | `aurora` |
+`solar` | `cyber` | `ink` | `ember` — wallpaper FX, icon plates, Start/taskbar chrome, cursor FX),
+known `--ah-*` tokens (colors, wallpaper, blur/glass, shadows, typography, spacing, dock,
+motion timing/easing, animation amplitudes), and optional sandboxed `rules` for allowlisted `.apphub-*`
+selectors/properties. Omitted custom skins default to `classic`. Passing `dark`, `light`, or `auto`
+clears the pack (and skin). Arbitrary stylesheets, `url()`, and free-form `@keyframes` are rejected —
+reshape Hub motion with `--ah-fx-*` / `--ah-motion-*` tokens and target chrome via `rules`.
+Product-shell and parent-suite CSS are not modified. Full allowlists: `GET …/integration-docs` →
+`audiences.publisher.bridge.javascript_api.applyDesktopTheme`.
 
 ### `api_urls`
 
