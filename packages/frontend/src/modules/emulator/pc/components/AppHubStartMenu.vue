@@ -1,6 +1,27 @@
 <template>
-  <div v-if="open" class="apphub-start" @click.stop="emit('close')">
-    <div class="apphub-start__panel" @click.stop>
+  <div
+    v-if="open"
+    class="apphub-start"
+    :data-ah-skin="skin || undefined"
+    @click.stop="emit('close')"
+    @contextmenu.prevent.stop
+  >
+    <div
+      class="apphub-start__panel"
+      :class="skin ? [`apphub-start__panel--skin`, `apphub-start__panel--skin-${skin}`] : null"
+      @click.stop
+      @contextmenu.prevent.stop
+    >
+      <header v-if="skin" class="apphub-start__skin-bar" aria-hidden="true">
+        <span class="apphub-start__skin-badge">{{ skin }}</span>
+        <span
+          v-for="(glyph, i) in (skinMix || []).slice(0, 4)"
+          :key="'bar-' + skin + i"
+          class="apphub-start__skin-bar-glyph"
+        >{{ glyph }}</span>
+      </header>
+
+      <div class="apphub-start__body">
       <aside class="apphub-start__left">
         <div class="apphub-start__search-wrap">
           <svg class="apphub-start__search-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -22,10 +43,17 @@
           <template v-if="isSearching">
             <p class="apphub-start__section-label">{{ searchResultsLabel }}</p>
             <ul class="apphub-start__list">
-              <li v-for="app in searchResults" :key="app.id">
-                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+              <li v-for="(app, idx) in searchResults" :key="app.id">
+                <button
+                  type="button"
+                  class="apphub-start__list-item"
+                  @click="onOpen(app)"
+                  @contextmenu.prevent.stop="onAppContextMenu(app, $event)"
+                >
                   <span class="apphub-start__list-icon-wrap">
-                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                    <AppHubSkinChrome :skin="skin || ''" tone="pin">
+                      <span class="apphub-start__list-icon">{{ glyphFor(idx, app) }}</span>
+                    </AppHubSkinChrome>
                   </span>
                   <span class="apphub-start__list-name">{{ app.name }}</span>
                 </button>
@@ -37,10 +65,17 @@
           <template v-else>
             <p class="apphub-start__section-label">{{ favoritesLabel }}</p>
             <ul class="apphub-start__list">
-              <li v-for="app in favoriteApps" :key="`fav-${app.id}`">
-                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+              <li v-for="(app, idx) in favoriteApps" :key="`fav-${app.id}`">
+                <button
+                  type="button"
+                  class="apphub-start__list-item"
+                  @click="onOpen(app)"
+                  @contextmenu.prevent.stop="onAppContextMenu(app, $event)"
+                >
                   <span class="apphub-start__list-icon-wrap">
-                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                    <AppHubSkinChrome :skin="skin || ''" tone="pin">
+                      <span class="apphub-start__list-icon">{{ glyphFor(idx, app) }}</span>
+                    </AppHubSkinChrome>
                   </span>
                   <span class="apphub-start__list-name">{{ app.name }}</span>
                 </button>
@@ -50,10 +85,17 @@
 
             <p class="apphub-start__section-label apphub-start__section-label--spaced">{{ recentLabel }}</p>
             <ul class="apphub-start__list">
-              <li v-for="app in recentApps" :key="`recent-${app.id}`">
-                <button type="button" class="apphub-start__list-item" @click="onOpen(app)">
+              <li v-for="(app, idx) in recentApps" :key="`recent-${app.id}`">
+                <button
+                  type="button"
+                  class="apphub-start__list-item"
+                  @click="onOpen(app)"
+                  @contextmenu.prevent.stop="onAppContextMenu(app, $event)"
+                >
                   <span class="apphub-start__list-icon-wrap">
-                    <span class="apphub-start__list-icon">{{ app.icon }}</span>
+                    <AppHubSkinChrome :skin="skin || ''" tone="pin">
+                      <span class="apphub-start__list-icon">{{ glyphFor(idx + 2, app) }}</span>
+                    </AppHubSkinChrome>
                   </span>
                   <span class="apphub-start__list-name">{{ app.name }}</span>
                 </button>
@@ -83,8 +125,13 @@
           type="button"
           class="apphub-start__hero"
           @click="onOpen(featuredApp)"
+          @contextmenu.prevent.stop="onAppContextMenu(featuredApp, $event)"
         >
-          <span class="apphub-start__hero-icon">{{ featuredApp.icon }}</span>
+          <span class="apphub-start__hero-icon-wrap">
+            <AppHubSkinChrome :skin="skin || ''" tone="tray">
+              <span class="apphub-start__hero-icon">{{ glyphFor(0, featuredApp) }}</span>
+            </AppHubSkinChrome>
+          </span>
           <span class="apphub-start__hero-body">
             <strong class="apphub-start__hero-title">{{ featuredApp.name }}</strong>
             <span class="apphub-start__hero-hint">{{ featuredApp.hint }}</span>
@@ -97,8 +144,13 @@
           type="button"
           class="apphub-start__hero apphub-start__hero--guide"
           @click="onOpen(guideApp)"
+          @contextmenu.prevent.stop="onAppContextMenu(guideApp, $event)"
         >
-          <span class="apphub-start__hero-icon">{{ guideApp.icon }}</span>
+          <span class="apphub-start__hero-icon-wrap">
+            <AppHubSkinChrome :skin="skin || ''" tone="tray">
+              <span class="apphub-start__hero-icon">{{ glyphFor(1, guideApp) }}</span>
+            </AppHubSkinChrome>
+          </span>
           <span class="apphub-start__hero-body">
             <strong class="apphub-start__hero-title">{{ guideApp.name }}</strong>
             <span class="apphub-start__hero-hint">{{ guideApp.hint }}</span>
@@ -111,8 +163,13 @@
           type="button"
           class="apphub-start__hero apphub-start__hero--settings"
           @click="onOpen(settingsApp)"
+          @contextmenu.prevent.stop="onAppContextMenu(settingsApp, $event)"
         >
-          <span class="apphub-start__hero-icon">{{ settingsApp.icon }}</span>
+          <span class="apphub-start__hero-icon-wrap">
+            <AppHubSkinChrome :skin="skin || ''" tone="tray">
+              <span class="apphub-start__hero-icon">{{ glyphFor(2, settingsApp) }}</span>
+            </AppHubSkinChrome>
+          </span>
           <span class="apphub-start__hero-body">
             <strong class="apphub-start__hero-title">{{ settingsApp.name }}</strong>
             <span class="apphub-start__hero-hint">{{ settingsApp.hint }}</span>
@@ -123,13 +180,18 @@
         <p v-if="suggestedApps.length" class="apphub-start__section-label">{{ suggestedLabel }}</p>
         <div v-if="suggestedApps.length" class="apphub-start__grid">
           <button
-            v-for="app in suggestedApps"
+            v-for="(app, idx) in suggestedApps"
             :key="app.id"
             type="button"
             class="apphub-start__app-tile"
             @click="onOpen(app)"
+            @contextmenu.prevent.stop="onAppContextMenu(app, $event)"
           >
-            <span class="apphub-start__app-tile-icon">{{ app.icon }}</span>
+            <span class="apphub-start__app-tile-icon-wrap">
+              <AppHubSkinChrome :skin="skin || ''" tone="pin">
+                <span class="apphub-start__app-tile-icon">{{ glyphFor(idx, app) }}</span>
+              </AppHubSkinChrome>
+            </span>
             <span class="apphub-start__app-tile-name">{{ app.name }}</span>
           </button>
         </div>
@@ -137,12 +199,14 @@
           {{ emptyLabel }}
         </p>
       </section>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import AppHubSkinChrome from './AppHubSkinChrome.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -160,9 +224,12 @@ const props = defineProps({
   /** Normalized action name; empty hides the Start-panel shutdown control */
   shutdownAction: { type: String, default: '' },
   shutdownLabel: { type: String, default: '' },
+  /** Active desktop theme skin — Start menu chrome + mix glyphs. */
+  skin: { type: String, default: '' },
+  skinMix: { type: Array, default: null },
 })
 
-const emit = defineEmits(['close', 'open-app', 'shutdown'])
+const emit = defineEmits(['close', 'open-app', 'shutdown', 'app-context-menu'])
 
 const query = ref('')
 
@@ -191,13 +258,20 @@ const featuredApp = computed(() => findVisibleBuiltin('app-store'))
 const guideApp = computed(() => findVisibleBuiltin('guide'))
 const settingsApp = computed(() => findVisibleBuiltin('settings'))
 
+function glyphFor(_index, app) {
+  return app?.icon || '◆'
+}
+
 function onOpen(app) {
   emit('open-app', app)
   emit('close')
 }
 
+function onAppContextMenu(app, event) {
+  emit('app-context-menu', app, event)
+}
+
 function onShutdown() {
   emit('shutdown')
-  emit('close')
 }
 </script>

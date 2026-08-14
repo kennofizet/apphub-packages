@@ -11,6 +11,7 @@
 .apphub-desktop__wallpaper {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   background: var(--ah-wallpaper);
   filter: var(--ah-wallpaper-filter);
   transition:
@@ -32,7 +33,6 @@
 
 .apphub-desktop__icons-layer .apphub-desktop__icon,
 .apphub-desktop__icons-layer .apphub-drop-badge,
-.apphub-desktop__icons-layer .apphub-icon-menu,
 .apphub-desktop__icons-layer .apphub-icon-folder,
 .apphub-desktop__icons-layer .apphub-desktop__drop-target {
   pointer-events: auto;
@@ -190,7 +190,8 @@
 
 .apphub-desktop__icon-label {
   margin-top: 6px;
-  font-size: 0.75rem;
+  font-family: var(--ah-font);
+  font-size: var(--ah-font-size-sm, 0.75rem);
   text-align: center;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   line-height: 1.2;
@@ -213,7 +214,10 @@
   gap: 0;
   padding: 0;
   border-top: 1px solid var(--ah-border);
+  background: var(--ah-taskbar);
+  box-shadow: var(--ah-taskbar-shadow);
   backdrop-filter: var(--ah-blur);
+  -webkit-backdrop-filter: var(--ah-blur);
   pointer-events: auto;
   overflow: hidden;
 }
@@ -253,7 +257,7 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: 48px;
+  bottom: var(--ah-taskbar-height);
   z-index: 28;
   pointer-events: auto;
 }
@@ -263,10 +267,10 @@
   left: 0;
   bottom: 0;
   display: flex;
+  flex-direction: column;
   width: min(720px, calc(100% - 12px));
-  height: min(600px, calc(100% - 8px));
-  margin: 0 0 0 6px;
-  margin-bottom: 8px;
+  height: min(600px, 100%);
+  margin: 0 0 0 0;
   border: 1px solid var(--ah-border);
   border-bottom: none;
   border-radius: var(--ah-window-radius) var(--ah-window-radius) 0 0;
@@ -275,6 +279,17 @@
   backdrop-filter: var(--ah-panel-blur);
   box-shadow: var(--ah-panel-shadow);
   animation: apphub-start-in var(--ah-motion-panel-duration) var(--ah-ease-standard);
+}
+
+.apphub-start__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.apphub-start__skin-bar {
+  display: none;
 }
 
 .apphub-start__left {
@@ -621,9 +636,12 @@
 
 @media (max-width: 560px) {
   .apphub-start__panel {
-    flex-direction: column;
     width: calc(100% - 8px);
-    height: min(520px, calc(100% - 8px));
+    height: min(520px, 100%);
+  }
+
+  .apphub-start__body {
+    flex-direction: column;
   }
 
   .apphub-start__left {
@@ -789,7 +807,8 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  font-size: 0.75rem;
+  font-family: var(--ah-font);
+  font-size: var(--ah-font-size-sm, 0.75rem);
   color: var(--ah-text-secondary);
   padding: 0 0 0 8px;
   height: 48px;
@@ -803,6 +822,8 @@
   margin-left: auto;
   padding-right: 4px;
   height: 48px;
+  font-family: var(--ah-font);
+  font-size: var(--ah-font-size-sm, 0.75rem);
 }
 
 @keyframes apphub-start-in {
@@ -861,7 +882,8 @@
 
 .apphub-win__title {
   flex: 1;
-  font-size: 0.8rem;
+  font-family: var(--ah-font);
+  font-size: var(--ah-font-size-sm, 0.8rem);
   font-weight: 600;
 }
 
@@ -897,7 +919,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #1e293b;
+  background: var(--ah-surface);
+  color: var(--ah-text);
 }
 
 .apphub-win__body-shield {
@@ -991,8 +1014,8 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  color: #e2e8f0;
-  background: #1e293b;
+  color: var(--ah-text-secondary);
+  background: var(--ah-surface);
 }
 
 .apphub-store__header {
@@ -3270,7 +3293,21 @@
   background: var(--perm-item-bg);
 }
 
-/* Desktop icon context menu */
+/* Desktop icon / surface context menus (above Start + taskbar) */
+.apphub-desktop > .apphub-icon-menu {
+  position: absolute;
+  z-index: 40;
+  min-width: 200px;
+  padding: 4px 0;
+  border: 1px solid var(--ah-border);
+  border-radius: var(--ah-radius-sm);
+  background: var(--ah-surface-elevated);
+  backdrop-filter: var(--ah-blur);
+  box-shadow: var(--ah-elevation-shadow);
+  animation: apphub-icon-menu-in var(--ah-motion-fast) var(--ah-ease-out);
+  pointer-events: auto;
+}
+
 .apphub-icon-menu {
   position: absolute;
   z-index: 35;
@@ -3286,8 +3323,9 @@
 
 .apphub-icon-menu__item {
   display: block;
+  position: relative;
   width: 100%;
-  padding: 8px 28px 8px 16px;
+  padding: 8px 28px 8px 28px;
   border: none;
   background: transparent;
   color: #f3f4f6;
@@ -3298,6 +3336,16 @@
 
 .apphub-icon-menu__item:hover {
   background: rgba(96, 165, 250, 0.35);
+}
+
+.apphub-icon-menu__item--checked::before {
+  content: '✓';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: #93c5fd;
 }
 
 .apphub-icon-menu__item--danger {

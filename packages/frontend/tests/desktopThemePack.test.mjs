@@ -99,6 +99,10 @@ test('accepts sandboxed custom rules for Hub chrome selectors', () => {
     scopeDesktopThemeSelector('.apphub-desktop'),
     '.apphub-desktop.apphub-desktop--custom-theme',
   )
+  const iconScoped = scopeDesktopThemeSelector('.apphub-desktop__icon')
+  assert.match(iconScoped, /\.apphub-skin-chrome__plate/)
+  assert.match(iconScoped, /\.apphub-skin-chrome__face/)
+  assert.match(iconScoped, /\[data-ah-skin\]/)
   assert.ok(DESKTOP_THEME_RULE_SELECTORS.includes('.apphub-mobile-dock'))
 })
 

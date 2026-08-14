@@ -31,6 +31,7 @@
       '--apphub-edge-app-opacity': 1 - edgeSwipeProgress * 0.22,
       '--apphub-edge-indicator-scale': 0.72 + edgeSwipeProgress * 0.28,
     }"
+    :data-ah-skin="desktopThemeSkin || undefined"
     data-apphub-device="mobile"
     :data-apphub-phone="deviceMode.state.phone || undefined"
     @click="onDesktopClick"
@@ -39,7 +40,9 @@
     @dragleave="onDesktopDragLeave"
     @drop.capture.prevent="onDesktopDrop"
   >
-    <div class="apphub-desktop__wallpaper" :class="{ 'apphub-desktop__wallpaper--drop': dropInstall.state.dragActive }" />
+    <div class="apphub-desktop__wallpaper" :class="{ 'apphub-desktop__wallpaper--drop': dropInstall.state.dragActive }">
+      <AppHubWallpaperFx v-if="desktopThemeIsCustom" :skin="desktopThemeSkin || 'classic'" />
+    </div>
     <div
       class="apphub-mobile-brightness-dimmer"
       :style="{ opacity: (1 - mobileBrightness) * 0.68 }"
@@ -387,6 +390,7 @@ import {
 import { AppHubWindowFrame, useWindowManager } from '../../../window-manager/index.js'
 import { useDeviceMode } from '../../../responsive/index.js'
 import AppHubDesktopDropLayer from '../../pc/components/AppHubDesktopDropLayer.vue'
+import AppHubWallpaperFx from '../../pc/components/AppHubWallpaperFx.vue'
 import AppHubMobileDock from './AppHubMobileDock.vue'
 import AppHubMobileControlCenter from './AppHubMobileControlCenter.vue'
 import AppHubDuplicateAppDialog from '../../pc/components/AppHubDuplicateAppDialog.vue'
@@ -580,6 +584,7 @@ const desktopTheme = useDesktopThemePack({
   },
 })
 const desktopThemeIsCustom = desktopTheme.hasCustomTheme
+const desktopThemeSkin = desktopTheme.themeSkin
 const desktopThemeRootStyle = desktopTheme.customThemeStyle
 const keyboardSettings = reactive(loadHubKeyboardSettings())
 const startMenuPins = reactive(loadStartMenuPins())

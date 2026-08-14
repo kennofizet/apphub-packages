@@ -3,6 +3,50 @@ import {
   renderDesktopThemeCustomCss,
 } from './desktopThemeCustomCss.js'
 
+/** Structural wallpaper / icon chrome families for custom themes. */
+export const DESKTOP_THEME_SKINS = Object.freeze([
+  'classic',
+  'light',
+  'ocean',
+  'forest',
+  'dusk',
+  'aurora',
+  'solar',
+  'cyber',
+  'ink',
+  'ember',
+])
+
+const SKIN_SET = new Set(DESKTOP_THEME_SKINS)
+
+/** Decorative mix glyphs rendered on the wallpaper (not app icons). */
+export const DESKTOP_THEME_SKIN_MIX = Object.freeze({
+  classic: ['🛒', '📖', '⚙️'],
+  light: ['📁', '📝', '🔍'],
+  ocean: ['🪸', '🧭', '🐚', '⛵'],
+  forest: ['🍃', '🍄', '🦌', '🏕️'],
+  dusk: ['🌹', '🕯️', '🫖', '📜'],
+  aurora: ['💜', '🪐', '✨', '🔮'],
+  solar: ['🔆', '📐', '🛰️', '⏳'],
+  cyber: ['⚡', '🖥️', '🛰️', '👾'],
+  ink: ['✒️', '📎', '📰', '🗂️'],
+  ember: ['🔥', '🏜️', '🌋', '🪓'],
+})
+
+export function normalizeDesktopThemeSkin(raw) {
+  const skin = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (!skin) return 'classic'
+  if (!SKIN_SET.has(skin)) {
+    throw new Error(`Unknown desktop theme skin: ${raw}`)
+  }
+  return skin
+}
+
+export function mixIconsForSkin(skin) {
+  const key = SKIN_SET.has(skin) ? skin : 'classic'
+  return DESKTOP_THEME_SKIN_MIX[key] || DESKTOP_THEME_SKIN_MIX.classic
+}
+
 export const DESKTOP_THEME_TOKENS = Object.freeze([
   '--ah-text',
   '--ah-text-secondary',
@@ -283,6 +327,7 @@ const PROPERTY_SUPPORT = {
   overflow: 'overflow',
   'overflow-x': 'overflow-x',
   'overflow-y': 'overflow-y',
+  visibility: 'visibility',
 }
 
 export function normalizeDesktopThemeTokenKey(rawKey) {
@@ -335,7 +380,8 @@ function assertSafeCssValue(label, value, cssProperty, options = {}) {
   if (typeof value !== 'string') {
     throw new Error(`${label} must be a string`)
   }
-  const trimmed = value.trim()
+  // Theme authors often paste `!important`; Hub scopes selectors instead — strip so CSS.supports passes.
+  const trimmed = value.trim().replace(/\s*!important\s*$/i, '').trim()
   if (!trimmed) throw new Error(`${label} cannot be empty`)
   if (trimmed.length > MAX_VALUE_LENGTH) {
     throw new Error(`${label} exceeds ${MAX_VALUE_LENGTH} characters`)
@@ -396,7 +442,7 @@ export function normalizeDesktopThemeRequest(payload, options = {}) {
 
   const mode = String(payload.mode ?? '').trim().toLowerCase()
   if (mode === 'dark' || mode === 'light' || mode === 'auto') {
-    return { mode, tokens: {}, rules: [] }
+    return { mode, tokens: {}, rules: [], skin: null }
   }
   if (mode !== 'custom') {
     throw new Error('Desktop theme mode must be custom, dark, light, or auto')
@@ -434,7 +480,11 @@ export function normalizeDesktopThemeRequest(payload, options = {}) {
     throw new Error('Custom desktop theme requires tokens and/or rules')
   }
 
-  return { mode: 'custom', tokens, rules }
+  const skin = payload.skin == null || payload.skin === ''
+    ? 'classic'
+    : normalizeDesktopThemeSkin(payload.skin)
+
+  return { mode: 'custom', tokens, rules, skin }
 }
 
 export function applyDesktopThemeTokens(style, tokens = {}) {

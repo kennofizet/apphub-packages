@@ -19,6 +19,7 @@ export function useDesktopThemePack(options) {
     mode: null,
     tokens: {},
     rules: [],
+    skin: null,
   })
 
   function storage() {
@@ -30,6 +31,7 @@ export function useDesktopThemePack(options) {
     state.mode = saved?.mode ?? null
     state.tokens = saved?.tokens ?? {}
     state.rules = saved?.rules ?? []
+    state.skin = saved?.skin ?? (saved?.mode === 'custom' ? 'classic' : null)
   }
 
   function syncCustomCss() {
@@ -69,8 +71,10 @@ export function useDesktopThemePack(options) {
       state.mode = 'custom'
       state.tokens = theme.tokens
       state.rules = theme.rules
+      state.skin = theme.skin || 'classic'
       return {
         mode: 'custom',
+        skin: state.skin,
         tokens: { ...theme.tokens },
         rules: theme.rules.map((rule) => ({
           selector: rule.selector,
@@ -83,13 +87,19 @@ export function useDesktopThemePack(options) {
     state.mode = null
     state.tokens = {}
     state.rules = []
+    state.skin = null
     options.setBuiltInMode?.(theme.mode)
-    return { mode: theme.mode, tokens: {}, rules: [] }
+    return { mode: theme.mode, skin: null, tokens: {}, rules: [] }
   }
 
   return {
     state,
     hasCustomTheme: computed(() => state.mode === 'custom' && !options.isThemeLocked?.()),
+    themeSkin: computed(() =>
+      state.mode === 'custom' && !options.isThemeLocked?.()
+        ? (state.skin || 'classic')
+        : null,
+    ),
     customThemeStyle: computed(() =>
       state.mode === 'custom' && !options.isThemeLocked?.()
         ? desktopThemeStyleObject(state.tokens)

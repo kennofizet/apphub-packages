@@ -20,14 +20,29 @@
       'apphub-desktop--custom-theme': desktopThemeIsCustom,
     }"
     :style="desktopThemeRootStyle"
+    :data-ah-skin="desktopThemeSkin || undefined"
     data-apphub-device="pc"
     @click="onDesktopClick"
+    @contextmenu.prevent="onBlockedContextMenu"
     @dragenter.capture.prevent="onDesktopDragEnter"
     @dragover.capture.prevent="onDesktopDragOver"
     @dragleave="onDesktopDragLeave"
     @drop.capture.prevent="onDesktopDrop"
   >
-    <div class="apphub-desktop__wallpaper" :class="{ 'apphub-desktop__wallpaper--drop': dropInstall.state.dragActive }" />
+    <div
+      class="apphub-desktop__wallpaper"
+      :class="{ 'apphub-desktop__wallpaper--drop': dropInstall.state.dragActive && !desktopThemeIsCustom }"
+      @contextmenu.prevent.stop="onDesktopSurfaceContextMenu"
+    >
+      <AppHubWallpaperFx v-if="desktopThemeIsCustom" :skin="desktopThemeSkin || 'classic'" />
+    </div>
+
+    <AppHubCursorFx
+      v-if="desktopThemeIsCustom"
+      :root="desktopRoot"
+      :skin="desktopThemeSkin || 'classic'"
+      :moving="anyThemeIconDragging"
+    />
 
     <AppHubDesktopDropLayer
       v-show="isMainScreen && dropInstall.state.dragActive"
@@ -41,8 +56,9 @@
         'apphub-desktop__icons-layer--drop-target': isMainScreen,
         'apphub-desktop__icons-layer--grid': desktopSettings.snapToGrid,
       }"
+      @contextmenu.prevent.stop="onIconsLayerContextMenu"
     >
-      <template v-for="item in desktopLayout" :key="item.id">
+      <template v-for="(item, layoutIdx) in desktopLayout" :key="item.id">
         <AppHubDesktopIconGroup
           v-if="item.type === 'group'"
           :apps="item.apps"
@@ -66,6 +82,7 @@
             'apphub-desktop__icon--dragging': iconDrag.isDragging(item.app.id),
             'apphub-desktop__icon--holding': iconDrag.isHolding(item.app.id),
             'apphub-desktop__icon--drop-target': isDropTargetCell(item.x, item.y),
+            'apphub-desktop__icon--skin': desktopThemeIsCustom,
           }"
           :style="{ left: `${item.x}px`, top: `${item.y}px` }"
           :title="`${item.app.name} — ${labels.desktop_icon_move_hint}`"
@@ -73,12 +90,20 @@
           @dblclick.stop="onOpenIcon(item.app)"
           @contextmenu.prevent.stop="onIconContextMenu(item.app, $event)"
         >
-          <span class="apphub-desktop__icon-img-wrap">
-            <AppHubCatalogIcon
-              :app="item.app"
-              emoji-class="apphub-desktop__icon-img"
-              img-class="apphub-desktop__icon-img apphub-desktop__icon-img--image"
-            />
+          <span
+            class="apphub-desktop__icon-img-wrap"
+            :class="{ 'apphub-desktop__icon-img-wrap--skin': desktopThemeIsCustom }"
+          >
+            <AppHubSkinChrome
+              :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
+              tone="desktop"
+            >
+              <AppHubCatalogIcon
+                :app="item.app"
+                emoji-class="apphub-desktop__icon-img"
+                img-class="apphub-desktop__icon-img apphub-desktop__icon-img--image"
+              />
+            </AppHubSkinChrome>
             <span
               v-if="iconShowsDraftStatus(item.app)"
               class="apphub-desktop__icon-flag"
@@ -141,28 +166,6 @@
         :error-label="labels.drop_error"
         :method-label="methodLabel(job)"
         :done-publish-label="labels.drop_done_publish"
-      />
-
-      <AppHubDesktopIconContextMenu
-        :open="iconContextMenu.open"
-        :x="iconContextMenu.x"
-        :y="iconContextMenu.y"
-        :can-rename="contextMenuCanRename"
-        :show-pin="contextMenuShowPin"
-        :show-favorite="contextMenuShowFavorite"
-        :show-uninstall="contextMenuShowUninstall"
-        :open-label="contextMenuOpenLabel"
-        :pin-label="contextMenuPinLabel"
-        :favorite-label="contextMenuFavoriteLabel"
-        :uninstall-label="labels.icon_context_uninstall"
-        :rename-label="labels.icon_context_rename"
-        :properties-label="labels.icon_context_properties"
-        @open="onContextMenuOpen"
-        @pin="onContextMenuPin"
-        @favorite="onContextMenuFavorite"
-        @uninstall="onContextMenuUninstall"
-        @rename="onContextMenuRename"
-        @info="onContextMenuInfo"
       />
     </div>
 
@@ -245,18 +248,23 @@
       :empty-label="labels.start_menu_empty"
       :shutdown-action="shutdownAction"
       :shutdown-label="labels.desktop_shutdown"
+      :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
+      :skin-mix="desktopThemeIsCustom ? skinMixList : null"
       @close="shell.state.startOpen = false"
       @open-app="onStartMenuOpenApp"
+      @app-context-menu="onIconContextMenu"
       @shutdown="onShutdownClick"
     />
 
     <footer
       class="apphub-desktop__taskbar"
       @click.stop
+      @contextmenu.prevent.stop="onBlockedContextMenu"
     >
       <AppHubStartButton
         :active="shell.state.startOpen"
         :title="labels.desktop_start"
+        :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
         @toggle="onToggleStart"
       />
 
@@ -268,6 +276,7 @@
           class="apphub-desktop__task"
           :class="{ active: win.id === wm.state.activeId, minimized: win.minimized }"
           @click="onTaskClick(win)"
+          @contextmenu.prevent.stop="onTaskbarWindowContextMenu(win, $event)"
         >
           <span class="apphub-desktop__task-icon" aria-hidden="true">{{ win.icon }}</span>
           <span class="apphub-desktop__task-title">{{ win.title }}</span>
@@ -277,17 +286,28 @@
       <AppHubTaskbarPins
         :apps="taskbarPinnedApps"
         :aria-label="labels.taskbar_pins"
+        :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
         @open-app="onOpenIcon"
+        @app-context-menu="onIconContextMenu"
       />
 
       <button
         v-if="draftStoreApp"
         type="button"
         class="apphub-desktop__taskbar-draft-store"
+        :class="traySkinClasses"
         :title="draftStoreApp.hint || draftStoreApp.name"
         @click="onOpenIcon(draftStoreApp)"
+        @contextmenu.prevent.stop="onIconContextMenu(draftStoreApp, $event)"
       >
-        <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{ draftStoreApp.icon }}</span>
+        <AppHubSkinChrome
+          :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
+          tone="tray"
+        >
+          <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{
+            draftStoreApp.icon
+          }}</span>
+        </AppHubSkinChrome>
         <span class="apphub-desktop__taskbar-draft-store-label">{{ draftStoreApp.name }}</span>
       </button>
 
@@ -295,10 +315,19 @@
         v-if="devToolsApp"
         type="button"
         class="apphub-desktop__taskbar-draft-store apphub-desktop__taskbar-dev-tools"
+        :class="traySkinClasses"
         :title="devToolsApp.hint || devToolsApp.name"
         @click="onOpenIcon(devToolsApp)"
+        @contextmenu.prevent.stop="onIconContextMenu(devToolsApp, $event)"
       >
-        <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{ devToolsApp.icon }}</span>
+        <AppHubSkinChrome
+          :skin="desktopThemeIsCustom ? (desktopThemeSkin || 'classic') : ''"
+          tone="tray"
+        >
+          <span class="apphub-desktop__taskbar-draft-store-icon" aria-hidden="true">{{
+            devToolsApp.icon
+          }}</span>
+        </AppHubSkinChrome>
         <span class="apphub-desktop__taskbar-draft-store-label">{{ devToolsApp.name }}</span>
       </button>
 
@@ -313,6 +342,43 @@
 
     <AppHubDesktopNotifications />
     <AppHubNotificationDrawer />
+
+    <AppHubDesktopIconContextMenu
+      :open="iconContextMenu.open"
+      :x="iconContextMenu.x"
+      :y="iconContextMenu.y"
+      :can-rename="contextMenuCanRename"
+      :show-pin="contextMenuShowPin"
+      :show-favorite="contextMenuShowFavorite"
+      :show-uninstall="contextMenuShowUninstall"
+      :open-label="contextMenuOpenLabel"
+      :pin-label="contextMenuPinLabel"
+      :favorite-label="contextMenuFavoriteLabel"
+      :uninstall-label="labels.icon_context_uninstall"
+      :rename-label="labels.icon_context_rename"
+      :properties-label="labels.icon_context_properties"
+      @open="onContextMenuOpen"
+      @pin="onContextMenuPin"
+      @favorite="onContextMenuFavorite"
+      @uninstall="onContextMenuUninstall"
+      @rename="onContextMenuRename"
+      @info="onContextMenuInfo"
+    />
+
+    <AppHubDesktopContextMenu
+      :open="desktopContextMenu.open"
+      :x="desktopContextMenu.x"
+      :y="desktopContextMenu.y"
+      :snap-to-grid="desktopSettings.snapToGrid"
+      :light-mode="activeTheme === 'light'"
+      :show-theme-toggle="showThemeToggle"
+      :settings-label="labels.desktop_context_display_settings"
+      :snap-label="labels.desktop_context_snap_grid"
+      :theme-label="labels.desktop_context_light_mode"
+      @settings="onDesktopContextSettings"
+      @toggle-snap="onDesktopContextToggleSnap"
+      @toggle-theme="onDesktopContextToggleTheme"
+    />
   </div>
 </template>
 
@@ -342,12 +408,15 @@ import {
 } from '../../../user-notifications/index.js'
 import { AppHubWindowFrame, useWindowManager } from '../../../window-manager/index.js'
 import AppHubDesktopDropLayer from './AppHubDesktopDropLayer.vue'
+import AppHubWallpaperFx from './AppHubWallpaperFx.vue'
+import AppHubCursorFx from './AppHubCursorFx.vue'
 import AppHubStartButton from './AppHubStartButton.vue'
 import AppHubStartMenu from './AppHubStartMenu.vue'
 import AppHubTaskbarPins from './AppHubTaskbarPins.vue'
 import AppHubDuplicateAppDialog from './AppHubDuplicateAppDialog.vue'
 import AppHubInstallPermissionsDialog from './AppHubInstallPermissionsDialog.vue'
 import AppHubDesktopIconContextMenu from './AppHubDesktopIconContextMenu.vue'
+import AppHubDesktopContextMenu from './AppHubDesktopContextMenu.vue'
 import AppHubDesktopIconInfoDialog from './AppHubDesktopIconInfoDialog.vue'
 import AppHubDesktopIconRenameDialog from './AppHubDesktopIconRenameDialog.vue'
 import AppHubDropInstallBadge from './AppHubDropInstallBadge.vue'
@@ -414,8 +483,10 @@ import {
 import { nextDuplicateName } from '../utils/duplicateAppUtils.js'
 import AppHubCatalogIcon from '../../../../components/AppHubCatalogIcon.vue'
 import { desktopThemeStorageKey as resolveDesktopThemeStorageKey } from '../../shared/desktopThemeStorage.js'
+import { mixIconsForSkin } from '../../shared/desktopThemePack.js'
 import { useDesktopThemePack } from '../../shared/useDesktopThemePack.js'
 import { usePreferredColorScheme } from '../../shared/usePreferredColorScheme.js'
+import AppHubSkinChrome from './AppHubSkinChrome.vue'
 
 const DESKTOP_HOST_KEY = 'apphubDesktopHost'
 
@@ -524,7 +595,22 @@ const desktopTheme = useDesktopThemePack({
   },
 })
 const desktopThemeIsCustom = desktopTheme.hasCustomTheme
+const desktopThemeSkin = desktopTheme.themeSkin
 const desktopThemeRootStyle = desktopTheme.customThemeStyle
+const skinMixList = computed(() => mixIconsForSkin(desktopThemeSkin.value || 'classic'))
+function skinMixAt(index) {
+  const list = skinMixList.value
+  if (!list.length) return '◆'
+  return list[Math.abs(index) % list.length]
+}
+const traySkinClasses = computed(() => {
+  if (!desktopThemeIsCustom.value) return null
+  const skin = desktopThemeSkin.value || 'classic'
+  return [
+    'apphub-desktop__taskbar-draft-store--skin',
+    `apphub-desktop__taskbar-draft-store--skin-${skin}`,
+  ]
+})
 const keyboardSettings = reactive(loadHubKeyboardSettings())
 const startMenuPins = reactive(loadStartMenuPins())
 const startMenuFavorites = reactive(loadStartMenuFavorites())
@@ -551,6 +637,7 @@ const installPermDialog = reactive({
 let installPermResolve = null
 
 const iconContextMenu = reactive({ open: false, x: 0, y: 0, app: null, group: null })
+const desktopContextMenu = reactive({ open: false, x: 0, y: 0 })
 const iconInfoDialog = reactive({ open: false, app: null, group: null })
 const iconRenameDialog = reactive({ open: false, app: null, group: null, error: '' })
 
@@ -637,6 +724,9 @@ const labels = computed(() => ({
   icon_context_favorite: t('icon_context_favorite', lang.value),
   icon_context_unfavorite: t('icon_context_unfavorite', lang.value),
   icon_context_uninstall: t('icon_context_uninstall', lang.value),
+  desktop_context_display_settings: t('desktop_context_display_settings', lang.value),
+  desktop_context_snap_grid: t('desktop_context_snap_grid', lang.value),
+  desktop_context_light_mode: t('desktop_context_light_mode', lang.value),
   start_menu_favorites: t('start_menu_favorites', lang.value),
   icon_info_title: t('icon_info_title', lang.value),
   icon_info_name: t('icon_info_name', lang.value),
@@ -1354,6 +1444,13 @@ function isGroupDragging(apps) {
   return apps.some((a) => iconDrag.isDragging(a.id))
 }
 
+const anyThemeIconDragging = computed(() =>
+  desktopLayout.value.some((item) => {
+    if (item.type === 'group') return isGroupDragging(item.apps)
+    return iconDrag.isDragging(item.app.id)
+  }),
+)
+
 function isGroupHolding(apps) {
   return apps.some((a) => iconDrag.isHolding(a.id))
 }
@@ -1417,20 +1514,14 @@ function onGroupContextMenu(item, event) {
   event.stopPropagation()
   if (isGroupDragging(item.apps)) return
 
-  const layer = iconsLayerRef.value
-  if (!layer) return
-  const rect = layer.getBoundingClientRect()
-  const menuW = 220
-  const menuH = 132
-  let x = event.clientX - rect.left
-  let y = event.clientY - rect.top
-  x = Math.max(4, Math.min(x, rect.width - menuW - 4))
-  y = Math.max(4, Math.min(y, rect.height - menuH - 4))
+  closeDesktopContextMenu()
+  const pos = positionContextMenu(event, 220, 132)
+  if (!pos) return
 
   iconContextMenu.app = null
   iconContextMenu.group = item
-  iconContextMenu.x = x
-  iconContextMenu.y = y
+  iconContextMenu.x = pos.x
+  iconContextMenu.y = pos.y
   iconContextMenu.open = true
 }
 
@@ -1655,6 +1746,14 @@ function isTypingTarget(target) {
 }
 
 function onDocumentKeyDown(event) {
+  if (event.key === 'Escape') {
+    if (iconContextMenu.open || desktopContextMenu.open) {
+      closeIconContextMenu()
+      closeDesktopContextMenu()
+      return
+    }
+  }
+
   const direction = matchSnapShortcut(event, keyboardSettings)
   if (!direction) return
   if (isTypingTarget(event.target)) return
@@ -1785,6 +1884,7 @@ function onDesktopClick(event) {
   if (event.target.closest('.apphub-icon-folder')) return
   shell.state.startOpen = false
   closeIconContextMenu()
+  closeDesktopContextMenu()
   closeOpenFolder()
 }
 
@@ -1794,32 +1894,86 @@ function closeIconContextMenu() {
   iconContextMenu.group = null
 }
 
-function onIconContextMenu(app, event) {
-  event.preventDefault()
-  event.stopPropagation()
-  if (iconDrag.isDragging(app.id)) return
+function closeDesktopContextMenu() {
+  desktopContextMenu.open = false
+}
 
-  const layer = iconsLayerRef.value
-  if (!layer) return
-  const rect = layer.getBoundingClientRect()
-  const menuW = 220
-  const menuH = app.builtin ? 176 : 220
+function positionContextMenu(event, menuW, menuH) {
+  const root = desktopRoot.value
+  if (!root) return null
+  const rect = root.getBoundingClientRect()
   let x = event.clientX - rect.left
   let y = event.clientY - rect.top
   x = Math.max(4, Math.min(x, rect.width - menuW - 4))
   y = Math.max(4, Math.min(y, rect.height - menuH - 4))
+  return { x, y }
+}
+
+function onBlockedContextMenu() {
+  closeIconContextMenu()
+  closeDesktopContextMenu()
+}
+
+function onDesktopSurfaceContextMenu(event) {
+  event.preventDefault()
+  event.stopPropagation()
+  closeIconContextMenu()
+  const pos = positionContextMenu(event, 220, 140)
+  if (!pos) return
+  desktopContextMenu.x = pos.x
+  desktopContextMenu.y = pos.y
+  desktopContextMenu.open = true
+}
+
+function onIconsLayerContextMenu(event) {
+  const target = event.target
+  if (!(target instanceof Element)) {
+    onBlockedContextMenu()
+    return
+  }
+  if (target.closest('.apphub-desktop__icon, .apphub-icon-folder, .apphub-icon-menu, .apphub-drop-badge')) {
+    return
+  }
+  onDesktopSurfaceContextMenu(event)
+}
+
+function onIconContextMenu(app, event) {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!app || iconDrag.isDragging(app.id)) return
+
+  closeDesktopContextMenu()
+  const menuH = app.builtin ? 176 : 220
+  const pos = positionContextMenu(event, 220, menuH)
+  if (!pos) return
 
   iconContextMenu.group = null
   iconContextMenu.app = app
-  iconContextMenu.x = x
-  iconContextMenu.y = y
+  iconContextMenu.x = pos.x
+  iconContextMenu.y = pos.y
   iconContextMenu.open = true
+}
+
+function onTaskbarWindowContextMenu(win, event) {
+  const app = resolveAppFromWindow(win)
+  if (!app) {
+    onBlockedContextMenu()
+    return
+  }
+  onIconContextMenu(app, event)
+}
+
+function resolveAppFromWindow(win) {
+  const id = resolveAppIdFromWindow(win)
+  if (!id) return null
+  return iconList.find((a) => a.id === id) ?? null
 }
 
 function onContextMenuOpen() {
   const group = iconContextMenu.group
   const app = iconContextMenu.app
   closeIconContextMenu()
+  shell.state.startOpen = false
   if (group) {
     openGroupFolder(group)
     return
@@ -1880,6 +2034,23 @@ function onContextMenuInfo() {
   iconInfoDialog.app = app
   iconInfoDialog.group = null
   iconInfoDialog.open = true
+}
+
+function onDesktopContextSettings() {
+  closeDesktopContextMenu()
+  shell.state.startOpen = false
+  const app = iconList.find((a) => a.builtin && a.module === 'settings')
+  if (app) onOpenIcon(app)
+}
+
+function onDesktopContextToggleSnap() {
+  onSnapGridChange(!desktopSettings.snapToGrid)
+  closeDesktopContextMenu()
+}
+
+function onDesktopContextToggleTheme() {
+  onThemeChange(activeTheme.value === 'light' ? 'dark' : 'light')
+  closeDesktopContextMenu()
 }
 
 function formatAppCreatedAt(iso) {
@@ -1949,10 +2120,11 @@ function onIconRenameSave(name) {
 }
 
 function onDocumentPointerDown(event) {
-  if (!iconContextMenu.open) return
+  if (!iconContextMenu.open && !desktopContextMenu.open) return
   const root = desktopRoot.value
   if (root?.querySelector('.apphub-icon-menu')?.contains(event.target)) return
   closeIconContextMenu()
+  closeDesktopContextMenu()
 }
 
 function onToggleStart() {

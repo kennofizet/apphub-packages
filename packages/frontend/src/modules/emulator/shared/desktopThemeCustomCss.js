@@ -109,6 +109,8 @@ export const DESKTOP_THEME_RULE_PROPERTIES = Object.freeze([
   'overflow',
   'overflow-x',
   'overflow-y',
+  // Safer hide than display:none — keeps layout/bridge chrome reachable
+  'visibility',
 ])
 
 const SELECTOR_SET = new Set(DESKTOP_THEME_RULE_SELECTORS)
@@ -125,7 +127,45 @@ export function scopeDesktopThemeSelector(selector) {
   if (trimmed === '.apphub-desktop') {
     return '.apphub-desktop.apphub-desktop--custom-theme'
   }
-  return `.apphub-desktop.apphub-desktop--custom-theme ${trimmed}`
+  const root = '.apphub-desktop.apphub-desktop--custom-theme'
+  const scoped = `${root} ${trimmed}`
+  // Skin themes draw shape on chrome plates / rings / faces — mirror icon rules onto
+  // those nodes (and raise specificity vs data-ah-skin plate CSS) so Theme Studio
+  // border-radius / border / shadow edits show on the real desktop, not only preview.
+  if (trimmed === '.apphub-desktop__icon' || trimmed === '.apphub-desktop__icon:hover') {
+    const iconSel = trimmed
+    const under = (extra) => `${root} ${iconSel} ${extra}`
+    const underSkin = (extra) => `${root}[data-ah-skin] ${iconSel} ${extra}`
+    return [
+      scoped,
+      `${root}[data-ah-skin] ${iconSel}`,
+      under('.apphub-skin-chrome'),
+      under('.apphub-skin-chrome__plate'),
+      under('.apphub-skin-chrome__plate[class*="plate--"]'),
+      under('.apphub-skin-chrome__ring'),
+      under('.apphub-skin-chrome__shell'),
+      under('.apphub-skin-chrome__face'),
+      under('.apphub-skin-chrome__face--round'),
+      under('.apphub-desktop__icon-img-wrap'),
+      under('.apphub-desktop__icon-img-wrap--skin'),
+      underSkin('.apphub-skin-chrome__plate'),
+      underSkin('.apphub-skin-chrome__plate[class*="plate--"]'),
+      underSkin('.apphub-skin-chrome__ring'),
+      underSkin('.apphub-skin-chrome__face'),
+      underSkin('.apphub-skin-chrome__face--round'),
+    ].join(',')
+  }
+  if (trimmed === '.apphub-desktop__icon-img') {
+    return [
+      scoped,
+      `${scoped}.apphub-desktop__icon-skin-glyph`,
+      `${root} .apphub-skin-chrome__face ${trimmed}`,
+      `${root} .apphub-skin-chrome__face .apphub-desktop__icon-skin-glyph`,
+      `${root}[data-ah-skin] .apphub-skin-chrome__face ${trimmed}`,
+      `${root}[data-ah-skin] .apphub-skin-chrome__face .apphub-desktop__icon-skin-glyph`,
+    ].join(',')
+  }
+  return scoped
 }
 
 /**
