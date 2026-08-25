@@ -379,6 +379,19 @@
       @toggle-snap="onDesktopContextToggleSnap"
       @toggle-theme="onDesktopContextToggleTheme"
     />
+
+    <AppHubWindowSwitcher
+      :open="windowSwitcher.open"
+      :windows="windowSwitcherWindows"
+      :selected-index="windowSwitcher.selectedIndex"
+      :title-label="labels.window_switcher_title"
+      :empty-label="labels.window_switcher_empty"
+      :hint-label="labels.window_switcher_hint"
+      :minimized-label="labels.window_switcher_minimized"
+      @select="onWindowSwitcherSelect"
+      @confirm="onWindowSwitcherConfirm"
+      @cancel="closeWindowSwitcher"
+    />
   </div>
 </template>
 
@@ -417,6 +430,7 @@ import AppHubDuplicateAppDialog from './AppHubDuplicateAppDialog.vue'
 import AppHubInstallPermissionsDialog from './AppHubInstallPermissionsDialog.vue'
 import AppHubDesktopIconContextMenu from './AppHubDesktopIconContextMenu.vue'
 import AppHubDesktopContextMenu from './AppHubDesktopContextMenu.vue'
+import AppHubWindowSwitcher from './AppHubWindowSwitcher.vue'
 import AppHubDesktopIconInfoDialog from './AppHubDesktopIconInfoDialog.vue'
 import AppHubDesktopIconRenameDialog from './AppHubDesktopIconRenameDialog.vue'
 import AppHubDropInstallBadge from './AppHubDropInstallBadge.vue'
@@ -454,7 +468,7 @@ import {
 import { clampPointToLayer, nextIconGridSlot, snapPoint } from '../utils/desktopGrid.js'
 import { DESKTOP_HUB_SETTINGS_KEY } from '../composables/useDesktopHubSettings.js'
 import { applyDesktopSettings, loadDesktopSettings, saveDesktopSettings } from '../utils/desktopSettings.js'
-import { loadHubKeyboardSettings, matchSnapShortcut, saveHubKeyboardSettings } from '../utils/hubKeyboardSettings.js'
+import { loadHubKeyboardSettings, matchSnapShortcut, isWindowSwitcherShortcut, saveHubKeyboardSettings } from '../utils/hubKeyboardSettings.js'
 import {
   isAppPinned,
   isAppVisibleInStart,
@@ -638,6 +652,7 @@ let installPermResolve = null
 
 const iconContextMenu = reactive({ open: false, x: 0, y: 0, app: null, group: null })
 const desktopContextMenu = reactive({ open: false, x: 0, y: 0 })
+const windowSwitcher = reactive({ open: false, selectedIndex: 0, windowIds: [] })
 const iconInfoDialog = reactive({ open: false, app: null, group: null })
 const iconRenameDialog = reactive({ open: false, app: null, group: null, error: '' })
 
@@ -727,6 +742,10 @@ const labels = computed(() => ({
   desktop_context_display_settings: t('desktop_context_display_settings', lang.value),
   desktop_context_snap_grid: t('desktop_context_snap_grid', lang.value),
   desktop_context_light_mode: t('desktop_context_light_mode', lang.value),
+  window_switcher_title: t('window_switcher_title', lang.value),
+  window_switcher_empty: t('window_switcher_empty', lang.value),
+  window_switcher_hint: t('window_switcher_hint', lang.value),
+  window_switcher_minimized: t('window_switcher_minimized', lang.value),
   start_menu_favorites: t('start_menu_favorites', lang.value),
   icon_info_title: t('icon_info_title', lang.value),
   icon_info_name: t('icon_info_name', lang.value),
@@ -770,6 +789,12 @@ const visibleWindows = computed(() =>
 const taskbarWindows = computed(() =>
   (wm.taskbarWindows?.value ?? wm.taskbarWindows ?? []).filter((w) => w?.id),
 )
+
+const windowSwitcherWindows = computed(() => {
+  if (!windowSwitcher.open || !windowSwitcher.windowIds.length) return []
+  const byId = new Map((wm.state.windows ?? []).map((w) => [w.id, w]))
+  return windowSwitcher.windowIds.map((id) => byId.get(id)).filter(Boolean)
+})
 
 const shutdownAction = computed(() => {
   // Prop wins (dedicated host can pass :shutdown-action). undefined = fall through.
@@ -1747,11 +1772,28 @@ function isTypingTarget(target) {
 
 function onDocumentKeyDown(event) {
   if (event.key === 'Escape') {
+    if (windowSwitcher.open) {
+      event.preventDefault()
+      closeWindowSwitcher()
+      return
+    }
     if (iconContextMenu.open || desktopContextMenu.open) {
       closeIconContextMenu()
       closeDesktopContextMenu()
       return
     }
+  }
+
+  if (windowSwitcher.open) {
+    if (handleWindowSwitcherKey(event)) return
+  }
+
+  if (isWindowSwitcherShortcut(event, keyboardSettings)) {
+    if (isTypingTarget(event.target)) return
+    event.preventDefault()
+    event.stopPropagation()
+    openOrCycleWindowSwitcher(event.shiftKey ? -1 : 1)
+    return
   }
 
   const direction = matchSnapShortcut(event, keyboardSettings)
@@ -1761,6 +1803,99 @@ function onDocumentKeyDown(event) {
 
   event.preventDefault()
   wm.snapActiveWindow?.(wm.state.activeId, direction)
+  schedulePersist()
+}
+
+function orderedSwitcherWindows() {
+  return [...(wm.state.windows ?? [])]
+    .filter((w) => w?.id)
+    .sort((a, b) => (b.zIndex ?? 0) - (a.zIndex ?? 0))
+}
+
+function openOrCycleWindowSwitcher(step = 1) {
+  const windows = orderedSwitcherWindows()
+
+  shell.state.startOpen = false
+  closeIconContextMenu()
+  closeDesktopContextMenu()
+
+  if (!windowSwitcher.open) {
+    windowSwitcher.windowIds = windows.map((w) => w.id)
+    windowSwitcher.selectedIndex = windows.length > 1 ? 1 : 0
+    windowSwitcher.open = true
+    return
+  }
+
+  if (!windows.length) return
+  cycleWindowSwitcher(step)
+}
+
+function cycleWindowSwitcher(step) {
+  const count = windowSwitcher.windowIds.length
+  if (!count) return
+  const next = (windowSwitcher.selectedIndex + step + count * 10) % count
+  windowSwitcher.selectedIndex = next
+}
+
+function handleWindowSwitcherKey(event) {
+  const key = event.key
+  if (isWindowSwitcherShortcut(event, keyboardSettings)) {
+    event.preventDefault()
+    cycleWindowSwitcher(event.shiftKey ? -1 : 1)
+    return true
+  }
+  if (key === 'Tab') {
+    event.preventDefault()
+    cycleWindowSwitcher(event.shiftKey ? -1 : 1)
+    return true
+  }
+  if (key === 'ArrowRight' || key === 'ArrowDown') {
+    event.preventDefault()
+    cycleWindowSwitcher(1)
+    return true
+  }
+  if (key === 'ArrowLeft' || key === 'ArrowUp') {
+    event.preventDefault()
+    cycleWindowSwitcher(-1)
+    return true
+  }
+  if (key === 'Enter') {
+    event.preventDefault()
+    confirmWindowSwitcherSelection()
+    return true
+  }
+  if ((event.code === 'Space' || key === ' ') && !event.ctrlKey && !event.altKey) {
+    event.preventDefault()
+    confirmWindowSwitcherSelection()
+    return true
+  }
+  return false
+}
+
+function closeWindowSwitcher() {
+  windowSwitcher.open = false
+  windowSwitcher.selectedIndex = 0
+  windowSwitcher.windowIds = []
+}
+
+function onWindowSwitcherSelect(windowId) {
+  const index = windowSwitcher.windowIds.indexOf(windowId)
+  if (index >= 0) windowSwitcher.selectedIndex = index
+  confirmWindowSwitcherSelection()
+}
+
+function onWindowSwitcherConfirm(windowId) {
+  const index = windowSwitcher.windowIds.indexOf(windowId)
+  if (index >= 0) windowSwitcher.selectedIndex = index
+  confirmWindowSwitcherSelection()
+}
+
+function confirmWindowSwitcherSelection() {
+  const win = windowSwitcherWindows.value[windowSwitcher.selectedIndex]
+  closeWindowSwitcher()
+  if (!win?.id) return
+  touchRecentApp(resolveAppIdFromWindow(win))
+  wm.focusWindow(win.id)
   schedulePersist()
 }
 
@@ -1882,9 +2017,11 @@ watch(
 
 function onDesktopClick(event) {
   if (event.target.closest('.apphub-icon-folder')) return
+  if (event.target.closest('.apphub-window-switcher')) return
   shell.state.startOpen = false
   closeIconContextMenu()
   closeDesktopContextMenu()
+  closeWindowSwitcher()
   closeOpenFolder()
 }
 
@@ -2228,7 +2365,7 @@ async function initDesktopShell() {
   document.addEventListener('pointerdown', onDocumentPointerDownCapture, true)
   document.addEventListener('focusin', onDocumentFocusIn, true)
   document.addEventListener('mousedown', onDocumentPointerDown)
-  document.addEventListener('keydown', onDocumentKeyDown)
+  document.addEventListener('keydown', onDocumentKeyDown, true)
 
   await nextTick()
   measureWorkArea()
@@ -2304,7 +2441,7 @@ onUnmounted(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDownCapture, true)
   document.removeEventListener('focusin', onDocumentFocusIn, true)
   document.removeEventListener('mousedown', onDocumentPointerDown)
-  document.removeEventListener('keydown', onDocumentKeyDown)
+  document.removeEventListener('keydown', onDocumentKeyDown, true)
   userNotificationCenter.dispose()
   persistSession()
 })

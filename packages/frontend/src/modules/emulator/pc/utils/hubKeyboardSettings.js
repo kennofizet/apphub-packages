@@ -51,6 +51,9 @@ export function matchSnapShortcut(event, settings) {
   if (!settings?.enabled) return null
   if (!event.ctrlKey || !event.altKey) return null
   if (event.metaKey) return null
+  if (event.key === 'Tab') return null
+  if (event.code === 'Space' || event.key === ' ') return null
+  if (event.code === 'KeyW') return null
 
   const map = {
     ArrowLeft: 'left',
@@ -60,4 +63,15 @@ export function matchSnapShortcut(event, settings) {
   }
 
   return map[event.key] ?? null
+}
+
+/** Ctrl+Alt+W — sticky window switcher.
+ * Ctrl+Alt+Tab / Alt+Tab / Win+Tab are often owned by Windows Task View and never reach the page.
+ * Avoid Space: Alt+Space opens the OS window system menu.
+ */
+export function isWindowSwitcherShortcut(event, settings) {
+  if (!settings?.enabled) return false
+  if (!event.ctrlKey || !event.altKey || event.metaKey) return false
+  const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
+  return event.code === 'KeyW' || key === 'w'
 }

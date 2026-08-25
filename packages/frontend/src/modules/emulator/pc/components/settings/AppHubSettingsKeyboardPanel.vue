@@ -58,6 +58,7 @@ const labels = computed(() => ({
   snap_right: t('hub_settings_keyboard_snap_right', lang.value),
   snap_up: t('hub_settings_keyboard_snap_up', lang.value),
   snap_down: t('hub_settings_keyboard_snap_down', lang.value),
+  switcher: t('hub_settings_keyboard_switcher', lang.value),
   modifier_ctrl_alt: t('hub_settings_keyboard_modifier_ctrl_alt', lang.value),
 }))
 
@@ -69,6 +70,7 @@ const shortcutRows = computed(() => {
     { id: 'right', label: labels.value.snap_right, keys: t('hub_settings_keyboard_key_right', l, { mod }) },
     { id: 'up', label: labels.value.snap_up, keys: t('hub_settings_keyboard_key_up', l, { mod }) },
     { id: 'down', label: labels.value.snap_down, keys: t('hub_settings_keyboard_key_down', l, { mod }) },
+    { id: 'switcher', label: labels.value.switcher, keys: t('hub_settings_keyboard_key_switcher', l, { mod }) },
   ]
 })
 
